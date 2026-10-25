@@ -1,6 +1,6 @@
 # TASKS.md — Cesta
 
-> **Estado global:** F0 en curso. F0.1, F0.2, F0.3 y F0.4 completadas.
+> **Estado global:** F0 en curso. F0.1, F0.2, F0.3, F0.4 y F0.5 completadas.
 > **Última actualización:** 2026-10-25
 > **Plan de referencia:** `PLAN.md`
 
@@ -54,7 +54,7 @@
   - Guardar fixtures **mínimas y sintéticas** (2-3 productos, una sección), no el catálogo completo.
   - **DoD:** script que imprime 26 secciones, ≥100 subcategorías, almacén 4389 y un producto parseado.
 
-- [ ] **F0.5 — Spike del catálogo**
+- [x] **F0.5 — Spike del catálogo**
   - Descargar las 152 subcategorías con concurrencia 4 y registrar:
     - número de productos únicos;
     - tiempo total;

@@ -47,7 +47,8 @@ class MercadonaPriceInstructions(_MercadonaModel):
     unit_size: float | None = None
     size_format: str | None = None
     is_pack: bool | None = None
-    pack_size: int | None = None
+    #: Tamaño de cada unidad del pack (puede ser decimal: 6 x 1,5 L -> 1.5).
+    pack_size: float | None = None
     total_units: int | None = None
     approx_size: bool | None = None
     selling_method: int | None = None
@@ -72,7 +73,10 @@ class MercadonaProductCategory(_MercadonaModel):
 class MercadonaProduct(_MercadonaModel):
     """Producto de una subcategoría."""
 
-    id: int
+    model_config = ConfigDict(extra="ignore", coerce_numbers_to_str=True)
+
+    #: Identificador externo. Puede ser numérico o con sufijo de variante ("81649.1").
+    id: str
     display_name: str
     slug: str | None = None
     published: bool = True

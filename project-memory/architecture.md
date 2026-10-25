@@ -43,7 +43,7 @@ MERCADONA/
 │       ├── pages/           # MenuPage, DishesPage, SettingsPage, NotFoundPage
 │       ├── lib/utils.ts
 │       └── test/            # setup, servidor MSW, render-app
-├── scripts/                 # check_mercadona.py (F0.5 añadirá spike_catalog.py)
+├── scripts/                 # check_mercadona.py, spike_catalog.py
 ├── run.ps1                  # pendiente F0.7
 └── check.ps1                # pendiente F0.9
 ```
@@ -57,7 +57,7 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 - **FastAPI:** API REST, validación Pydantic, orquestación de servicios. Implementado el esqueleto y `/api/health`.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Constantes `POSTAL_CODE="22002"` y `EXPECTED_WAREHOUSE="4389"`.
 - **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición.
-- **MercadonaClient:** cliente asíncrono implementado (F0.4); fija CP 22002, valida almacén 4389, descarga secciones y subcategorías. Ver sección propia.
+- **MercadonaClient:** cliente asíncrono implementado (F0.4); fija CP 22002, valida almacén 4389, descarga secciones y subcategorías. Ver sección propia y el informe del spike en `decisions.md`.
 - **CatalogSyncService:** sync por subcategoría, estado parcial, disponibilidad y errores. Pendiente (F1).
 - **PricingService:** unidades base, necesidad neta, paquetes, ticket, consumo, despensa y sobras. Pendiente (F3).
 - **OptimizerService:** CP-SAT en dos etapas con presupuesto duro. Pendiente (F4).
@@ -95,14 +95,14 @@ Implementado en `app/services/mercadona_client.py`, con DTOs en `app/schemas/mer
 - Sesión única de `httpx.AsyncClient`; la primera petición hace `PUT /api/postal-codes/actions/change-pc/` con `{"new_postal_code":"22002"}`.
 - Fail-closed: si `x-customer-wh` no es `4389`, lanza `WarehouseUnavailableError` y no descarga catálogo.
 - Todas las peticiones de catálogo llevan `wh=4389`, también las páginas siguientes.
-- Reintentos con tenacity solo ante errores de transporte, 429 y 5xx (3 intentos, backoff exponencial); un 4xx no se reintenta.
+- Reintentos con tenacity ante errores de transporte, 403, 429 y 5xx (4 intentos, backoff exponencial desde 1 s); otros 4xx no se reintentan.
 - Códigos estables: `WAREHOUSE_UNAVAILABLE`, `MERCADONA_UNAVAILABLE`, `MERCADONA_HTTP_ERROR`, `MERCADONA_INVALID_RESPONSE`.
-- DTOs tolerantes (`extra="ignore"`); precios como texto para normalizarlos en F1.3; sin `raw_json`.
+- DTOs tolerantes (`extra="ignore"`); `MercadonaProduct.id` es texto (acepta variantes como `"81649.1"`), `pack_size` admite decimales y los precios se conservan como texto para normalizarlos en F1.3; sin `raw_json`.
 - `MercadonaCategoryDetail.all_products()` aplana los grupos hijos porque la API anida los productos en `categories[].products`.
-- Script manual: `backend\.venv\Scripts\python.exe scripts\check_mercadona.py`.
+- Scripts manuales: `check_mercadona.py` (una subcategoría) y `spike_catalog.py` (catálogo completo, solo métricas).
 - Tests: respx + fixtures sintéticas en `backend/tests/fixtures/mercadona/`, sin red.
 
-Contrato observado el 2026-10-25: `/api/categories/` devuelve `{count,next,previous,results}` con 26 secciones y 152 subcategorías; el detalle de subcategoría trae `products` vacío y los productos dentro de `categories[].products`; `unit_price` es el precio del paquete (5 L → 17,25 €; referencia 3,45 €/L).
+Contrato observado el 2026-10-25: `/api/categories/` devuelve `{count,next,previous,results}` con 26 secciones y 152 subcategorías. El detalle de subcategoría trae `products` vacío y los productos dentro de `categories[].products`; `unit_price` es el precio del paquete (pack de agua 6 × 1,5 L: 1,62 € frente a 0,18 €/L). Spike F0.5: 4.291 productos únicos, 4.543 entradas, 100 % precios parseables, 35 sin tamaño/formato, 383 con `approx_size`, 65 ids de variante, 6,37 s con concurrencia 4 y 0 fallos.
 
 ## APIs
 

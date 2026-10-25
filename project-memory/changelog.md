@@ -1,11 +1,48 @@
 # Changelog
 
+## 2026-10-25 — F0.5: spike del catálogo
+
+### Cambios
+
+- `scripts/spike_catalog.py`: descarga las 152 subcategorías con concurrencia 4 y calcula métricas sin persistir catálogo ni `raw_json`.
+- Corregido el contrato del cliente tras el spike: `pack_size` pasa a `float | None` (packs con unidades de 1,5 L) y `MercadonaProduct.id` a texto con `coerce_numbers_to_str` (ids de variante como `"81649.1"`).
+- El cliente trata también el 403 como transitorio (WAF de Mercadona) además de 429/5xx: 4 intentos con backoff exponencial desde 1 s.
+- Inicialización de sesión protegida con `asyncio.Lock`: las descargas concurrentes comparten un único PUT de CP.
+- Tests nuevos: pack decimal, id de variante, 403 transitorio y sesión única bajo concurrencia; 26 tests en total.
+- Informe completo del spike en `project-memory/decisions.md`.
+
+### Resultado del spike
+
+- 26 secciones, 152/152 subcategorías, 0 fallos.
+- 4.543 entradas y 4.291 productos únicos (referencia ~4.327; −36, −0,8 %).
+- 100 % de precios parseables, 0 sin precio y 0 no publicados.
+- 35 productos sin tamaño/formato, 383 con `approx_size` y 65 ids de variante.
+- 6,37 s con concurrencia 4.
+
+### Verificación
+
+- Ruff, mypy strict (app y script) y 26 tests en verde.
+- Spike reproducible: `cd backend; uv run python ..\scripts\spike_catalog.py` → APTO.
+
+### Archivos
+
+- `scripts/spike_catalog.py`
+- `backend/app/schemas/mercadona.py`
+- `backend/app/services/mercadona_client.py`
+- `backend/tests/test_mercadona_client.py`
+- `TASKS.md`
+- `project-memory/**`
+
+### Motivo
+
+- Validar el catálogo completo y fijar el contrato real antes de F1.
+
 ## 2026-10-25 — F0.4: cliente Mercadona mínimo
 
 ### Cambios
 
 - `MercadonaClient` asíncrono con httpx: fija el CP 22002, valida `x-customer-wh=4389` y reutiliza cookies de sesión.
-- Reintentos con tenacity ante transporte, 429 y 5xx (3 intentos); errores de dominio con códigos `WAREHOUSE_UNAVAILABLE`, `MERCADONA_UNAVAILABLE`, `MERCADONA_HTTP_ERROR` y `MERCADONA_INVALID_RESPONSE`.
+- Reintentos con tenacity ante transporte, 429 y 5xx (3 intentos; F0.5 amplió a 403 y 4 intentos); errores de dominio con códigos `WAREHOUSE_UNAVAILABLE`, `MERCADONA_UNAVAILABLE`, `MERCADONA_HTTP_ERROR` y `MERCADONA_INVALID_RESPONSE`.
 - `get_sections()` sigue la paginación de `/api/categories/`; `get_subcategory(id)` descarga grupos y productos. `wh=4389` se mantiene en todas las páginas.
 - DTOs Pydantic tolerantes (`extra="ignore"`) en `app/schemas/mercadona.py`; precios como texto para normalizar en F1.3; sin `raw_json`.
 - Fixtures sintéticas mínimas: 1 sección, 2 subcategorías y 3 productos (incluido un pack 6 × 125 g y un grupo vacío).

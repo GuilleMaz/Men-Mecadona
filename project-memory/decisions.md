@@ -1,5 +1,55 @@
 # Decisions
 
+## 2026-10-25 — Informe del spike de catálogo (F0.5)
+
+### Ejecución
+
+- Script: `scripts/spike_catalog.py` (concurrencia 4, sin guardar catálogo).
+- Comando: `cd backend; uv run python ..\scripts\spike_catalog.py`.
+- Entorno: Windows, Python 3.13.5, OR-Tools 9.15, httpx 0.28, tenacity 9.2.
+- CP 22002 / almacén 4389 confirmados.
+
+### Resultado
+
+| Métrica | Valor |
+|---|---|
+| Secciones | 26 |
+| Subcategorías | 152 |
+| Subcategorías descargadas | 152 (0 fallidas) |
+| Productos vistos (con duplicados) | 4.543 |
+| Productos únicos | 4.291 |
+| Duplicados entre subcategorías | 252 |
+| Precios parseables | 4.291 (100 %) |
+| Productos sin precio | 0 |
+| Precios no parseables | 0 |
+| Productos no publicados | 0 |
+| Sin tamaño o formato de paquete | 35 |
+| Con peso aproximado (`approx_size`) | 383 |
+| Con id de variante no numérico | 65 |
+| Tiempo total | 6,37 s |
+| Referencia observada | ~4.327 |
+| Diferencia | −36 (−0,8 %) |
+
+Umbrales F0.5: **APTO** (≥20 secciones, ≥100 subcategorías, ≥3.000 productos, precios parseables, 0 precios no parseables).
+
+### Hallazgos
+
+1. **`pack_size` puede ser decimal.** El DTO lo tipaba como entero y hacía fallar 67 subcategorías. Ejemplo real: pack de 6 botellas de 1,5 L → `pack_size=1.5`, `total_units=6`, `unit_size=9.0`, `unit_price="1.62"`, `bulk_price="0.18"`. Se cambió a `float | None`; `unit_size` sigue siendo la cantidad total del paquete.
+2. **El `id` de producto puede ser texto con sufijo de variante.** Pescado y pan usan ids como `"81649.1"` (peso variable) o `"83203.1"`. El cliente ahora usa `id: str` y `coerce_numbers_to_str`; encaja con `products.external_id` textual de F1.1. Hay 65 ids de este tipo.
+3. **Los 403 son transitorios.** Con concurrencia 4 se produjeron 5 `403` en una tanda; al repetir la misma categoría respondió 200. El cliente trata `403`, `429` y `5xx` como reintentables (4 intentos, backoff exponencial desde 1 s). Con eso, la ejecución limpia tiene 0 fallos.
+4. **`approx_size=true` identifica peso variable** (383 productos). El MVP debe excluirlos del mapeo ingrediente → producto (F1.3/F2.3), igual que los 35 sin tamaño/formato.
+5. **`unit_price` es el precio del paquete**, confirmado con el pack de agua: 1,62 € el pack frente a 0,18 €/L de `bulk_price`. Refuerza la regla de PLAN §12.4 y la normalización de F1.3.
+6. **La estructura del catálogo no es plana.** El detalle de subcategoría trae `products` vacío y los productos dentro de `categories[].products`; `all_products()` aplana los grupos.
+
+### Consecuencias
+
+- F1.1: `external_id` debe ser `TEXT` único; no asumir ids numéricos.
+- F1.3: convertir `unit_size`/`size_format` a milésimas, tratar `pack_size`/`total_units` como metadatos del pack y descartar `approx_size=true` para el mapeo.
+- F1.4: la sync puede alcanzar 152/152 en ~6 s con concurrencia 4; debe reintentar 403/429/5xx y registrar fallos por subcategoría.
+- F0.5 no persiste catálogo ni `raw_json`; el informe es reproducible con el script.
+
+---
+
 ## 2026-10-25 — Cliente Mercadona asíncrono y fail-closed
 
 ### Problema
@@ -11,7 +61,7 @@ Había que validar el acceso real a Mercadona antes de diseñar el catálogo per
 - `httpx.AsyncClient` con una sesión por cliente; el CP 22002 se fija con `PUT /api/postal-codes/actions/change-pc/` en la primera petición.
 - El almacén se valida por la cabecera `x-customer-wh`; si no es `4389`, se lanza `WarehouseUnavailableError` y no se descarga catálogo.
 - Se sigue la paginación de `/api/categories/` con `next`; todas las URLs de catálogo llevan `wh=4389` conservando el resto de parámetros.
-- Reintentos con tenacity solo en errores de transporte, 429 y 5xx; los 4xx no se reintentan.
+- Reintentos con tenacity ante errores de transporte, 403, 429 y 5xx (4 intentos, backoff exponencial desde 1 s); otros 4xx no se reintentan.
 - DTOs Pydantic con `extra="ignore"` y precios como texto: la normalización a céntimos corresponde a F1.3.
 - Fixtures sintéticas en los tests; la API real solo se consulta desde un script manual.
 

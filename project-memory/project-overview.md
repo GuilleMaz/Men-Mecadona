@@ -8,15 +8,15 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F0 en curso. F0.1 (estructura), F0.2 (backend mínimo), F0.3 (frontend mínimo) y F0.4 (cliente Mercadona) completadas.
+- **Fase:** F0 en curso. F0.1 (estructura), F0.2 (backend mínimo), F0.3 (frontend mínimo), F0.4 (cliente Mercadona) y F0.5 (spike del catálogo) completadas.
 - **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite y cliente Mercadona (CP 22002 / almacén 4389). Frontend con layout en español, navegación Menú/Platos/Ajustes y formulario placeholder.
 - **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
-- **Integración Mercadona:** validada contra la API real (26 secciones, 152 subcategorías, almacén 4389); tests con fixtures sintéticas y respx, sin red.
+- **Integración Mercadona:** catálogo validado (26 secciones, 152/152 subcategorías, 4.291 productos únicos, 100 % precios parseables, 6,37 s con concurrencia 4); tests con fixtures sintéticas y respx, sin red.
 - **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`.
-- **Memoria:** inicializada y actualizada.
+- **Memoria:** inicializada y actualizada; informe del spike en `decisions.md`.
 - **Auditorías:** arquitectura, coherencia y cobertura completadas; verificación final aplicada.
 - **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad.
-- **Calidad:** backend con Ruff, mypy (strict) y 22 tests; frontend con ESLint, Prettier, TypeScript estricto, 6 tests y build de producción.
+- **Calidad:** backend con Ruff, mypy (strict) y 26 tests; frontend con ESLint, Prettier, TypeScript estricto, 6 tests y build de producción.
 - **Última actualización:** 2026-10-25.
 
 ## Tecnologías
@@ -53,10 +53,11 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - F0.2: backend mínimo (FastAPI + uv), `GET /api/health`, configuración validada, motor SQLite con PRAGMA, CORS solo en desarrollo y tooling de calidad.
 - F0.3: frontend mínimo (Vite + React + TypeScript), Tailwind 4, shadcn/ui, navegación Menú/Platos/Ajustes, formulario placeholder con Zod, Vitest + Testing Library + MSW, ESLint + Prettier y build de producción.
 - F0.4: cliente Mercadona asíncrono con validación de almacén 4389, paginación, reintentos, DTOs, fixtures sintéticas, tests con respx y script de comprobación real.
+- F0.5: spike del catálogo completo con concurrencia 4: 26 secciones, 152/152 subcategorías, 4.291 productos únicos, 100 % precios parseables y 6,37 s; informe en `decisions.md`.
 
 ## Pendientes
 
-- F0.5-F0.10: spike del catálogo, spike de OR-Tools, `run.ps1`, seguridad local, scripts de calidad y smoke test de `/api/health` en la UI.
+- F0.6-F0.10: spike de OR-Tools, `run.ps1`, seguridad local, scripts de calidad y smoke test de `/api/health` en la UI.
 - F1: catálogo y sync.
 - F2: ingredientes, platos, alérgenos y preferencias.
 - F3: coste puro y preview.

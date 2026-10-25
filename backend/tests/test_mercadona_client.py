@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ import httpx
 import pytest
 import respx
 
+from app.schemas.mercadona import MercadonaProduct
 from app.services.mercadona_client import (
     CHANGE_POSTAL_CODE_PATH,
     MERCADONA_BASE_URL,
@@ -53,6 +55,51 @@ def mock_subcategory_112() -> respx.Route:
     )
 
 
+def test_product_accepts_fractional_pack_size() -> None:
+    product = MercadonaProduct.model_validate(
+        {
+            "id": 9004,
+            "display_name": "Agua mineral 1,5 L (pack 6)",
+            "price_instructions": {
+                "is_pack": True,
+                "pack_size": 1.5,
+                "total_units": 6,
+                "unit_size": 9.0,
+                "size_format": "l",
+                "unit_price": "1.62",
+                "bulk_price": "0.18",
+            },
+        }
+    )
+
+    assert product.price_instructions is not None
+    assert product.id == "9004"
+    assert product.price_instructions.pack_size == 1.5
+    assert product.price_instructions.total_units == 6
+    assert product.price_instructions.unit_size == 9.0
+
+
+def test_product_accepts_variable_weight_variant_id() -> None:
+    product = MercadonaProduct.model_validate(
+        {
+            "id": "81649.1",
+            "display_name": "Salmón a rodajas",
+            "price_instructions": {
+                "unit_size": 2.991,
+                "size_format": "kg",
+                "unit_price": "32.75",
+                "bulk_price": "10.95",
+                "approx_size": True,
+            },
+        }
+    )
+
+    assert product.id == "81649.1"
+    assert product.price_instructions is not None
+    assert product.price_instructions.approx_size is True
+    assert product.price_instructions.size_format == "kg"
+
+
 async def test_full_flow_parses_sections_and_products() -> None:
     with respx.mock:
         put_route = mock_postal_code()
@@ -73,7 +120,7 @@ async def test_full_flow_parses_sections_and_products() -> None:
     assert [subcategory.id for subcategory in sections[0].categories] == [112, 113]
 
     products = detail.all_products()
-    assert [product.id for product in products] == [9001, 9003, 9002]
+    assert [product.id for product in products] == ["9001", "9003", "9002"]
 
     oil = products[0]
     assert oil.display_name == "Aceite de oliva sintético 5 L"
@@ -131,6 +178,21 @@ async def test_follows_categories_pagination() -> None:
     assert route.calls[1].request.url.params["wh"] == "4389"
 
 
+async def test_session_is_initialized_once_under_concurrency() -> None:
+    def subcategory_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=load_fixture("subcategory_112.json"))
+
+    with respx.mock:
+        put_route = mock_postal_code()
+        respx.get(SUBCATEGORY_112_URL).mock(side_effect=subcategory_handler)
+
+        async with MercadonaClient(retry_wait_seconds=0) as client:
+            details = await asyncio.gather(*(client.get_subcategory(112) for _ in range(4)))
+
+    assert put_route.call_count == 1
+    assert all(len(detail.all_products()) == 3 for detail in details)
+
+
 async def test_warehouse_mismatch_blocks_catalog_download() -> None:
     with respx.mock:
         mock_postal_code({"x-customer-wh": "9999", "x-customer-pc": "22002"})
@@ -161,6 +223,23 @@ async def test_retries_transient_server_errors() -> None:
         route = respx.get(CATEGORIES_URL).mock(
             side_effect=[
                 httpx.Response(503),
+                httpx.Response(200, json=load_fixture("categories.json")),
+            ]
+        )
+
+        async with MercadonaClient(retry_wait_seconds=0) as client:
+            sections = await client.get_sections()
+
+    assert len(sections) == 1
+    assert route.call_count == 2
+
+
+async def test_retries_transient_forbidden_rate_limit() -> None:
+    with respx.mock:
+        mock_postal_code()
+        route = respx.get(CATEGORIES_URL).mock(
+            side_effect=[
+                httpx.Response(403),
                 httpx.Response(200, json=load_fixture("categories.json")),
             ]
         )

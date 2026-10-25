@@ -6,6 +6,7 @@ catálogo. No automatiza la compra ni maneja credenciales.
 
 from __future__ import annotations
 
+import asyncio
 from types import TracebackType
 from typing import Any, Self, TypeVar
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -88,8 +89,8 @@ class MercadonaClient:
         postal_code: str = POSTAL_CODE,
         expected_warehouse: str = EXPECTED_WAREHOUSE,
         timeout: float = 10.0,
-        max_attempts: int = 3,
-        retry_wait_seconds: float = 0.5,
+        max_attempts: int = 4,
+        retry_wait_seconds: float = 1.0,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._postal_code = postal_code
@@ -98,6 +99,7 @@ class MercadonaClient:
         self._max_attempts = max_attempts
         self._retry_wait_seconds = retry_wait_seconds
         self._client: httpx.AsyncClient | None = None
+        self._session_lock = asyncio.Lock()
         self._session_ready = False
         self._warehouse: str | None = None
         self._postal_code_header: str | None = None
@@ -161,7 +163,7 @@ class MercadonaClient:
                         response = await self._http().request(method, url, **kwargs)
                     except httpx.TransportError as exc:
                         raise _RetryableRequest(str(exc)) from exc
-                    if response.status_code == 429 or response.status_code >= 500:
+                    if response.status_code in (403, 429) or response.status_code >= 500:
                         raise _RetryableRequest(f"HTTP {response.status_code} en {url}")
                     if response.status_code >= 400:
                         raise MercadonaHTTPError(
@@ -175,10 +177,19 @@ class MercadonaClient:
         raise AssertionError("bucle de reintentos sin resultado")  # pragma: no cover
 
     async def _ensure_session(self) -> None:
-        """Fija el CP y valida el almacén una sola vez por sesión."""
+        """Fija el CP y valida el almacén una sola vez por sesión.
+
+        Usa un lock para que las llamadas concurrentes de F1.4 no dupliquen el PUT.
+        """
         if self._session_ready:
             return
 
+        async with self._session_lock:
+            if not self._session_ready:
+                await self._start_session()
+
+    async def _start_session(self) -> None:
+        """Realiza el PUT de CP y exige que la API confirme el almacén."""
         response = await self._request(
             "PUT",
             CHANGE_POSTAL_CODE_PATH,

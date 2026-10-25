@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-10-25 — F0.3: frontend mínimo y tooling
+
+### Cambios
+
+- Vite 8 + React 19 + TypeScript 6 estricto (`strict`, `noUncheckedIndexedAccess`) con alias `@/*`.
+- Tailwind CSS 4 mediante `@tailwindcss/vite` y tema shadcn/ui en `src/index.css` (variables oklch, primario verde).
+- shadcn/ui por copia: `components.json` (`new-york`), `lib/utils.ts` y componentes `button`, `card`, `input` y `label` sobre Radix.
+- TanStack Query 5, React Router 8, React Hook Form 7 + Zod 4 (resolvers 5) y Lucide.
+- Layout base en español con navegación Menú / Platos / Ajustes, foco visible y pie con aviso legal.
+- Formulario placeholder de personas (1-10), días (1-14) y presupuesto (€) con validación Zod en español y resumen no persistente.
+- Páginas de Platos y Ajustes como placeholders explícitos; 404 con vuelta al menú.
+- Vitest 5 + jsdom + Testing Library + MSW 3 (`onUnhandledFrame: 'error'`), con limpieza y servidor sin handlers.
+- ESLint 10 plano (typescript-eslint, react-hooks, react-refresh, Prettier) y scripts `lint`, `format`, `format:check`, `test`, `typecheck`.
+- Proxy de Vite `/api` → `http://127.0.0.1:8000` para desarrollo.
+- `components.json` normalizado a `new-york` porque el CLI de shadcn no es viable sin TTY (ver `decisions.md`).
+
+### Verificación
+
+- `npm run lint`: sin errores ni avisos.
+- `npm run format:check`: OK.
+- `npm run typecheck`: OK con TypeScript 6 estricto.
+- `npm run test`: 6 tests en 2 archivos.
+- `npm run build`: OK (2169 módulos; JS 137 kB gzip, CSS 3,9 kB gzip).
+- `npm run dev`: `http://localhost:5173` responde 200 con título «Cesta — Menús de comida y cena» y `#root`.
+
+### Archivos
+
+- `frontend/**`
+- `TASKS.md`
+- `project-memory/**`
+
+### Motivo
+
+- Cumplir el DoD de F0.3 (UI mínima en español, tooling y tests) antes de integrar el catálogo de Mercadona.
+
 ## 2026-10-25 — F0.1 y F0.2: estructura y backend mínimo
 
 ### Cambios

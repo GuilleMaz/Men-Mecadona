@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-10-25 — shadcn/ui por copia, sin CLI interactivo
+
+### Problema
+
+El CLI de shadcn no completa `init` en este entorno sin TTY: la versión actual escribe `components.json` y después falla con «Could not load the workspace config»; la versión anterior pide confirmación interactiva para reinstalar componentes.
+
+### Decisión
+
+- Mantener `components.json` con `style: new-york`, Tailwind 4 y alias `@/*`.
+- Copiar el código canónico de shadcn para `button`, `card`, `input` y `label`, con `clsx`, `tailwind-merge`, `class-variance-authority`, `@radix-ui/react-slot` y `@radix-ui/react-label`.
+- Definir el tema en `src/index.css` con variables oklch y primario verde (Cesta); sin modo oscuro en el MVP.
+- Usar `new-york` (compatible con Tailwind 4) para que futuras incorporaciones mantengan el mismo estilo que estos componentes.
+
+### Justificación
+
+- shadcn/ui se basa en copiar componentes; el CLI no es un requisito en ejecución.
+- Evita depender de prompts, de un TTY y de un fallo del CLI.
+- Los componentes quedan versionados, revisables y sin dependencia de una librería UI empaquetada.
+
+### Alternativas
+
+- `--force` / `--legacy-peer-deps`: no resuelve los prompts ni el error de workspace.
+- MUI, Chakra u otra librería empaquetada: descartadas por stack, peso y estilo.
+- Dejar el frontend sin shadcn: incumple el stack acordado.
+
+---
+
 ## 2026-10-25 — Backend plano gestionado con uv
 
 ### Problema

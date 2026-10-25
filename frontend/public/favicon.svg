@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cesta">
+  <rect width="64" height="64" rx="14" fill="#15803d" />
+  <path
+    d="M16 25h32l-3.5 21h-25L16 25Z"
+    fill="none"
+    stroke="#f0fdf4"
+    stroke-width="4"
+    stroke-linejoin="round"
+  />
+  <path d="M24 25c0-7 3.6-11 8-11s8 4 8 11" fill="none" stroke="#f0fdf4" stroke-width="4" />
+  <path d="M26 33v8M32 33v8M38 33v8" stroke="#f0fdf4" stroke-width="3" stroke-linecap="round" />
+</svg>

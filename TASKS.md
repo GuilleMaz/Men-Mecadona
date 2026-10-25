@@ -1,6 +1,6 @@
 # TASKS.md — Cesta
 
-> **Estado global:** F0 en curso. F0.1 y F0.2 completadas.
+> **Estado global:** F0 en curso. F0.1, F0.2 y F0.3 completadas.
 > **Última actualización:** 2026-10-25
 > **Plan de referencia:** `PLAN.md`
 
@@ -38,7 +38,7 @@
   - Configurar CORS solo para `http://localhost:5173` en desarrollo.
   - **DoD:** `uv run uvicorn app.main:app --reload` responde `{"status":"ok"}`; `uv run pytest`, `ruff` y `mypy` **pasan en verde**.
 
-- [ ] **F0.3 — Frontend mínimo y tooling**
+- [x] **F0.3 — Frontend mínimo y tooling**
   - Inicializar Vite + React + TypeScript.
   - Instalar Tailwind CSS, shadcn/ui, TanStack Query, React Router, React Hook Form, Zod, Lucide.
   - Dev: Vitest, Testing Library, MSW, ESLint, Prettier.

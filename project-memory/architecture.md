@@ -26,7 +26,23 @@ MERCADONA/
 │   │   ├── services/        # pendiente F0.4+
 │   │   └── data/            # pendiente F2 (ingredients.yaml, dishes.yaml)
 │   └── tests/
-├── frontend/                # reservado; se inicializa en F0.3
+├── frontend/
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── components.json      # shadcn/ui (style new-york, Tailwind 4)
+│   ├── vite.config.ts       # alias @/*, Tailwind, proxy /api, Vitest
+│   ├── eslint.config.js
+│   ├── .prettierrc.json
+│   └── src/
+│       ├── main.tsx         # QueryClient + BrowserRouter
+│       ├── App.tsx          # rutas
+│       ├── index.css        # Tailwind 4 + tema shadcn/ui
+│       ├── components/
+│       │   ├── layout/AppLayout.tsx
+│       │   └── ui/          # button, card, input, label
+│       ├── pages/           # MenuPage, DishesPage, SettingsPage, NotFoundPage
+│       ├── lib/utils.ts
+│       └── test/            # setup, servidor MSW, render-app
 ├── scripts/                 # reservado; primer script en F0.5
 ├── run.ps1                  # pendiente F0.7
 └── check.ps1                # pendiente F0.9
@@ -37,7 +53,7 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** formulario de creación, rejilla de menú, lista de la compra, catálogo de platos y ajustes. Pendiente (F0.3).
+- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario placeholder de personas/días/presupuesto y páginas de Platos y Ajustes. Implementado el esqueleto (F0.3); la lógica de menú llega en F4.
 - **FastAPI:** API REST, validación Pydantic, orquestación de servicios. Implementado el esqueleto y `/api/health`.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Constantes `POSTAL_CODE="22002"` y `EXPECTED_WAREHOUSE="4389"`.
 - **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición.
@@ -55,6 +71,21 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 3. Generación de menú.
 4. Recálculo de costes y lista de la compra.
 5. Exportación de menú/lista.
+
+## Frontend
+
+Rutas:
+
+- `/` — crear menú (formulario placeholder; generación real en F4).
+- `/dishes` — catálogo de platos (F2).
+- `/settings` — exclusiones, alérgenos, despensa y sync (F1/F2).
+- `*` — página no encontrada.
+
+Tooling:
+
+- Vite 8 con alias `@/*`, tailwind plugin y proxy `/api` → `http://127.0.0.1:8000`.
+- Vitest 5 + jsdom + Testing Library + MSW 3 (sin red real; `onUnhandledFrame: 'error'`).
+- ESLint 10 plano + Prettier 3; TypeScript 6 con `strict` y `noUncheckedIndexedAccess`.
 
 ## APIs
 

@@ -8,14 +8,14 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F0 en curso. F0.1 (estructura) y F0.2 (backend mínimo) completadas.
-- **Código de aplicación:** backend mínimo con FastAPI, `/api/health`, configuración y motor SQLite. Sin modelos, migraciones ni servicios todavía.
-- **Frontend:** solo el directorio reservado; se inicializa en F0.3.
+- **Fase:** F0 en curso. F0.1 (estructura), F0.2 (backend mínimo) y F0.3 (frontend mínimo) completadas.
+- **Código de aplicación:** backend mínimo con FastAPI, `/api/health`, configuración y motor SQLite. Frontend con layout en español, navegación Menú/Platos/Ajustes y formulario placeholder.
+- **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
 - **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`.
 - **Memoria:** inicializada y actualizada.
 - **Auditorías:** arquitectura, coherencia y cobertura completadas; verificación final aplicada.
 - **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad.
-- **Calidad backend:** Ruff, mypy (strict) y pytest en verde (14 tests).
+- **Calidad:** backend con Ruff, mypy (strict) y 14 tests; frontend con ESLint, Prettier, TypeScript estricto, 6 tests y build de producción.
 - **Última actualización:** 2026-10-25.
 
 ## Tecnologías
@@ -50,10 +50,11 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - Auditoría documental completada y correcciones aplicadas.
 - F0.1: estructura de repositorio, `.gitignore`, `.env.example`, git inicializado.
 - F0.2: backend mínimo (FastAPI + uv), `GET /api/health`, configuración validada, motor SQLite con PRAGMA, CORS solo en desarrollo y tooling de calidad.
+- F0.3: frontend mínimo (Vite + React + TypeScript), Tailwind 4, shadcn/ui, navegación Menú/Platos/Ajustes, formulario placeholder con Zod, Vitest + Testing Library + MSW, ESLint + Prettier y build de producción.
 
 ## Pendientes
 
-- F0.3-F0.10: frontend, cliente Mercadona, spikes de catálogo y OR-Tools, `run.ps1`, seguridad local, scripts de calidad y smoke tests.
+- F0.4-F0.10: cliente Mercadona, spikes de catálogo y OR-Tools, `run.ps1`, seguridad local, scripts de calidad y smoke test de `/api/health` en la UI.
 - F1: catálogo y sync.
 - F2: ingredientes, platos, alérgenos y preferencias.
 - F3: coste puro y preview.

@@ -1,0 +1,49 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# --- Build / empaquetado ---
+build/
+dist/
+*.whl
+
+# --- Entorno ---
+.env
+.env.*
+!.env.example
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+.vite/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# --- SQLite y datos locales ---
+# La base vive en %LOCALAPPDATA%\Cesta; nunca se versiona.
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# --- Sistema / editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

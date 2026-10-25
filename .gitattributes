@@ -1,0 +1,12 @@
+# Normaliza finales de línea para evitar ruido entre Windows y otros equipos.
+* text=auto eol=lf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary

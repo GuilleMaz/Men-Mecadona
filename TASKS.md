@@ -1,6 +1,6 @@
 # TASKS.md — Cesta
 
-> **Estado global:** F0 en curso. F0.1, F0.2 y F0.3 completadas.
+> **Estado global:** F0 en curso. F0.1, F0.2, F0.3 y F0.4 completadas.
 > **Última actualización:** 2026-10-25
 > **Plan de referencia:** `PLAN.md`
 
@@ -46,7 +46,7 @@
   - Página de inicio con formulario placeholder.
   - **DoD:** `npm run dev` muestra la app; `npm run test`, `lint` y `build` funcionan.
 
-- [ ] **F0.4 — Cliente Mercadona mínimo**
+- [x] **F0.4 — Cliente Mercadona mínimo**
   - Implementar `MercadonaClient` con httpx.
   - Fijar CP 22002 con `PUT /api/postal-codes/actions/change-pc/`.
   - Leer `x-customer-wh` y validar `4389`.

@@ -2,17 +2,23 @@
 
 ## Estado
 
-F0 en curso. F0.1 (estructura), F0.2 (backend mínimo) y F0.3 (frontend mínimo) cerradas. Backend: Ruff, mypy strict y 14 tests en verde. Frontend: ESLint, Prettier, TypeScript estricto, 6 tests y build en verde; `npm run dev` sirve la app en `http://localhost:5173`.
+F0 en curso. F0.1 (estructura), F0.2 (backend mínimo), F0.3 (frontend mínimo) y F0.4 (cliente Mercadona) cerradas. Backend: Ruff, mypy strict y 22 tests en verde; frontend: ESLint, Prettier, TypeScript estricto, 6 tests y build en verde. Cliente validado contra la API real: 26 secciones, 152 subcategorías, almacén 4389 y CP 22002.
 
 ## Alta prioridad
 
-- F0.4: cliente Mercadona mínimo para CP 22002 / almacén 4389.
-- F0.5: spike del catálogo con umbrales y informe.
+- F0.5: spike del catálogo completo con concurrencia 4, umbrales e informe en `decisions.md`.
 - F0.6: spike de OR-Tools en Windows/Python 3.13; decidir un único solver antes de F4.
-- F0.7: `run.ps1` y base de datos en `%LOCALAPPDATA%\Cesta` (el motor y los PRAGMA ya existen en `app/db.py`, falta el arranque y la creación explícita).
-- F0.8: seguridad local básica (bind, CORS, Host). CORS de desarrollo ya está limitado a `http://localhost:5173`.
-- F0.9: scripts de calidad agregados (backend + frontend).
+- F0.7: `run.ps1` y creación explícita de la base en `%LOCALAPPDATA%\Cesta` (motor y PRAGMA ya existen).
+- F0.8: seguridad local básica (bind a 127.0.0.1, validación de `Host`, CORS ya limitado).
+- F0.9: scripts de calidad agregados (backend + frontend + scripts).
 - F0.10: smoke test de `/api/health` en frontend (MSW ya está configurado).
+
+## Notas de la API de Mercadona (2026-10-25)
+
+- `/api/categories/` devuelve un sobre `{count,next,previous,results}`; hoy 26 secciones y 152 subcategorías en una sola página.
+- El detalle de una subcategoría trae `products` vacío y los productos dentro de `categories[].products` (los ids hijos no son consultables por separado: devuelven 404).
+- El producto usa `display_name` (no `name`); `unit_price` es el precio del paquete y `bulk_price` el precio por unidad base (5 L → 17,25 € frente a 3,45 €/L).
+- La subcategoría 112 (`Aceite, vinagre y sal`) tiene 4 grupos y 38 productos.
 
 ## Prioridad media
 
@@ -57,5 +63,5 @@ F0 en curso. F0.1 (estructura), F0.2 (backend mínimo) y F0.3 (frontend mínimo)
 
 ## Siguiente acción recomendada
 
-1. F0.4: `MercadonaClient` con CP 22002, validación de almacén 4389 y fixtures sintéticas.
-2. F0.5-F0.6: spikes de catálogo y OR-Tools antes de comprometer F3/F4.
+1. F0.5: `scripts/spike_catalog.py` con concurrencia 4, métricas del catálogo y umbrales (≥20 secciones, ≥100 subcategorías, ≥3.000 productos).
+2. F0.6: spike de OR-Tools con el modelo toy antes de comprometer F4.

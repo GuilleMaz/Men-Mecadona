@@ -1,0 +1,32 @@
+{
+  "count": 1,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 12,
+      "name": "Aceite, especias y salsas",
+      "order": 1,
+      "is_extended": false,
+      "icon_url": "https://example.invalid/icon.svg",
+      "categories": [
+        {
+          "id": 112,
+          "name": "Aceite, vinagre y sal",
+          "order": 1,
+          "layout": "horizontal",
+          "published": true,
+          "is_extended": false
+        },
+        {
+          "id": 113,
+          "name": "Especias",
+          "order": 2,
+          "layout": "horizontal",
+          "published": true,
+          "is_extended": false
+        }
+      ]
+    }
+  ]
+}

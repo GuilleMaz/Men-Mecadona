@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-10-25 — F0.4: cliente Mercadona mínimo
+
+### Cambios
+
+- `MercadonaClient` asíncrono con httpx: fija el CP 22002, valida `x-customer-wh=4389` y reutiliza cookies de sesión.
+- Reintentos con tenacity ante transporte, 429 y 5xx (3 intentos); errores de dominio con códigos `WAREHOUSE_UNAVAILABLE`, `MERCADONA_UNAVAILABLE`, `MERCADONA_HTTP_ERROR` y `MERCADONA_INVALID_RESPONSE`.
+- `get_sections()` sigue la paginación de `/api/categories/`; `get_subcategory(id)` descarga grupos y productos. `wh=4389` se mantiene en todas las páginas.
+- DTOs Pydantic tolerantes (`extra="ignore"`) en `app/schemas/mercadona.py`; precios como texto para normalizar en F1.3; sin `raw_json`.
+- Fixtures sintéticas mínimas: 1 sección, 2 subcategorías y 3 productos (incluido un pack 6 × 125 g y un grupo vacío).
+- 8 tests nuevos con respx: flujo completo, paginación, almacén incorrecto/ausente, reintentos agotados, 404 y respuesta inválida.
+- Script `scripts/check_mercadona.py` y sección de uso en `backend/README.md`.
+
+### Verificación
+
+- `uv run ruff check .` y `uv run ruff format --check .`: OK.
+- `uv run mypy app`: OK (strict, 11 archivos).
+- `uv run pytest`: 22 passed.
+- Script real contra Mercadona: 26 secciones, 152 subcategorías, almacén 4389, CP 22002, 38 productos en la subcategoría 112 y producto parseado `Aceite de oliva 0,4º Hacendado` (17,25 € el paquete de 5 L).
+
+### Archivos
+
+- `backend/app/schemas/mercadona.py`
+- `backend/app/services/{__init__,mercadona_client}.py`
+- `backend/tests/test_mercadona_client.py`
+- `backend/tests/fixtures/mercadona/{categories,subcategory_112}.json`
+- `backend/README.md`
+- `scripts/check_mercadona.py`
+- `TASKS.md`
+- `project-memory/**`
+
+### Motivo
+
+- Validar el acceso a Mercadona y el almacén 4389 antes de diseñar el catálogo persistente y la sync de F1.
+
 ## 2026-10-25 — F0.3: frontend mínimo y tooling
 
 ### Cambios

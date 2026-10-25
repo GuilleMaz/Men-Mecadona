@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-10-25 — Cliente Mercadona asíncrono y fail-closed
+
+### Problema
+
+Había que validar el acceso real a Mercadona antes de diseñar el catálogo persistente, sin acoplar el cliente a un JSON cambiante ni permitir precios de otro almacén.
+
+### Decisión
+
+- `httpx.AsyncClient` con una sesión por cliente; el CP 22002 se fija con `PUT /api/postal-codes/actions/change-pc/` en la primera petición.
+- El almacén se valida por la cabecera `x-customer-wh`; si no es `4389`, se lanza `WarehouseUnavailableError` y no se descarga catálogo.
+- Se sigue la paginación de `/api/categories/` con `next`; todas las URLs de catálogo llevan `wh=4389` conservando el resto de parámetros.
+- Reintentos con tenacity solo en errores de transporte, 429 y 5xx; los 4xx no se reintentan.
+- DTOs Pydantic con `extra="ignore"` y precios como texto: la normalización a céntimos corresponde a F1.3.
+- Fixtures sintéticas en los tests; la API real solo se consulta desde un script manual.
+
+### Justificación
+
+- La concurrencia 4 de F1.4 encaja con un cliente asíncrono.
+- Un fallo de almacén debe bloquear la generación de menús, no degradarse con precios de otra zona.
+- Ignorar campos desconocidos evita romper el cliente si Mercadona añade metadatos.
+- No duplicar la normalización de precios mantiene una única fuente de conversión.
+
+### Alternativas
+
+- Cliente síncrono: suficiente para F0.4 pero obligaría a rehacerlo en F1.4.
+- Descargar el catálogo completo en F0.4: fuera de alcance y prohibido en tests.
+- Parsear precios en el cliente: duplicaría la lógica de F1.3.
+- Reintentar también 4xx: oculta errores de contrato y multiplica llamadas.
+
+---
+
 ## 2026-10-25 — shadcn/ui por copia, sin CLI interactivo
 
 ### Problema

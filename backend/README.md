@@ -22,3 +22,15 @@ uv run pytest
 
 La base de datos vive en `%LOCALAPPDATA%\Cesta\cesta.db` (o en `CESTA_DATA_DIR`),
 fuera de OneDrive. Los YAML de ingredientes y platos irán en `app/data/`.
+
+## Cliente Mercadona (F0.4)
+
+```powershell
+uv run python ..\scripts\check_mercadona.py
+```
+
+Fija el CP 22002, exige que la API confirme el almacén 4389 y muestra el número de
+secciones y subcategorías, además de un producto parseado de una subcategoría. No
+descarga el catálogo completo ni guarda respuestas.
+
+Los tests usan fixtures sintéticas y `respx`: **nunca** llaman a Mercadona.

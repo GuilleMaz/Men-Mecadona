@@ -41,6 +41,17 @@ def test_relative_data_dir_is_rejected() -> None:
         Settings(_env_file=None, cesta_data_dir=Path("datos"))
 
 
+def test_data_dir_inside_onedrive_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError, match="OneDrive"):
+        Settings(_env_file=None, cesta_data_dir=tmp_path / "OneDrive" / "Cesta")
+
+
+def test_allowed_hosts_are_local_only() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.allowed_hosts == frozenset({"127.0.0.1", "localhost", "::1"})
+
+
 def test_cors_only_in_development() -> None:
     development = Settings(_env_file=None, app_env="development")
     production = Settings(_env_file=None, app_env="production")

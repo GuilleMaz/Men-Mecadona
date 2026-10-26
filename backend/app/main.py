@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import health
 from app.config import APP_NAME, APP_VERSION, Settings, get_settings
+from app.security import HostValidationMiddleware
 
 API_PREFIX = "/api"
 
@@ -13,6 +14,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """Construye la aplicación FastAPI.
 
     CORS solo se activa en desarrollo y solo para el origen del servidor de Vite.
+    Todas las peticiones pasan por la validación de `Host` local.
     """
     resolved = settings or get_settings()
     application = FastAPI(
@@ -33,6 +35,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
             allow_headers=["*"],
         )
+
+    # Se añade después de CORS para que la validación de Host sea la capa más externa.
+    application.add_middleware(
+        HostValidationMiddleware,
+        allowed_hosts=resolved.allowed_hosts,
+    )
 
     application.include_router(health.router, prefix=API_PREFIX)
     return application

@@ -7,6 +7,8 @@ MERCADONA/
 ├── PLAN.md
 ├── TASKS.md
 ├── AGENTS.md
+├── README.md
+├── SECURITY.md
 ├── .env.example
 ├── .gitignore
 ├── project-memory/
@@ -17,15 +19,16 @@ MERCADONA/
 │   ├── README.md
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── main.py          # create_app(), CORS de desarrollo, prefijo /api
+│   │   ├── main.py          # create_app(), CORS de desarrollo, Host, prefijo /api
 │   │   ├── config.py        # Settings, ruta de datos, CP 22002 / almacén 4389
 │   │   ├── db.py            # motor SQLite, PRAGMA, Base, sesiones
+│   │   ├── security.py      # allowlist de Host local
 │   │   ├── api/             # routers (health.py)
 │   │   ├── schemas/         # health.py, mercadona.py (DTOs de la API)
 │   │   ├── models/          # pendiente F1
 │   │   ├── services/        # mercadona_client.py (pricing/optimizer/menu pendientes)
 │   │   └── data/            # pendiente F2 (ingredients.yaml, dishes.yaml)
-│   └── tests/               # API, config, db y cliente Mercadona + fixtures
+│   └── tests/               # API, config, db, seguridad y cliente Mercadona + fixtures
 ├── frontend/
 │   ├── package.json
 │   ├── package-lock.json
@@ -39,13 +42,15 @@ MERCADONA/
 │       ├── index.css        # Tailwind 4 + tema shadcn/ui
 │       ├── components/
 │       │   ├── layout/AppLayout.tsx
+│       │   ├── layout/BackendStatus.tsx
 │       │   └── ui/          # button, card, input, label
 │       ├── pages/           # MenuPage, DishesPage, SettingsPage, NotFoundPage
 │       ├── lib/utils.ts
-│       └── test/            # setup, servidor MSW, render-app
-├── scripts/                 # check_mercadona.py, spike_catalog.py
-├── run.ps1                  # pendiente F0.7
-└── check.ps1                # pendiente F0.9
+│       └── test/            # setup, servidor MSW con /api/health, render-app
+├── scripts/                 # check_mercadona.py, spike_catalog.py, spike_ortools.py, init_db.py
+├── run.ps1                  # backend + frontend, SQLite fuera de OneDrive
+├── check.ps1                # lint + tipos + tests + build
+└── finish-phase.ps1         # calidad + commit + push a GitHub
 ```
 
 `backend/app` es un paquete plano (no se distribuye): `uv` usa `package = false` y
@@ -53,9 +58,10 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario placeholder de personas/días/presupuesto y páginas de Platos y Ajustes. Implementado el esqueleto (F0.3); la lógica de menú llega en F4.
-- **FastAPI:** API REST, validación Pydantic, orquestación de servicios. Implementado el esqueleto y `/api/health`.
-- **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Constantes `POSTAL_CODE="22002"` y `EXPECTED_WAREHOUSE="4389"`.
+- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario placeholder de personas/días/presupuesto, páginas de Platos y Ajustes e indicador de estado de la API (`BackendStatus` con TanStack Query). Implementado el esqueleto (F0.3/F0.10); la lógica de menú llega en F4.
+- **FastAPI:** API REST, validación Pydantic, orquestación de servicios. Implementado el esqueleto, `/api/health` y la validación de `Host`.
+- **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Rechaza rutas dentro de OneDrive. Constantes `POSTAL_CODE="22002"`, `EXPECTED_WAREHOUSE="4389"` y `LOCAL_HOSTS`.
+- **Seguridad (`app/security.py`):** `HostValidationMiddleware` acepta solo `127.0.0.1`, `localhost` y `::1`; el resto devuelve `400 INVALID_HOST`.
 - **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición.
 - **MercadonaClient:** cliente asíncrono implementado (F0.4); fija CP 22002, valida almacén 4389, descarga secciones y subcategorías. Ver sección propia y el informe del spike en `decisions.md`.
 - **CatalogSyncService:** sync por subcategoría, estado parcial, disponibilidad y errores. Pendiente (F1).
@@ -63,6 +69,7 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 - **OptimizerService:** CP-SAT en dos etapas con presupuesto duro. Pendiente (F4).
 - **MenuService:** persistencia de menús, bloqueos, cambios, regeneración y lista. Pendiente (F4).
 - **SeedService:** carga idempotente y validación de ingredientes, productos y platos. Pendiente (F2).
+- **Operación local:** `run.ps1` resuelve `CESTA_DATA_DIR`, inicializa la base, arranca backend y frontend y limpia procesos; `scripts/init_db.py` crea el SQLite con sus PRAGMA; `check.ps1` agrega toda la calidad; `finish-phase.ps1` cierra la fase con commit y push tras validar `check.ps1` y rechazar archivos prohibidos.
 
 ## Servicios
 
@@ -121,11 +128,14 @@ Prefijo `/api`:
 - `/menus/{id}/shopping-list`
 - `/menus/{id}/export`
 
+Los errores usan el sobre `{"error": {"code", "message", "details"}}`; `INVALID_HOST`
+(400) cubre una cabecera `Host` no local.
+
 ## Base de Datos
 
 SQLite en `%LOCALAPPDATA%\Cesta\cesta.db`, modo WAL, `foreign_keys=ON`, `busy_timeout=5000`.
 
-Implementado (F0.2): motor, PRAGMA por conexión, `Base` declarativa y sesión por petición. Las tablas y migraciones llegan en F1.1/F1.2.
+Implementado (F0.2/F0.7): motor, PRAGMA por conexión, `Base` declarativa, sesión por petición, rechazo de rutas en OneDrive y `scripts/init_db.py` para crear el archivo. Las tablas y migraciones llegan en F1.1/F1.2.
 
 Tablas principales:
 
@@ -139,7 +149,7 @@ No hay `price_snapshots` ni `raw_json` persistente en el MVP.
 
 ## Dependencias Críticas
 
-- OR-Tools CP-SAT para el optimizador (verificado: 9.15 instala en Windows/Python 3.13; spike F0.6 pendiente).
+- OR-Tools CP-SAT para el optimizador (validado en F0.6: 9.15.6755 resuelve el toy de 28 huecos en 3,46-3,47 s con un worker).
 - httpx + tenacity para la API de Mercadona (cliente implementado en F0.4).
 - SQLAlchemy + Alembic para persistencia y migraciones.
 - React + TanStack Query para la UI.
@@ -180,3 +190,5 @@ React UI
 - `plan_purchase` es la función canónica de compra y se comparte entre preview y lista final.
 - `used`/`leftover` se calculan después de resolver.
 - `price_status` es independiente de `status` de generación.
+- La API valida la cabecera `Host`; un host desconocido devuelve `400 INVALID_HOST`.
+- La base SQLite se rechaza si `CESTA_DATA_DIR` apunta dentro de OneDrive.

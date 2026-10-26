@@ -1,8 +1,8 @@
 # AGENTS.md — Cesta
 
 > Guía operativa para agentes que trabajen en este repositorio.
-> **Estado actual:** documentación consolidada tras auditoría. No hay código de aplicación.
-> **Última actualización:** 2026-10-25
+> **Estado actual:** F0 completada el 2026-10-26 (F0.1-F0.10). Siguiente fase: F1.
+> **Última actualización:** 2026-10-26
 
 ---
 
@@ -113,6 +113,7 @@ MERCADONA/
 ├── scripts/
 ├── run.ps1
 ├── check.ps1
+├── finish-phase.ps1
 └── .env.example
 ```
 
@@ -142,7 +143,15 @@ npm run build
 # Todo
 .\run.ps1
 .\run.ps1 -Prod
+
+# Calidad y cierre de fase
+.\check.ps1
+.\finish-phase.ps1 -Phase F0 -Summary "fundaciones y spikes"
 ```
+
+`finish-phase.ps1` es el gate de cierre: ejecuta `check.ps1`, rechaza secretos,
+bases de datos y dependencias, hace el commit `FASE: resumen` y lo sube a GitHub.
+No se cierra una fase sin este paso salvo que el usuario lo impida explícitamente.
 
 Si PowerShell bloquea el script:
 
@@ -324,6 +333,7 @@ Al terminar una tarea:
 3. Si hubo decisión técnica, `decisions.md`.
 4. Si cambió la estructura, `architecture.md`.
 5. Marcar la tarea en `TASKS.md`.
+6. Cerrar la fase con `.\finish-phase.ps1 -Phase Fx -Summary "..."`.
 
 No dupliques información: `PLAN.md` alcance, `TASKS.md` ejecución, `project-memory` estado.
 
@@ -338,7 +348,8 @@ No dupliques información: `PLAN.md` alcance, `TASKS.md` ejecución, `project-me
 5. Añadir tests.
 6. Ejecutar lint, tipos y tests.
 7. Actualizar `TASKS.md` y `project-memory`.
-8. Reportar qué se hizo, qué se verificó y qué queda.
+8. Cerrar la fase con `.\finish-phase.ps1 -Phase Fx -Summary "..."`.
+9. Reportar qué se hizo, qué se verificó, el commit y qué queda.
 
 Reglas:
 
@@ -348,6 +359,7 @@ Reglas:
 - No dejar TODOs sin registrar en `next-steps.md`.
 - No commitear secretos, base de datos ni `node_modules`.
 - No usar `git` para descartar cambios del usuario.
+- No cerrar una fase sin commit y push a GitHub, salvo bloqueo explícito del usuario.
 
 ---
 
@@ -363,7 +375,8 @@ Una tarea está terminada cuando:
 - no hay telemetría ni llamadas externas no declaradas;
 - `TASKS.md` está actualizado;
 - `project-memory/changelog.md` y `next-steps.md` están actualizados;
-- el README o la documentación reflejan cambios relevantes.
+- el README o la documentación reflejan cambios relevantes;
+- la fase está commiteada y subida a GitHub con `finish-phase.ps1`, o existe un bloqueo explícito documentado.
 
 ---
 

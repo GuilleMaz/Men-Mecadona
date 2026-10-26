@@ -1,6 +1,7 @@
 import { CalendarDays, Settings, UtensilsCrossed } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router';
 
+import { BackendStatus } from '@/components/layout/BackendStatus';
 import { cn } from '@/lib/utils';
 
 const navigation = [
@@ -18,30 +19,33 @@ export function AppLayout() {
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">Cesta</p>
             <p className="text-lg font-semibold">Menús de comida y cena</p>
           </div>
-          <nav aria-label="Navegación principal">
-            <ul className="flex flex-wrap gap-1">
-              {navigation.map(({ to, label, icon: Icon, end }) => (
-                <li key={to}>
-                  <NavLink
-                    to={to}
-                    end={end}
-                    className={({ isActive }) =>
-                      cn(
-                        'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      )
-                    }
-                  >
-                    <Icon aria-hidden="true" className="size-4" />
-                    {label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <div className="flex flex-wrap items-center gap-3">
+            <BackendStatus />
+            <nav aria-label="Navegación principal">
+              <ul className="flex flex-wrap gap-1">
+                {navigation.map(({ to, label, icon: Icon, end }) => (
+                  <li key={to}>
+                    <NavLink
+                      to={to}
+                      end={end}
+                      className={({ isActive }) =>
+                        cn(
+                          'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          isActive
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                        )
+                      }
+                    >
+                      <Icon aria-hidden="true" className="size-4" />
+                      {label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
         </div>
       </header>
 

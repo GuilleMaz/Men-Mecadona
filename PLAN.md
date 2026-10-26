@@ -673,6 +673,7 @@ Prefijo `/api`. Errores homogéneos:
 | `PRODUCT_UNAVAILABLE` | 409 | Producto necesario no disponible |
 | `SOLVER_TIMEOUT` | 200 | Estado `timeout`; si hay mejor esfuerzo se persiste como `feasible` con `timed_out=true` |
 | `NOT_FOUND` | 404 | Menú, entrada, producto o plato inexistente |
+| `INVALID_HOST` | 400 | Cabecera `Host` fuera de la allowlist local |
 | `VALIDATION_ERROR` | 422 | Entrada inválida, sobre homogéneo |
 
 ---

@@ -1,5 +1,68 @@
 # Changelog
 
+## 2026-10-26 — Pipeline de cierre de fase
+
+### Cambios
+
+- `finish-phase.ps1`: gate único de cierre. Ejecuta `check.ps1`, rechaza archivos
+  prohibidos, crea el commit `FASE: resumen` y hace push al remoto.
+- `AGENTS.md`: flujo de trabajo, comandos, DoD y prohibiciones actualizados para
+  exigir commit y push al cerrar cada fase.
+- `TASKS.md`: convención de cierre y uso obligatorio de `finish-phase.ps1`.
+- `README.md`: sección de cierre de fase.
+- `project-memory/decisions.md`: decisión y alternativas del pipeline.
+
+### Verificación
+
+- Pendiente de la primera ejecución del pipeline sobre F0.
+
+### Archivos
+
+- `finish-phase.ps1`
+- `AGENTS.md`, `TASKS.md`, `README.md`
+- `project-memory/**`
+
+### Motivo
+
+- Evitar que una fase quede sin commit o sin subir a GitHub y convertir la calidad
+  y la trazabilidad en un paso obligatorio del flujo.
+
+## 2026-10-26 — F0.6-F0.10: cierre de F0
+
+### Cambios
+
+- `scripts/spike_ortools.py`: modelo toy CP-SAT con 28 huecos, 60 platos, 120 ingredientes y 240 paquetes; demanda dependiente de la selección, despensa, presupuesto duro, mínimos diarios, dos bloqueos y variedad en dos etapas. Fija `num_search_workers=1` y semilla 42, valida la solución y mide tiempos.
+- `run.ps1`: resuelve `CESTA_DATA_DIR` (por defecto `%LOCALAPPDATA%\Cesta`), rechaza OneDrive, inicializa la base, arranca backend en `127.0.0.1:8000`, espera salud, arranca Vite en `localhost:5173` y limpia el árbol de procesos al salir.
+- `scripts/init_db.py`: crea el archivo SQLite y comprueba WAL, `foreign_keys=ON` y `busy_timeout=5000` fuera de OneDrive.
+- `backend/app/config.py`: rechaza `CESTA_DATA_DIR` dentro de OneDrive y expone la allowlist de hosts locales.
+- `backend/app/security.py` y `backend/app/main.py`: `HostValidationMiddleware` para `127.0.0.1`, `localhost` y `::1`, con `400 INVALID_HOST` homogéneo.
+- `check.ps1`: lint, formato, tipos, tests y build de backend, scripts y frontend en un comando.
+- Frontend: `BackendStatus` consulta `/api/health` con TanStack Query y muestra «API conectada»/«API no disponible»; handler MSW por defecto y tests de éxito, error y respuesta inválida.
+- Documentación: `README.md`, `SECURITY.md`, actualización de `backend/README.md` y `frontend/README.md`, y código `INVALID_HOST` en `PLAN.md` §10.4.
+- `scripts/spike_catalog.py` se reformatea con Ruff (sin cambios funcionales) para que `check.ps1` valide también los scripts.
+- Tests nuevos: 22 de seguridad/Host, 2 de configuración de OneDrive/allowed hosts y 4 de frontend de estado de la API.
+
+### Verificación
+
+- `.\check.ps1`: Ruff, formato, mypy, 50 tests de backend, ESLint, Prettier, TypeScript, 10 tests de frontend y build: todo en verde (28,0 s).
+- Spike OR-Tools, 3 repeticiones: etapa 1 `OPTIMAL` con 0 violaciones en 0,28-0,29 s; etapa 2 `FEASIBLE` con ticket 333,18 € (presupuesto 358,16 €) en 3,00 s; total 3,46-3,47 s; validación completa OK. DoD <10 s: APTO.
+- `.\run.ps1`: UI 200, `/api/health` directo y a través del proxy de Vite 200; base creada en `C:\Users\guill\AppData\Local\Cesta\cesta.db` con WAL, `foreign_keys=1` y `busy_timeout=5000`.
+- `.\run.ps1` detiene backend y frontend sin dejar puertos 8000/5173 escuchando.
+
+### Archivos
+
+- `run.ps1`, `check.ps1`, `README.md`, `SECURITY.md`, `.env.example`
+- `scripts/init_db.py`, `scripts/spike_ortools.py`
+- `backend/app/config.py`, `backend/app/main.py`, `backend/app/security.py`
+- `backend/tests/test_config.py`, `backend/tests/test_cors.py`, `backend/tests/test_health.py`, `backend/tests/test_security.py`
+- `frontend/src/components/layout/AppLayout.tsx`, `frontend/src/components/layout/BackendStatus.tsx`, `frontend/src/components/layout/BackendStatus.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/pages/MenuPage.tsx`, `frontend/src/pages/MenuPage.test.tsx`, `frontend/src/test/server.ts`
+- `backend/README.md`, `frontend/README.md`, `PLAN.md`
+- `AGENTS.md`, `TASKS.md`, `project-memory/**`
+
+### Motivo
+
+- Cerrar F0 con OR-Tools validado, arranque local reproducible, seguridad local básica, scripts de calidad y smoke test de `/api/health` antes de iniciar F1.
+
 ## 2026-10-25 — F0.5: spike del catálogo
 
 ### Cambios

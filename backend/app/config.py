@@ -26,6 +26,8 @@ EXPECTED_WAREHOUSE = "4389"
 DEV_CORS_ORIGINS: tuple[str, ...] = ("http://localhost:5173",)
 #: Entornos que habilitan CORS para el frontend de desarrollo.
 DEV_ENVIRONMENTS: frozenset[str] = frozenset({"local", "development", "dev", "test"})
+#: Hosts locales permitidos. El puerto se ignora al validar la cabecera Host.
+LOCAL_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "localhost", "::1"})
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND_DIR.parent
@@ -48,7 +50,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _resolve_data_dir(self) -> Self:
-        """Resuelve el directorio de datos y rechaza rutas relativas."""
+        """Resuelve el directorio de datos, rechaza rutas relativas y OneDrive."""
         if self.cesta_data_dir is None:
             local_app_data = os.environ.get("LOCALAPPDATA")
             if not local_app_data:
@@ -58,6 +60,9 @@ class Settings(BaseSettings):
             self.cesta_data_dir = Path(local_app_data) / "Cesta"
         elif not self.cesta_data_dir.is_absolute():
             raise ValueError("CESTA_DATA_DIR debe ser una ruta absoluta")
+
+        if any(part.casefold() == "onedrive" for part in self.cesta_data_dir.parts):
+            raise ValueError("CESTA_DATA_DIR no puede estar dentro de OneDrive")
         return self
 
     @property
@@ -85,6 +90,11 @@ class Settings(BaseSettings):
     def cors_origins(self) -> list[str]:
         """CORS solo en desarrollo y solo para el puerto de Vite."""
         return list(DEV_CORS_ORIGINS) if self.is_development else []
+
+    @property
+    def allowed_hosts(self) -> frozenset[str]:
+        """Hosts locales aceptados; cualquier otro Host se rechaza con 400."""
+        return LOCAL_HOSTS
 
 
 @lru_cache(maxsize=1)

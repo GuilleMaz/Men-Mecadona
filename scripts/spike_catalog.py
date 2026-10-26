@@ -124,11 +124,7 @@ async def main() -> int:
 
     async with MercadonaClient() as client:
         sections = await client.get_sections()
-        subcategories = [
-            subcategory
-            for section in sections
-            for subcategory in section.categories
-        ]
+        subcategories = [subcategory for section in sections for subcategory in section.categories]
 
         print("=== Spike del catalogo de Mercadona (F0.5) ===")
         print(f"Almacen confirmado: {client.warehouse}")
@@ -141,8 +137,7 @@ async def main() -> int:
 
         semaphore = asyncio.Semaphore(CONCURRENCY)
         tasks = [
-            download_subcategory(client, semaphore, subcategory)
-            for subcategory in subcategories
+            download_subcategory(client, semaphore, subcategory) for subcategory in subcategories
         ]
         results = await asyncio.gather(*tasks)
 

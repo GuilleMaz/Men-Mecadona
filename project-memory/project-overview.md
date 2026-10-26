@@ -8,16 +8,19 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F0 en curso. F0.1 (estructura), F0.2 (backend mínimo), F0.3 (frontend mínimo), F0.4 (cliente Mercadona) y F0.5 (spike del catálogo) completadas.
-- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite y cliente Mercadona (CP 22002 / almacén 4389). Frontend con layout en español, navegación Menú/Platos/Ajustes y formulario placeholder.
+- **Fase:** F0 completada el 2026-10-26 (F0.1-F0.10). Siguiente fase: F1 (catálogo y sincronización).
+- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host` y cliente Mercadona (CP 22002 / almacén 4389). Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario placeholder e indicador de estado de la API.
 - **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
 - **Integración Mercadona:** catálogo validado (26 secciones, 152/152 subcategorías, 4.291 productos únicos, 100 % precios parseables, 6,37 s con concurrencia 4); tests con fixtures sintéticas y respx, sin red.
-- **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`.
-- **Memoria:** inicializada y actualizada; informe del spike en `decisions.md`.
-- **Auditorías:** arquitectura, coherencia y cobertura completadas; verificación final aplicada.
+- **OR-Tools:** CP-SAT 9.15.6755 validado en Windows/Python 3.13 con un toy de 28 huecos, 60 platos, 120 ingredientes y paquetes: 3,46-3,47 s por ejecución, etapa 1 óptima y etapa 2 factible bajo presupuesto.
+- **Arranque:** `.\run.ps1` arranca backend y frontend, inicializa SQLite fuera de OneDrive y limpia procesos; `.\check.ps1` ejecuta lint, tipos, tests y build.
+- **Cierre de fase:** `.\finish-phase.ps1 -Phase Fx -Summary "..."` ejecuta la calidad, crea el commit de la fase y lo sube a GitHub; `-NoPush` y `-SkipChecks` son escapes documentados.
+- **Seguridad local:** bind a `127.0.0.1`, CORS solo en desarrollo, allowlist de `Host` y rechazo de bases de datos dentro de OneDrive. Checklist en `SECURITY.md`.
+- **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`, `README.md` y `SECURITY.md`.
+- **Memoria:** actualizada con informes de los spikes de catálogo y OR-Tools en `decisions.md`.
 - **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad.
-- **Calidad:** backend con Ruff, mypy (strict) y 26 tests; frontend con ESLint, Prettier, TypeScript estricto, 6 tests y build de producción.
-- **Última actualización:** 2026-10-25.
+- **Calidad:** backend con Ruff, formato, mypy (strict) y 50 tests; frontend con ESLint, Prettier, TypeScript estricto, 10 tests y build de producción.
+- **Última actualización:** 2026-10-26.
 
 ## Tecnologías
 
@@ -54,10 +57,15 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - F0.3: frontend mínimo (Vite + React + TypeScript), Tailwind 4, shadcn/ui, navegación Menú/Platos/Ajustes, formulario placeholder con Zod, Vitest + Testing Library + MSW, ESLint + Prettier y build de producción.
 - F0.4: cliente Mercadona asíncrono con validación de almacén 4389, paginación, reintentos, DTOs, fixtures sintéticas, tests con respx y script de comprobación real.
 - F0.5: spike del catálogo completo con concurrencia 4: 26 secciones, 152/152 subcategorías, 4.291 productos únicos, 100 % precios parseables y 6,37 s; informe en `decisions.md`.
+- F0.6: spike de OR-Tools CP-SAT con 28 huecos, 60 platos, 120 ingredientes y paquetes; 3,46-3,47 s, `num_search_workers=1` y sin cambio de solver.
+- F0.7: `run.ps1`, `scripts/init_db.py` y base SQLite en `%LOCALAPPDATA%\Cesta` con WAL, claves foráneas y busy timeout.
+- F0.8: validación de `Host`, CORS solo en desarrollo y checklist de seguridad local.
+- F0.9: `check.ps1` con lint, formato, tipos, tests y build de backend y frontend.
+- F0.10: indicador de estado del backend en la UI, consumiendo `/api/health`, con MSW en tests.
+- Pipeline de cierre: `finish-phase.ps1` ejecuta la calidad, crea el commit y lo sube a GitHub.
 
 ## Pendientes
 
-- F0.6-F0.10: spike de OR-Tools, `run.ps1`, seguridad local, scripts de calidad y smoke test de `/api/health` en la UI.
 - F1: catálogo y sync.
 - F2: ingredientes, platos, alérgenos y preferencias.
 - F3: coste puro y preview.

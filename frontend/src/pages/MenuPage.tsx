@@ -162,6 +162,7 @@ export function MenuPage() {
       {summary ? (
         <div
           role="status"
+          aria-label="Resumen del menú"
           className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm"
         >
           <CircleCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />

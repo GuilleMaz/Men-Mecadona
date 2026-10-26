@@ -1,7 +1,7 @@
 # TASKS.md — Cesta
 
-> **Estado global:** F0 en curso. F0.1, F0.2, F0.3, F0.4 y F0.5 completadas.
-> **Última actualización:** 2026-10-25
+> **Estado global:** F0 completada el 2026-10-26 (F0.1-F0.10). Siguiente fase: F1.
+> **Última actualización:** 2026-10-26
 > **Plan de referencia:** `PLAN.md`
 
 ## Convenciones
@@ -10,6 +10,7 @@
 - Cada tarea debe tener un resultado verificable.
 - No se pasa a la siguiente fase sin cumplir el **Definition of Done (DoD)** de la actual.
 - Al terminar una tarea: actualizar este archivo y `project-memory/`.
+- Al cerrar una fase: ejecutar `.\finish-phase.ps1 -Phase Fx -Summary "..."`. El script corre `check.ps1`, hace el commit `Fx: resumen` y lo sube a GitHub. No se deja una fase cerrada sin commit y push salvo bloqueo explícito.
 - No se implementan recetas ni pasos de cocina. El dominio usa **platos** (`dishes`).
 - Las estimaciones son orientativas; se reestimarán después de F0.
 
@@ -65,40 +66,47 @@
   - Guardar el informe en `project-memory/decisions.md`.
   - **DoD:** script `scripts/spike_catalog.py` reproducible; umbrales: ≥20 secciones, ≥100 subcategorías, ≥3.000 productos, precios parseables.
 
-- [ ] **F0.6 — Spike de OR-Tools**
+- [x] **F0.6 — Spike de OR-Tools**
   - Instalar OR-Tools en Python 3.13/Windows.
   - Resolver un modelo toy con 28 huecos, 60 platos, 120 ingredientes y paquetes.
   - Medir tiempo y verificar `num_search_workers=1`.
   - Si falla, **elegir un único solver alternativo** (SciPy MILP o PuLP) y registrar la decisión; no mantener dos modelos en paralelo.
   - **DoD:** toy resuelto en <10 s o decisión única de cambio de solver documentada.
+  - **Resultado:** `scripts/spike_ortools.py` resuelve el toy en 3,46-3,47 s (3 repeticiones). Etapa 1 óptima en 0,28-0,29 s; etapa 2 factible (sin prueba de optimalidad dentro de sus 3 s) con ticket 333,18 € y presupuesto 358,16 €. `num_search_workers=1` y semilla fija. OR-Tools 9.15.6755 validado; no se cambia de solver.
 
-- [ ] **F0.7 — Arranque local y base de datos**
+- [x] **F0.7 — Arranque local y base de datos**
   - Crear `run.ps1` para desarrollo (backend + frontend).
   - Resolver `CESTA_DATA_DIR` a ruta absoluta; por defecto `%LOCALAPPDATA%\Cesta`.
   - Crear la base fuera de OneDrive.
   - Configurar SQLite con WAL, `foreign_keys=ON` y `busy_timeout=5000`.
   - Documentar `powershell -ExecutionPolicy Bypass -File .\run.ps1`.
   - **DoD:** `.\run.ps1` arranca ambos servicios; la base se crea fuera de OneDrive.
+  - **Resultado:** `run.ps1` arranca backend y frontend, espera `/api/health` y limpia el árbol de procesos. `scripts/init_db.py` crea `%LOCALAPPDATA%\Cesta\cesta.db` con WAL, `foreign_keys=1` y `busy_timeout=5000`. `Settings` rechaza rutas dentro de OneDrive. Verificado con UI 200 y proxy `/api/health` 200.
 
-- [ ] **F0.8 — Seguridad local básica**
+- [x] **F0.8 — Seguridad local básica**
   - Bind a `127.0.0.1`.
   - CORS solo en desarrollo y solo para el puerto de Vite.
   - Validar cabecera `Host`.
   - Sin secretos en el repositorio.
   - **DoD:** checklist de seguridad local y test de que un origen no permitido no recibe CORS.
+  - **Resultado:** middleware `HostValidationMiddleware` con allowlist `127.0.0.1`, `localhost` y `::1`; `400 INVALID_HOST` para el resto. Checklist en `SECURITY.md` y tests de Host/CORS.
 
-- [ ] **F0.9 — Scripts de calidad**
+- [x] **F0.9 — Scripts de calidad**
   - Añadir `check.ps1` o scripts npm/uv para lint, tipos y tests.
   - Documentar comandos en README futuro.
   - **DoD:** un comando ejecuta lint + tipos + tests de backend y frontend.
+  - **Resultado:** `check.ps1` ejecuta Ruff, formato, mypy y pytest; ESLint, Prettier, TypeScript, Vitest y build; y Ruff sobre `scripts/`. Documentado en `README.md`, `backend/README.md` y `frontend/README.md`.
 
-- [ ] **F0.10 — Smoke test**
+- [x] **F0.10 — Smoke test**
   - Test de `/api/health`.
   - Test del cliente con fixture sintética, sin red.
   - Comprobar que el frontend consume `/api/health`.
   - **DoD:** tests verdes y app mostrando el estado del backend.
+  - **Resultado:** `/api/health` probado en backend; cliente Mercadona probado con respx y fixtures; `BackendStatus` consume `/api/health` y muestra «API conectada» o «API no disponible». MSW cubre el endpoint en tests.
 
 **DoD de F0:** esqueleto ejecutable, cliente Mercadona validado para 22002/4389, OR-Tools validado, base fuera de OneDrive y scripts de calidad.
+
+**Estado F0:** cumplido el 2026-10-26. `.\run.ps1` arranca ambos servicios y `.\check.ps1` deja lint, tipos, tests y build en verde.
 
 ---
 
@@ -492,5 +500,5 @@
 
 | Fecha | Tarea | Bloqueo | Acción |
 |---|---|---|---|
-| 2026-10-25 | F4 | OR-Tools no validado todavía | F0.6 debe resolverlo antes de F4 |
-| 2026-10-25 | F2 | Seed y mapeo dependen del catálogo real | F0.5 y F1 deben cerrarse antes |
+| 2026-10-25 | F4 | OR-Tools no validado todavía | Resuelto en F0.6: OR-Tools 9.15.6755 resuelve el toy en 3,6 s |
+| 2026-10-25 | F2 | Seed y mapeo dependen del catálogo real | F0.5 cerrado; F1 debe cerrarse antes |

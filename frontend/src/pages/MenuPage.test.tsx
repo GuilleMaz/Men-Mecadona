@@ -11,7 +11,7 @@ describe('MenuPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Generar menú' }));
 
-    const status = await screen.findByRole('status');
+    const status = await screen.findByRole('status', { name: 'Resumen del menú' });
     expect(status).toHaveTextContent('2 personas · 7 días · 70,00');
     expect(status).toHaveTextContent('de presupuesto');
   });
@@ -26,7 +26,7 @@ describe('MenuPage', () => {
     await user.click(screen.getByRole('button', { name: 'Generar menú' }));
 
     expect(await screen.findByText('El menú debe cubrir al menos 1 día.')).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Resumen del menú' })).not.toBeInTheDocument();
   });
 
   it('rechaza más de 10 personas', async () => {

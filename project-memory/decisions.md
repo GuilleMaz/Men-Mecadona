@@ -1,5 +1,121 @@
 # Decisions
 
+## 2026-10-26 — Cierre de fase con commit y push obligatorio
+
+### Problema
+
+El trabajo de una fase podía quedar en el árbol de trabajo sin commitear o sin
+subir a GitHub. Eso rompe la trazabilidad, deja fases "hechas" solo en local y
+facilita que se mezclen cambios de varias fases.
+
+### Decisión
+
+- `finish-phase.ps1` es el único gate de cierre de fase.
+- Ejecuta `check.ps1` antes de commitear; si la calidad falla, no hay commit.
+- Rechaza archivos prohibidos (`*.db`, `.env` distintos de `.env.example`,
+  `node_modules`, `.venv`, `frontend/dist`, claves privadas).
+- Crea un commit `FASE: resumen` y lo sube a `origin` (o al remoto indicado).
+- Si el push falla, el commit queda local y el script termina con error.
+- `AGENTS.md` y `TASKS.md` exigen usar el script al cerrar cada fase; el DoD
+  incluye commit y push.
+- `-NoPush` y `-SkipChecks` existen solo como escapes documentados; no son el
+  flujo normal.
+
+### Justificación
+
+- Un comando reproducible convierte el cierre en parte del pipeline, no en una
+  acción manual fácil de olvidar.
+- El orden calidad → commit → push evita subir código roto.
+- El filtro de archivos prohibidos protege secretos y datos locales.
+- El fallo del push no destruye el commit; se puede reintentar.
+
+### Alternativas
+
+- GitHub Actions que haga commit tras cada fase: descartado. El CI no sabe cuándo
+  una fase está terminada y necesitaría un token con permisos de escritura,
+  además de arriesgar bucles de commits.
+- Commit manual con `git commit && git push`: descartado. No garantiza que se
+  ejecute la calidad ni que el push se complete.
+- Hook `pre-push` que ejecute los tests: útil como refuerzo, pero no sustituye al
+  gate de cierre ni crea el commit.
+
+---
+
+## 2026-10-26 — Informe del spike de OR-Tools (F0.6)
+
+### Ejecución
+
+- Script: `scripts/spike_ortools.py`.
+- Comando: `cd backend; uv run python ..\scripts\spike_ortools.py` (3 repeticiones).
+- Entorno: Windows, Python 3.13.5, OR-Tools 9.15.6755.
+- Modelo: 14 días × 2 huecos = 28 huecos; 60 platos; 120 ingredientes; 240 productos/paquetes; 4 personas.
+- Presupuesto: 358,16 €; menú de referencia: 341,10 €.
+- Solver: `num_search_workers=1`, `random_seed=42`; etapa 1: 3 s; etapa 2: 3 s.
+- Cobertura sintética: 40 verduras, 30 proteínas de 9 fuentes, 25 hidratos de 4 fuentes y 25 extras; despensa, dos bloqueos, mínimos diarios y variedad.
+
+### Resultado
+
+| Métrica | Valor |
+|---|---|
+| Repeticiones | 3 |
+| Etapa 1 | `OPTIMAL`, 0 violaciones, 0,28-0,29 s |
+| Etapa 2 | `FEASIBLE`, ticket 333,18 €, 3,00 s |
+| Total por repetición | 3,46-3,47 s |
+| Validación | 28 huecos, demanda, mínimos, variedad, presupuesto y bloqueos OK |
+| DoD (<10 s) | APTO |
+
+### Hallazgos
+
+1. OR-Tools 9.15 instala y resuelve en Windows/Python 3.13; no se necesita SciPy MILP ni PuLP.
+2. La etapa 1 (minimizar violaciones de variedad) se prueba óptima en menos de 0,4 s.
+3. La etapa 2 (minimizar ticket con paquetes) agota sus 3 s y devuelve una solución factible. El contrato de F4.4 ya contempla `feasible` sin prueba de optimalidad; no se debe declarar `optimal`.
+4. Ajustar las cotas superiores de `q[p]` al mínimo necesario (sin `+1`) mejora el modelo: etapa 1 de 1,50 s a 0,42 s y etapa 2 de 358,12 € a 334,26 € en la primera medición.
+5. Con `num_search_workers=1` y semilla fija, la tanda final dio el mismo ticket (333,18 €) tres veces, pero una tanda anterior varió entre 333,18, 333,42 y 333,52 € porque el límite es de tiempo real. Los tests de optimalidad deben usar instancias pequeñas que terminen antes del límite, no comparar tickets exactos de ejecuciones limitadas por reloj.
+
+### Consecuencias
+
+- Mantener un único solver: OR-Tools CP-SAT.
+- F4.3: reutilizar la formulación de demanda, mínimos y variedad y las cotas ajustadas de `q`.
+- F4.4: la etapa 2 puede devolver `feasible`; el estado `optimal` solo con prueba.
+- F4.9: tests de optimalidad con fuerza bruta en instancia pequeña; tests de rendimiento con margen sobre el límite.
+- El spike no persiste catálogo, menús ni precios.
+
+---
+
+## 2026-10-26 — Allowlist de Host y SQLite fuera de OneDrive
+
+### Problema
+
+La app escucha en `127.0.0.1`, pero un navegador puede enviar un `Host` arbitrario
+(DNS rebinding). Además, una ruta de datos dentro de OneDrive puede corromper SQLite
+por la sincronización de WAL.
+
+### Decisión
+
+- Middleware propio `HostValidationMiddleware`: acepta `127.0.0.1`, `localhost` y
+  `::1` (el puerto se ignora) y devuelve `400 INVALID_HOST` con el sobre de error
+  homogéneo para el resto.
+- `Settings` rechaza `CESTA_DATA_DIR` dentro de OneDrive.
+- `run.ps1` resuelve la ruta absoluta, crea el directorio y pasa la variable al
+  backend; `scripts/init_db.py` crea el archivo con WAL, `foreign_keys=ON` y
+  `busy_timeout=5000`.
+- CORS se mantiene solo en desarrollo y solo para `http://localhost:5173`.
+
+### Justificación
+
+- El error homogéneo permite al frontend tratar el fallo como cualquier otro.
+- La allowlist sin puerto funciona con Vite, uvicorn y peticiones directas.
+- Rechazar OneDrive convierte una recomendación operativa en una garantía.
+
+### Alternativas
+
+- `TrustedHostMiddleware` de Starlette: válido, pero devuelve un 400 de texto plano
+  que rompe el contrato de errores.
+- Aceptar cualquier `Host` local: no protege frente a DNS rebinding.
+- Avisar solo si la base está en OneDrive: se descartó; el riesgo de corrupción es alto.
+
+---
+
 ## 2026-10-25 — Informe del spike de catálogo (F0.5)
 
 ### Ejecución

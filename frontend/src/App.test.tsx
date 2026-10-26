@@ -28,4 +28,10 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: 'Página no encontrada' })).toBeInTheDocument();
   });
+
+  it('muestra el estado de la API local', async () => {
+    renderApp();
+
+    expect(await screen.findByText('API conectada')).toBeInTheDocument();
+  });
 });

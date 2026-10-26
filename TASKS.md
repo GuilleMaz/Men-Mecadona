@@ -1,6 +1,6 @@
 ﻿# TASKS.md — Cesta
 
-> **Estado global:** F3 completada el 2026-10-26 (F3.1-F3.7). Siguiente fase: F4.
+> **Estado global:** F4.1-F4.5 completadas el 2026-10-26. Siguiente: F4.6-F4.9.
 > **Última actualización:** 2026-10-26
 > **Plan de referencia:** `PLAN.md`
 
@@ -359,28 +359,31 @@
 
 **Estimación:** 4-5 días.
 
-- [ ] **F4.1 — Modelos de menú y migración**
+- [x] **F4.1 — Modelos de menú y migración**
   - `Menu`, `MenuEntry`, `MenuEntryIngredient`, `ShoppingItem`.
   - Snapshot de nombre de plato, coste de entrada, fuente de proteína y precios de compra.
   - `Menu`: `status`, `price_status`, `timed_out`, `revalidated_ticket_cents`, `settings_json` (`MenuSettings` con exclusiones, despensa, alérgenos, `max_repeats`, versión del optimizer).
   - `UNIQUE(menu_id, day_index, slot)` y `UNIQUE(menu_id, product_id)`.
   - **DoD:** migración aplicada; el historial no depende de platos vivos; el snapshot de preferencias es reproducible.
+  - **Resultado:** migraciones `20261026_0003` y `20261026_0004` con las cuatro tablas, CHECKs, FKs RESTRICT/CASCADE, `UNIQUE(menu_id, day_index, slot)`, `UNIQUE(menu_id, product_id)`, `ticket_cents <= budget_cents`, `violations`/`relaxation_codes_json` e índices por perfil, estado y fecha; `alembic check` sin deriva. `MenuSettings` validado y versionado; `dish_name`, coste de entrada, fuente de proteína y precios de paquete quedan congelados. El historial conserva el nombre aunque el plato se renombre y la FK RESTRICT impide borrar platos referenciados.
 
-- [ ] **F4.2 — Filtro de elegibilidad**
+- [x] **F4.2 — Filtro de elegibilidad**
   - Excluir por ingrediente, plato, etiqueta, alérgeno y producto no disponible.
   - Fail-closed: `P_i` solo productos `known`; `partial`/`unknown` fuera si el usuario declara alérgenos; si `P_i` queda vacío, el ingrediente y sus platos son inelegibles.
   - Informar de platos elegibles y de ingredientes bloqueados.
   - **DoD:** ninguna exclusión ni alérgeno aparece en la solución; un producto `unknown` barato no entra con alérgeno declarado.
+  - **Resultado:** `build_eligibility_report` resume platos elegibles por hueco, motivos por plato e ingredientes bloqueados. El optimizador consume solo productos de `P_i`; un producto `unknown` barato queda fuera con alérgeno declarado y las exclusiones nunca llegan a las asignaciones. Tests de exclusión por plato, etiqueta e ingrediente, `P_i` vacío y producto desconocido.
 
-- [ ] **F4.3 — Modelo CP-SAT**
+- [x] **F4.3 — Modelo CP-SAT**
   - Variables `x`, `q` y `violation[k]` (entero no negativo).
   - Coeficiente por plato: `coef[r,i] = round(quantity_milli[r,i] × people / base_servings[r])`.
   - Demanda: `Σ_{p∈P_i} q[p] × package_quantity_milli[p] + pantry_milli[i] ≥ Σ_{r,d,s} coef[r,i] × x[r,d,s]`.
   - Restricciones duras: un plato por hueco, compatibilidad `lunch`/`dinner`, exclusiones, alérgenos, presupuesto, repeticiones, bloqueos, mínimos diarios por persona y `UNIQUE(product_id)`.
   - `used`/`leftover` son post-cálculo, no variables.
   - **DoD:** resuelve 7 días/2 personas y 14 días/4 personas; test con platos de distinto `base_servings` que comparten ingrediente.
+  - **Resultado:** modelo con `x`, `q` y seis violaciones de variedad; cotas de `q` ajustadas, demanda con despensa, presupuesto duro, mínimos diarios, un plato por día y bloqueos. Tests de 2/7/14 días, `base_servings` distintos, despensa, alérgenos, 3 días/10 personas y presupuesto ajustado. Smoke real: 7 días/2 personas en 3,58 s (49,85 €) y 14 días/4 personas en 3,73 s (111,83 €).
 
-- [ ] **F4.4 — Objetivo lexicográfico e inviabilidad**
+- [x] **F4.4 — Objetivo lexicográfico e inviabilidad**
   - Etapa 1: minimizar `Σ violation[k]` (peso 1).
   - Etapa 2: fijar la suma óptima y minimizar ticket.
   - Si la etapa 1 agota el tiempo sin prueba de optimalidad, usar el incumbente, mejorar en la etapa 2 y devolver `feasible`.
@@ -388,8 +391,9 @@
   - Solo `budget` produce preview `infeasible` con `is_preview=true`, mínimo estimado, `minimum_is_estimate`, `shortfall_cents` y sugerencias; no se persiste.
   - Las demás causas devuelven `422 NO_FEASIBLE_MENU`.
   - **DoD:** menú más barato con variedad 0; si no cabe, mínimo + déficit + sugerencias; nunca se relaja el presupuesto ni un alérgeno.
+  - **Resultado:** dos etapas con `AddHint`, pista greedy determinista y fallback sin presupuesto; estados `optimal`/`feasible`/`relaxed`/`infeasible`/`timeout`; diagnósticos de bloqueos, repeticiones, mínimos y asignación. El presupuesto imposible devuelve preview con mínimo canónico (`plan_purchase`), déficit y cuatro sugerencias sin persistir. Test de optimalidad por fuerza bruta y smoke real: 7 días/2 personas con 70/50/42 € (49,85/41,05/40,10 €) y 14 días/4 personas en 3,74 s (111,83 €); con 45 € el solver devolvió `relaxed` (40,25 €, una violación de pescado). Presupuesto de 1 € con mínimo 45,40 € y déficit 44,40 €.
 
-- [ ] **F4.5 — Servicio de menús, plan de compra y recálculo**
+- [x] **F4.5 — Servicio de menús, plan de compra y recálculo**
   - Persistir menú, `MenuSettings`, entradas y compras.
   - Materializar `shopping_items` con `plan_purchase` sobre la necesidad agregada; verificar `ticket_canónico ≤ ticket_solver ≤ budget`.
   - Verificar `Σ menu_entry_ingredients = entry_consumption` y `Σ entries = consumption`.
@@ -397,6 +401,7 @@
   - Rechazar cambios que superen presupuesto; `regenerate` con bloqueos inviable devuelve `reason="locks"`.
   - Conservar `checked` por `product_id` si el producto sigue.
   - **DoD:** `ticket == Σ shopping_items.subtotal`; un swap caro devuelve `BUDGET_EXCEEDED`; `preview.ticket == shopping_list.ticket` para el mismo menú.
+  - **Resultado:** `MenuService` transaccional con reparto exacto de céntimos por entrada, lista materializada solo con `plan_purchase`, preservación de `checked`, swap/exclude/regenerate/revalidate/«ya lo tengo» y rollback ante presupuesto. La revalidación conserva el snapshot válido y registra `revalidated_ticket_cents`/`stale` si los precios cambian; los recálculos usan la composición persistida de cada entrada, no la del plato vivo. Se valida que la sync sea de 22002/4389. Tests de identidades, swap caro, recálculo de precios, despensa, bloqueos, alérgenos, producto no disponible y preview; smoke real con 8 líneas, ticket 13,50 € e identidad correcta.
 
 - [ ] **F4.6 — API de menús**
   - `POST /api/menus/generate`

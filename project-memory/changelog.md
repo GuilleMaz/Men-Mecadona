@@ -1,5 +1,66 @@
 # Changelog
 
+## 2026-10-26 — F4.1-F4.5: menús persistidos, optimizador y lista canónica
+
+### Cambios
+
+- Backend: modelos `Menu`, `MenuEntry`, `MenuEntryIngredient` y `ShoppingItem`
+  con snapshots de nombre, coste, proteína y precios; migración
+  `20261026_0003` con CHECKs, FKs, `UNIQUE(menu_id, day_index, slot)` y
+  `UNIQUE(menu_id, product_id)`; `20261026_0004` añade `violations`,
+  `relaxation_codes_json` y `ticket_cents <= budget_cents`.
+- `MenuSettings` versionado para congelar alérgenos, exclusiones, despensa,
+  `max_repeats` y versión del optimizador.
+- `app/services/optimizer.py`: elegibilidad F4.2, CP-SAT F4.3 (x, q, violaciones,
+  demanda con despensa, presupuesto, mínimos, bloqueos y variedad) y objetivo
+  lexicográfico F4.4 con estados, diagnósticos y preview de presupuesto. Una
+  pista greedy y un fallback sin presupuesto evitan `timeout` con presupuestos
+  ajustados; el mínimo del preview se calcula con `plan_purchase`.
+- `app/services/menu_service.py`: persistencia transaccional, materialización de
+  la lista con `plan_purchase`, reparto exacto de céntimos por entrada,
+  verificación de identidades, snapshot de composición por entrada,
+  swap/exclude/regenerate/revalidate/«ya lo tengo», conservación de `checked`,
+  validación de sync 22002/4389 y revalidación que no rompe el presupuesto.
+- `pricing.py`: `purchasable_formats` acepta productos permitidos; `plan_purchase`
+  y `price_ingredient` aceptan formatos explícitos; `allocate_cents` pasa a ser
+  público para compartir el reparto con `MenuService`.
+- `OPTIMIZER_TIME_LIMIT_SECONDS` se reparte entre etapa 1, etapa 2 y fallback.
+- Tests: migración y constraints, `MenuSettings`, optimizador (incluida fuerza
+  bruta, presupuesto ajustado, despensa y alérgenos), servicio de menús e
+  integración real optimizador + persistencia.
+- Documentación: `TASKS.md`, `project-memory/` y estado de la fase.
+
+### Verificación
+
+- `uv run ruff check .`, `ruff format --check .`, `mypy app`: OK.
+- `uv run pytest`: 270 tests en verde, sin red.
+- `alembic check`: sin deriva; migraciones `0003` y `0004` aplicadas a la copia
+  local real.
+- Smoke real: menú de 1 día/2 personas con ticket 13,50 €, consumo 5,25 €,
+  sobras 8,25 €, lista de 8 líneas e identidad correcta; 7 días/2 personas con
+  70/50/42 € (49,85/41,05/40,10 €), 45 € con `relaxed` (40,25 €, una violación
+  de pescado) y 14 días/4 personas en 3,74 s (111,83 €); presupuesto de 1 € con
+  preview `infeasible`, mínimo canónico 45,40 € y déficit 44,40 €.
+
+### Archivos
+
+- `backend/app/models/menu.py`, `backend/app/schemas/menu.py`,
+  `backend/alembic/versions/20261026_0003_menus.py`,
+  `backend/alembic/versions/20261026_0004_menu_relaxations.py`
+- `backend/app/services/optimizer.py`, `backend/app/services/menu_service.py`,
+  `backend/app/services/pricing.py`
+- `backend/tests/test_optimizer.py`, `backend/tests/test_menu_service.py`,
+  `backend/tests/test_menu_migrations.py`, `backend/tests/test_menu_settings.py`,
+  `backend/tests/test_menu_integration.py`,
+  `backend/tests/optimizer_fixtures.py`, `backend/tests/domain_fixtures.py`
+- `TASKS.md`, `README.md`, `backend/README.md`, `AGENTS.md`, `project-memory/**`
+
+### Motivo
+
+- Dejar el optimizador y la persistencia listos para que F4.6 exponga la API y
+  F4.7-F4.9 construyan la UI y la batería completa de pruebas sin rehacer el
+  modelo de datos ni el criterio de compra.
+
 ## 2026-10-26 — F3: motor de costes puro y preview
 
 ### Cambios

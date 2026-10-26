@@ -1,5 +1,120 @@
 # Decisions
 
+## 2026-10-26 — Menús persistidos, CP-SAT y lista canónica (F4.1-F4.5)
+
+### Problema
+
+F4 debía convertir el coste puro de F3 en menús persistidos, con snapshots
+reproducibles, optimización bajo presupuesto y una lista que no pudiera
+contradecir al solver. Había que decidir cómo separar elegibilidad, modelo,
+inviabilidad y materialización, y cómo evitar que un swap o una revalidación
+rompieran las identidades contables o el presupuesto.
+
+### Decisión
+
+- Migración `20261026_0003` con `menus`, `menu_entries`, `menu_entry_ingredients`
+  y `shopping_items`; `20261026_0004` añade `violations`,
+  `relaxation_codes_json` y el CHECK `ticket_cents <= budget_cents`.
+  `Menu.settings_json` guarda un `MenuSettings` validado y versionado; el nombre
+  del plato, el coste de entrada, la fuente de proteína y los precios de paquete
+  quedan congelados. Las FKs a platos y productos son `RESTRICT` para que el
+  historial no dependa de datos vivos.
+- `app/services/optimizer.py` no abre sesiones: recibe `DishEligibility` ya
+  evaluadas y devuelve asignaciones, paquetes, estado y diagnóstico. Solo usa
+  productos de `P_i`, construidos desde `IngredientEligibility.eligible_products`.
+- Modelo CP-SAT con `x`, `q` y seis violaciones de variedad. Los coeficientes se
+  calculan con `scale_quantity` (half-up por plato). Las cotas de `q` son
+  `ceil(max_need / package_quantity)` sin `+1`, la demanda incluye despensa, el
+  presupuesto es duro y los mínimos diarios exigen una ración por persona.
+- Para que un presupuesto ajustado no acabe en `timeout`, la etapa 1 recibe una
+  pista greedy determinista: enumera parejas de platos por día, elige la más
+  barata que cubre los mínimos y valora la compra con `plan_purchase`. Si la
+  etapa 1 agota el tiempo, el fallback sin presupuesto devuelve un menú válido
+  cuando su plan canónico cabe; el mínimo del preview `infeasible` se calcula
+  también con `plan_purchase`, no con las `q` arbitrarias del fallback.
+- Etapa 1: minimizar la suma de violaciones. Etapa 2: fijar esa suma y minimizar
+  el ticket con `AddHint` del incumbente. `optimal` solo si ambas etapas prueban
+  optimalidad; `feasible` si hay solución sin prueba; `relaxed` si la solución
+  viola variedad; `timeout` si no hay incumbente.
+- Inviabilidad: solo el presupuesto devuelve preview `infeasible` con mínimo,
+  `minimum_is_estimate`, déficit y sugerencias. `locks`, `repeats`, `minimums` y
+  `no_assignment` se diagnostican con solves cortos y lanzan
+  `NO_FEASIBLE_MENU`. Nunca se relajan presupuesto, alérgenos ni exclusiones.
+- `MenuService` es la única puerta de escritura. Materializa la lista con
+  `plan_purchase` sobre la necesidad agregada, limita los formatos a `P_i`,
+  valida que la sync sea de 22002/4389, reparte el consumo por entrada con
+  `allocate_cents` y verifica `ticket_canónico ≤ ticket_solver ≤ budget` y las
+  sumas de PLAN §6.2.
+- `checked` se conserva por `product_id`; `pantry_quantity_milli` se guarda una
+  sola vez por ingrediente para no duplicar la despensa al sumar líneas. Los
+  recálculos usan `menu_entry_ingredients.used_milli` como snapshot de
+  composición, no la composición viva del plato.
+- `revalidate` recalcula precios sin romper el invariante: si el ticket nuevo
+  supera el presupuesto, conserva la lista y el ticket válidos, guarda el nuevo
+  valor en `revalidated_ticket_cents` y marca `stale`. Swap, exclude, regenerate
+  y «ya lo tengo» sí revierten con `BUDGET_EXCEEDED`. `regenerate` propaga
+  `reason="locks"` cuando los bloqueos hacen inviable el menú.
+
+### Justificación
+
+- Separar optimizador y persistencia permite testear el modelo sin base de datos
+  y garantizar que la lista final no depende de los paquetes arbitrarios del
+  solver.
+- El snapshot de preferencias y de composición hace reproducible un menú aunque
+  cambien el perfil, los platos o los precios.
+- La lista canónica es la única forma de cumplir `preview.ticket == shopping_list.ticket`
+  y `ticket == Σ shopping_items.subtotal` sin dobles criterios.
+- Los diagnósticos con solves cortos solo se ejecutan cuando el modelo principal
+  es inviable; no penalizan el camino normal.
+
+### Alternativas
+
+- Materializar la lista con los `q` del solver: descartado; podía sobrecomprar y
+  no coincidir con F3.
+- Recalcular con `ceil` sobre el producto por defecto: descartado; podía superar
+  el presupuesto.
+- Un objetivo escalar con penalizaciones: descartado; no garantiza variedad.
+- Persistir previews de presupuesto: descartado; rompe la promesa de menú válido.
+- Filtrar alérgenos solo al generar: descartado; la lista y los recálculos
+  también deben respetar `P_i`.
+
+### Resultado
+
+- 270 tests backend en verde, sin red; `ruff`, formato y `mypy` strict en verde.
+- `alembic check` sin deriva; migraciones `0003` y `0004` aplicadas a la copia
+  local real.
+- Smoke real con la copia del catálogo: menú de 1 día/2 personas, ticket 13,50 €,
+  consumo 5,25 €, sobras 8,25 € e identidad correcta.
+- 7 días/2 personas: `feasible` en 3,59 s con 70 € y 49,85 €; `feasible` con
+  50 € y 42 € (41,05 € y 40,10 €); con 45 € devolvió `relaxed` (40,25 €, una
+  violación de pescado) por el límite de tiempo. 14 días/4 personas en 3,74 s
+  (111,83 €). Presupuesto de 1 €: preview `infeasible` con mínimo canónico
+  45,40 € y déficit 44,40 €. Los tickets exactos pueden variar entre ejecuciones
+  limitadas por reloj; lo estable es el estado, el presupuesto y la validez.
+- La pista greedy y el fallback evitan los `timeout` que aparecían con
+  presupuestos ajustados antes de la revisión.
+
+### Limitaciones conocidas
+
+- Los diagnósticos de inviabilidad usan solves cortos; un `UNKNOWN` en un
+  diagnóstico se trata como no concluyente y el `reason` puede quedarse en
+  `no_assignment`/`budget` si no hay prueba mejor.
+- `verify_identities` es un método de comprobación pero, si falla, revierte la
+  transacción actual; los llamadores de escritura ya lo invocan antes del commit
+  y los de solo lectura no deben usarlo con cambios pendientes.
+- `exclude` con `scope="menu"` persiste el plato en `settings_json` para que
+  `regenerate` lo respete; sustituye todas las apariciones, incluidas las
+  bloqueadas. Es una decisión de producto revisable en F4.6.
+- Si la despensa cubre un ingrediente entero no hay línea de compra para ese
+  ingrediente; la UI deberá mostrar la despensa desde `settings_json` y
+  `pantry_consumption_cents`.
+- `MenuSettings.version` no tiene migrador todavía; una versión futura deberá
+  despachar por versión en `MenuService._settings`.
+- El CHECK de presupuesto y la validación de sync son la red de seguridad; la
+  API de F4.6 debe seguir pasando `sync_run_id` y mapear `WAREHOUSE_UNAVAILABLE`.
+
+---
+
 ## 2026-10-26 — Motor de costes exacto, plan de compra y preview (F3)
 
 ### Problema

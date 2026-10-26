@@ -6,7 +6,7 @@ from collections.abc import Iterable
 
 from sqlalchemy.orm import Session
 
-from app.models.catalog import Category, Product
+from app.models.catalog import Category, Product, SyncRun
 from app.models.dishes import Dish, DishIngredient
 from app.models.ingredients import Ingredient, IngredientProduct
 from app.models.profile import Profile
@@ -20,6 +20,30 @@ def ensure_category(session: Session, category_id: int = 1, name: str = "Despens
         session.add(category)
         session.flush()
     return category
+
+
+def make_sync_run(
+    session: Session,
+    *,
+    status: str = "success",
+    postal_code: str = "22002",
+    warehouse: str | None = "4389",
+) -> SyncRun:
+    """Sync sintética para validar el sello de almacén de los menús."""
+    now = utcnow()
+    run = SyncRun(
+        started_at=now,
+        finished_at=now,
+        status=status,
+        postal_code=postal_code,
+        warehouse=warehouse,
+        categories_ok=1,
+        categories_failed=0,
+        products_seen=1,
+    )
+    session.add(run)
+    session.flush()
+    return run
 
 
 def make_product(

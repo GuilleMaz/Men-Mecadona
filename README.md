@@ -4,9 +4,11 @@ Aplicación web local que genera un menú de **comidas y cenas** para N personas
 N días y un presupuesto, con productos y precios de la tienda online de Mercadona.
 Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiquetas.
 
-> Estado: F3 completada (motor de costes puro y preview). F4 añadirá el
-> optimizador, el menú y la lista de la compra. La documentación de alcance está
-> en `PLAN.md` y el detalle de ejecución en `TASKS.md`.
+> Estado: F4.1-F4.5 completadas (modelos de menú, elegibilidad, optimizador
+> CP-SAT, inviabilidad y servicio transaccional de menús). F4.6-F4.9 añadirán la
+> API pública, la UI de menú/lista y la batería completa de pruebas. La
+> documentación de alcance está en `PLAN.md` y el detalle de ejecución en
+> `TASKS.md`.
 
 ## Requisitos
 
@@ -77,6 +79,22 @@ Reglas verificadas:
 - el plan de compra mezcla formatos si sale más barato y minimiza el ticket;
 - `ticket + despensa = consumo + sobras` se cumple por ingrediente y por cesta;
 - el preview y la futura lista de la compra comparten el mismo plan canónico.
+
+## Optimizador y menús
+
+El backend ya puede generar y persistir un menú bajo presupuesto con el catálogo
+sintético de pruebas y con el catálogo real:
+
+- `app/services/optimizer.py` resuelve `días × 2` huecos con CP-SAT en dos
+  etapas: primero minimiza las violaciones de variedad y después el ticket.
+- El presupuesto es duro. Si el mínimo no cabe, devuelve un preview `infeasible`
+  con mínimo, déficit y sugerencias; no se guarda como menú.
+- `app/services/menu_service.py` persiste el menú y materializa la lista de la
+  compra con `plan_purchase`, verificando `ticket == Σ subtotales` y la identidad
+  contable.
+- La revalidación conserva el snapshot válido y marca `stale` si el nuevo ticket
+  no cabe en el presupuesto; nunca se guarda un menú válido por encima del límite.
+- La API pública de menús y la UI de rejilla/lista llegan en F4.6-F4.8.
 
 ## Cierre de fase
 

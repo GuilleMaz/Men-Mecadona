@@ -87,7 +87,7 @@ def test_domain_migration_creates_constraints_and_partial_indexes(tmp_path: Path
     } <= indexes
     assert "uq_ingredient_products_default" in ingredient_indexes
     assert "ck_profiles_single_row" in profile_checks
-    assert version == "20261026_0002"
+    assert version == "20261026_0004"
 
 
 def test_domain_constraints_reject_invalid_rows(tmp_path: Path) -> None:

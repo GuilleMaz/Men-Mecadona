@@ -21,7 +21,7 @@ para dinero.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Decimal
 from itertools import product as cartesian_product
@@ -188,16 +188,23 @@ def scale_dish(dish: Dish, people: int) -> dict[int, int]:
     return needs
 
 
-def purchasable_formats(ingredient: Ingredient) -> tuple[ProductFormat, ...]:
+def purchasable_formats(
+    ingredient: Ingredient,
+    allowed_product_ids: Collection[int] | None = None,
+) -> tuple[ProductFormat, ...]:
     """Formatos que pueden comprarse para el ingrediente, ordenados por coste.
 
     Se exige que el producto esté publicado, tenga precio y cantidad de paquete,
     sea de formato fijo y use la misma unidad base que el ingrediente (F3.1). La
-    elegibilidad por alérgenos no se aplica aquí: el preview es de coste.
+    elegibilidad por alérgenos no se aplica aquí: el preview es de coste. F4
+    puede pasar ``allowed_product_ids`` con los productos de ``P_i`` para no
+    comprar nunca un producto excluido por alérgenos o disponibilidad.
     """
     formats: list[ProductFormat] = []
     for mapping in ingredient.products:
         product = mapping.product
+        if allowed_product_ids is not None and product.id not in allowed_product_ids:
+            continue
         if not product.published:
             continue
         if (
@@ -233,15 +240,18 @@ def _format_order(fmt: ProductFormat) -> tuple[Decimal, int, int]:
     return (fmt.unit_cost, -fmt.package_quantity_milli, fmt.product_id)
 
 
-def _require_formats(ingredient: Ingredient) -> tuple[ProductFormat, ...]:
-    formats = purchasable_formats(ingredient)
-    if not formats:
+def _require_formats(
+    ingredient: Ingredient,
+    formats: Sequence[ProductFormat] | None = None,
+) -> tuple[ProductFormat, ...]:
+    resolved = tuple(formats) if formats is not None else purchasable_formats(ingredient)
+    if not resolved:
         raise PricingError(
             "PRODUCT_UNAVAILABLE",
             f"No hay un producto comprable para «{ingredient.name}».",
             details={"ingredient_id": ingredient.id, "ingredient_name": ingredient.name},
         )
-    return formats
+    return resolved
 
 
 def _score(
@@ -356,12 +366,17 @@ def _plan_counts(formats: Sequence[ProductFormat], target: int) -> tuple[int, ..
     return _dynamic_program_counts(formats, target)
 
 
-def plan_purchase(ingredient: Ingredient, net_need_milli: int) -> PurchasePlan:
+def plan_purchase(
+    ingredient: Ingredient,
+    net_need_milli: int,
+    formats: Sequence[ProductFormat] | None = None,
+) -> PurchasePlan:
     """Plan canónico de compra para una necesidad neta.
 
     Minimiza ``Σ q[p] × precio[p]`` sujeto a
     ``Σ q[p] × cantidad_paquete[p] ≥ net_need_milli``. Permite mezclar formatos.
-    A igual coste, prefiere menos paquetes y ``product_id`` estable.
+    A igual coste, prefiere menos paquetes y ``product_id`` estable. Si se pasan
+    ``formats``, el plan se limita a ese conjunto (los productos elegibles de F4).
     """
     if net_need_milli < 0:
         raise PricingError("INVALID_INPUT", "La necesidad neta no puede ser negativa.")
@@ -374,8 +389,8 @@ def plan_purchase(ingredient: Ingredient, net_need_milli: int) -> PurchasePlan:
             ticket_cents=0,
         )
 
-    formats = _require_formats(ingredient)
-    counts = _plan_counts(formats, net_need_milli)
+    resolved_formats = _require_formats(ingredient, formats)
+    counts = _plan_counts(resolved_formats, net_need_milli)
     lines = tuple(
         PurchaseLine(
             product=fmt,
@@ -384,7 +399,7 @@ def plan_purchase(ingredient: Ingredient, net_need_milli: int) -> PurchasePlan:
             subtotal_cents=count * fmt.package_price_cents,
             leftover_milli=count * fmt.package_quantity_milli,
         )
-        for fmt, count in zip(formats, counts, strict=True)
+        for fmt, count in zip(resolved_formats, counts, strict=True)
         if count > 0
     )
     purchased = sum(line.quantity_milli for line in lines)
@@ -404,6 +419,7 @@ def price_ingredient(
     ingredient: Ingredient,
     need_milli: int,
     pantry_milli: int = 0,
+    formats: Sequence[ProductFormat] | None = None,
 ) -> IngredientCost:
     """Calcula ticket, consumo, despensa y sobras de un ingrediente."""
     if need_milli < 0 or pantry_milli < 0:
@@ -426,15 +442,15 @@ def price_ingredient(
 
     pantry_used = min(pantry_milli, need_milli)
     net_need = need_milli - pantry_used
-    plan = plan_purchase(ingredient, net_need)
+    plan = plan_purchase(ingredient, net_need, formats)
 
     # La despensa se valora al coste unitario del formato elegible más barato;
     # si no hay compra, al producto por defecto del ingrediente.
-    formats = _require_formats(ingredient)
+    resolved_formats = _require_formats(ingredient, formats)
     if plan.lines:
-        valuation = formats[0]
+        valuation = resolved_formats[0]
     else:
-        valuation = next((fmt for fmt in formats if fmt.is_default), formats[0])
+        valuation = next((fmt for fmt in resolved_formats if fmt.is_default), resolved_formats[0])
 
     remaining = net_need
     purchased_value = Decimal(0)
@@ -476,8 +492,12 @@ def price_ingredient(
     )
 
 
-def _allocate_cents(total: int, weights: Sequence[int]) -> tuple[int, ...]:
-    """Reparte céntimos de forma exacta con el método del mayor resto."""
+def allocate_cents(total: int, weights: Sequence[int]) -> tuple[int, ...]:
+    """Reparte céntimos de forma exacta con el método del mayor resto.
+
+    Se comparte con el servicio de menús para repartir el consumo de cada
+    ingrediente entre las entradas sin perder ni duplicar céntimos.
+    """
     weight_sum = sum(weights)
     if total <= 0 or weight_sum <= 0:
         return tuple(0 for _ in weights)
@@ -497,12 +517,15 @@ def price_basket(
     dishes: Sequence[Dish],
     people: int,
     pantry: Mapping[int, int] | None = None,
+    formats_by_ingredient: Mapping[int, Sequence[ProductFormat]] | None = None,
 ) -> BasketCost:
     """Calcula el coste agregado de un conjunto de apariciones de platos.
 
     Cada elemento de ``dishes`` es un hueco del menú; el mismo plato puede
     repetirse. El coste de cada ingrediente se reparte entre las apariciones de
-    forma proporcional a su necesidad, con reparto exacto de céntimos.
+    forma proporcional a su necesidad, con reparto exacto de céntimos. F4 puede
+    limitar los formatos comprables por ingrediente con
+    ``formats_by_ingredient`` para respetar la elegibilidad.
     """
     if people < 1 or people > MAX_PEOPLE:
         raise PricingError(
@@ -531,6 +554,7 @@ def price_basket(
             ingredients[ingredient_id],
             totals[ingredient_id],
             pantry_map.get(ingredient_id, 0),
+            formats_by_ingredient.get(ingredient_id) if formats_by_ingredient else None,
         )
         for ingredient_id in sorted(totals)
     )
@@ -540,7 +564,7 @@ def price_basket(
         weights = [needs.get(cost.ingredient.id, 0) for needs in entry_needs]
         if cost.consumption_cents == 0 or sum(weights) == 0:
             continue
-        allocated = _allocate_cents(cost.consumption_cents, weights)
+        allocated = allocate_cents(cost.consumption_cents, weights)
         for index, cents in enumerate(allocated):
             entry_cents[index] += cents
 

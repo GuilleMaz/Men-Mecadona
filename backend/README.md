@@ -111,6 +111,29 @@ correcta.
 uv run pytest tests/test_pricing.py tests/test_pricing_api.py
 ```
 
+## Menús y optimizador (F4.1-F4.5)
+
+- `app/models/menu.py`: `menus`, `menu_entries`, `menu_entry_ingredients` y
+  `shopping_items`, con snapshot de nombre, coste, proteína y precios de compra.
+  Migraciones `20261026_0003` y `20261026_0004` (relajaciones y CHECK de
+  presupuesto).
+- `app/schemas/menu.py`: `MenuSettings` versionado con alérgenos, exclusiones,
+  despensa, `max_repeats` y versión del optimizador.
+- `app/services/optimizer.py`: CP-SAT en dos etapas (variedad y ticket), con
+  presupuesto duro, demanda por paquetes elegibles `P_i`, mínimos diarios,
+  pista greedy, fallback sin presupuesto y diagnóstico de `budget`, `repeats`,
+  `minimums`, `locks` y `no_assignment`.
+- `app/services/menu_service.py`: persistencia y recálculo transaccional, lista
+  materializada con `plan_purchase`, reparto exacto de céntimos por entrada,
+  conservación de `checked`, snapshot de composición por entrada, validación de
+  sync 22002/4389 y mutaciones `swap`/`exclude`/`regenerate`/`revalidate`/«ya lo
+  tengo». La revalidación no persiste un ticket por encima del presupuesto.
+- La API pública de menús llega en F4.6; F4.1-F4.5 se prueban por servicio.
+
+```powershell
+uv run pytest tests/test_optimizer.py tests/test_menu_service.py tests/test_menu_integration.py
+```
+
 Seguridad local: el middleware de `Host` solo acepta `127.0.0.1`, `localhost` y
 `::1`; el resto devuelve `400 INVALID_HOST`. Los tests de API envían un `Host`
 local explícito porque el `testserver` por defecto de TestClient se rechaza.

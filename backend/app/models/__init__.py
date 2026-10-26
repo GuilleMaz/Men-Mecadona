@@ -22,6 +22,15 @@ from app.models.ingredients import (
     Ingredient,
     IngredientProduct,
 )
+from app.models.menu import (
+    MENU_PRICE_STATUSES,
+    MENU_SLOTS,
+    MENU_STATUSES,
+    Menu,
+    MenuEntry,
+    MenuEntryIngredient,
+    ShoppingItem,
+)
 from app.models.profile import Exclusion, PantryItem, Profile
 from app.models.types import UtcDateTime, utcnow
 
@@ -29,6 +38,9 @@ __all__ = [
     "ALLERGEN_STATUSES",
     "BASE_UNITS",
     "INGREDIENT_GROUPS",
+    "MENU_PRICE_STATUSES",
+    "MENU_SLOTS",
+    "MENU_STATUSES",
     "SERVING_GROUPS",
     "SYNC_STATUSES",
     "Base",
@@ -38,10 +50,14 @@ __all__ = [
     "Exclusion",
     "Ingredient",
     "IngredientProduct",
+    "Menu",
+    "MenuEntry",
+    "MenuEntryIngredient",
     "PantryItem",
     "Product",
     "ProductAllergen",
     "Profile",
+    "ShoppingItem",
     "SyncCategoryRun",
     "SyncRun",
     "UtcDateTime",

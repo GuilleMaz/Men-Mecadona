@@ -27,13 +27,14 @@ MERCADONA/
 │   │   ├── security.py      # allowlist de Host local
 │   │   ├── allergens.py     # lista canónica y etiquetas de alérgenos
 │   │   ├── api/             # health, catalog, domain, pricing, presenters, errors
-│   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py, pricing.py
-│   │   ├── models/          # catalog.py, ingredients.py, dishes.py, profile.py, types.py
+│   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py, pricing.py, menu.py
+│   │   ├── models/          # catalog.py, ingredients.py, dishes.py, profile.py, menu.py, types.py
 │   │   ├── services/        # mercadona_client.py, catalog_normalizer.py, catalog_sync.py,
-│   │   │                    # seed.py, allergen_sync.py, eligibility.py, pricing.py
+│   │   │                    # seed.py, allergen_sync.py, eligibility.py, pricing.py,
+│   │   │                    # optimizer.py, menu_service.py
 │   │   └── data/            # ingredients.yaml, dishes.yaml
 │   └── tests/               # API, config, db, seguridad, cliente, catálogo, dominio,
-│                            # coste y fixtures
+│                            # coste, optimizador, menús y fixtures
 ├── frontend/
 │   ├── package.json
 │   ├── package-lock.json
@@ -82,8 +83,8 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 - **AllergenSyncService:** descarga el detalle de los productos mapeados, interpreta `nutrition_information` (`x99`, ingredientes, «puede contener») y persiste `allergen_status` y `product_allergens` (F2.4). Política fail-closed.
 - **EligibilityService:** productos elegibles por ingrediente, unión de alérgenos ingrediente/producto, exclusiones por ingrediente/plato/etiqueta y disponibilidad; base de F4.2 (F2.4/F2.8).
 - **PricingService:** funciones puras con `Decimal` y céntimos enteros (F3): escalado por personas/raciones, formatos comprables, necesidad neta con despensa, `plan_purchase` canónico, consumo, ticket, sobras e identidad contable. El preview de F3 y la lista de F4 comparten `plan_purchase`.
-- **OptimizerService:** CP-SAT en dos etapas con presupuesto duro. Pendiente (F4).
-- **MenuService:** persistencia de menús, bloqueos, cambios, regeneración y lista. Pendiente (F4).
+- **OptimizerService:** CP-SAT en dos etapas con presupuesto duro, demanda por paquetes `P_i`, mínimos diarios, variedad y diagnósticos de inviabilidad (F4.2-F4.4). No abre sesiones ni persiste.
+- **MenuService:** persistencia transaccional de menús, entradas y lista; recálculo con precios actuales; swap, exclude, regenerate, revalidate y «ya lo tengo»; identidades contables y rechazo por presupuesto (F4.5).
 - **Operación local:** `run.ps1` resuelve `CESTA_DATA_DIR`, inicializa la base, arranca backend y frontend y limpia procesos; `scripts/init_db.py` crea el SQLite con sus PRAGMA; `check.ps1` agrega toda la calidad; `finish-phase.ps1` cierra la fase con commit y push tras validar `check.ps1` y rechazar archivos prohibidos.
 
 ## Servicios
@@ -160,6 +161,18 @@ Implementado en `app/services/pricing.py` (F3), con esquemas en `app/schemas/pri
 - `price_basket` agrega ingredientes, reparte el consumo por aparición con el método del mayor resto y verifica la identidad global.
 - `POST /api/pricing/preview` no persiste nada ni aplica filtros de alérgenos: es un preview de coste. Si no se envía despensa, usa la del perfil. Devuelve coste por plato y ración, ingredientes, paquetes y totales. `PRODUCT_UNAVAILABLE` (409) si un ingrediente no tiene producto comprable.
 
+## Optimizador y menús
+
+Implementado en `app/services/optimizer.py` (F4.2-F4.4) y `app/services/menu_service.py` (F4.5).
+
+- `build_eligibility_report` resume platos elegibles por hueco, motivos por plato e ingredientes bloqueados. El optimizador solo usa `DishEligibility.eligible` y productos de `P_i`.
+- Modelo CP-SAT: `x[d,s,r]`, `q[p]` y seis `violation[k]`. Coeficientes con `scale_quantity` (half-up por plato), demanda con despensa, presupuesto duro, mínimos diarios, `max_repeats`, bloqueos y un plato por día. Una pista greedy determinista y un fallback sin presupuesto evitan que presupuestos ajustados terminen en `timeout`.
+- Etapa 1 minimiza violaciones de variedad; etapa 2 fija esa suma y minimiza ticket con `AddHint`. `optimal` solo con ambas etapas óptimas; `relaxed` si hay violaciones; `timeout` solo si no hay ningún menú válido tras el fallback.
+- Inviabilidad: solo `budget` genera preview `infeasible` con mínimo canónico (`plan_purchase`), `minimum_is_estimate`, déficit y sugerencias. `repeats`, `minimums`, `locks` y `no_assignment` lanzan `NO_FEASIBLE_MENU`.
+- `MenuService.generate` persiste el snapshot, entradas y lista; materializa `shopping_items` con `plan_purchase` sobre la necesidad agregada, limita los formatos a `P_i`, valida que la sync sea de 22002/4389 y verifica `ticket_canónico ≤ ticket_solver ≤ budget`.
+- El consumo se reparte por entrada con `allocate_cents`; `used_milli` y `consumption_cents` suman exactamente el consumo del menú. `checked` se conserva por `product_id`. Los recálculos usan `menu_entry_ingredients.used_milli` como snapshot de composición; cambiar el seed de un plato no altera las cantidades del menú guardado.
+- `revalidate` conserva el ticket y la lista válidos; si el recalculado supera el presupuesto, guarda el nuevo ticket en `revalidated_ticket_cents` y marca `stale` sin romper el invariante. Swap, exclude, regenerate y «ya lo tengo» sí rechazan con `BUDGET_EXCEEDED` y revierten la transacción.
+
 ## APIs
 
 Prefijo `/api`:
@@ -195,13 +208,13 @@ Tablas principales:
 - `ingredients` (con `serving_group` y `serving_size_milli`), `ingredient_products` (producto único y un `is_default` por ingrediente) — implementadas (F2.1).
 - `dishes`, `dish_ingredients` (cantidad en la unidad base del ingrediente) — implementadas (F2.1).
 - `profiles` (fila única `id=1`), `exclusions` (tres índices únicos parciales), `pantry_items` (`UNIQUE(profile_id, ingredient_id)`) — implementadas (F2.1).
-- `menus` (con `status`, `price_status`, `timed_out`), `menu_entries`, `menu_entry_ingredients`, `shopping_items` — pendientes (F4).
+- `menus` (con `status`, `price_status`, `timed_out`, `revalidated_ticket_cents`, `violations`, `relaxation_codes_json` y `settings_json`), `menu_entries`, `menu_entry_ingredients`, `shopping_items` — implementadas (F4.1, migraciones `20261026_0003` y `20261026_0004`).
 
 No hay `price_snapshots` ni `raw_json` persistente en el MVP.
 
 ## Dependencias Críticas
 
-- OR-Tools CP-SAT para el optimizador (validado en F0.6: 9.15.6755 resuelve el toy de 28 huecos en 3,46-3,47 s con un worker).
+- OR-Tools CP-SAT para el optimizador (validado en F0.6 y usado en F4.3-F4.4: 9.15.6755, `num_search_workers=1` y semilla fija).
 - httpx + tenacity para la API de Mercadona (cliente implementado en F0.4).
 - PyYAML para el seed de ingredientes y platos (F2).
 - SQLAlchemy + Alembic para persistencia y migraciones.
@@ -230,10 +243,10 @@ Elegibilidad fail-closed
 Coste puro: plan_purchase + despensa + sobras (F3)
     │
     ▼
-Optimizador CP-SAT (2 etapas) (F4)
+Optimizador CP-SAT (2 etapas) (F4.3-F4.4)
     │
     ▼
-Menú + coste + lista de la compra
+Menú + coste + lista de la compra (F4.5)
     │
     ▼
 React UI

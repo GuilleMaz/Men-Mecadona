@@ -8,8 +8,8 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F3 completada el 2026-10-26 (F3.1-F3.7). Siguiente fase: F4 (optimizador, menú y lista de la compra).
-- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389), catálogo persistente con sync parcial, ingredientes/platos con seed idempotente, alérgenos fail-closed, perfil, exclusiones, despensa y motor de costes puro con preview. Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario de perfil persistente, catálogo de platos con filtros, «no me gusta», alérgenos, exclusiones, despensa, estado del catálogo y coste por plato/ración.
+- **Fase:** F4.1-F4.5 completadas el 2026-10-26. Siguiente: F4.6-F4.9 (API, UI, lista y tests de menú).
+- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389), catálogo persistente con sync parcial, ingredientes/platos con seed idempotente, alérgenos fail-closed, perfil, exclusiones, despensa, motor de costes puro con preview, optimizador CP-SAT en dos etapas y servicio transaccional de menús con lista materializada. Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario de perfil persistente, catálogo de platos con filtros, «no me gusta», alérgenos, exclusiones, despensa, estado del catálogo y coste por plato/ración.
 - **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
 - **Integración Mercadona:** sync real validada: 26 secciones, 152/152 subcategorías, 4.540 productos vistos, 4.288 productos únicos persistidos, 178 categorías y 7,74 s con concurrencia 4. Tests con fixtures sintéticas y respx, sin red.
 - **Catálogo:** migraciones Alembic (`render_as_batch`), upsert por `external_id`, normalización a céntimos y milésimas, fallo parcial sin ocultar productos de categorías fallidas, lock de proceso y refresh de arranque a las 24 h.
@@ -22,7 +22,9 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - **Memoria:** actualizada con informes de los spikes y las decisiones de F1/F2 en `decisions.md`.
 - **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad.
 - **Coste (F3):** `plan_purchase` canónico exacto, necesidad neta con despensa, ticket, consumo, sobras e identidad `ticket + pantry_consumption = consumption + leftover`; preview sin persistencia y sin filtros de alérgenos.
-- **Calidad:** backend con Ruff, formato, mypy (strict) y 193 tests; frontend con ESLint, Prettier, TypeScript estricto, 27 tests y build de producción.
+- **Optimizador (F4.1-F4.4):** migraciones `20261026_0003` y `20261026_0004` con menús, snapshots y relajaciones; elegibilidad fail-closed reutilizada; CP-SAT con `x`, `q` y violaciones de variedad; pista greedy determinista y fallback sin presupuesto para presupuestos ajustados; dos etapas lexicográficas; estados `optimal`/`feasible`/`relaxed`/`infeasible`/`timeout`; preview de presupuesto con mínimo canónico, déficit y sugerencias; diagnóstico de bloqueos, repeticiones, mínimos y asignación.
+- **Menús (F4.5):** `MenuService` transaccional que materializa la lista con `plan_purchase`, reparte céntimos por entrada, preserva `checked` por producto, valida la sync 22002/4389 y recalcula tras swap, exclude, regenerate, revalidate y «ya lo tengo». La revalidación conserva el snapshot válido y expone el ticket recalculado en `revalidated_ticket_cents` si supera el presupuesto; los recálculos usan la composición persistida.
+- **Calidad:** backend con Ruff, formato, mypy (strict) y 270 tests; frontend con ESLint, Prettier, TypeScript estricto, 27 tests y build de producción.
 - **Última actualización:** 2026-10-26.
 
 ## Tecnologías
@@ -94,6 +96,6 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Pendientes
 
-- F4: optimizador, menú y lista.
+- F4.6-F4.9: API de menús, UI de rejilla y lista, y batería completa de tests/dry-run.
 - F5: calidad, seguridad y entrega.
 - Backlog posterior: CP configurable, LAN/móvil, historial de precios, PDF, PWA, Docker, macros.

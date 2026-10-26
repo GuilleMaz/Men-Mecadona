@@ -1,5 +1,71 @@
 # Decisions
 
+## 2026-10-26 — Motor de costes exacto, plan de compra y preview (F3)
+
+### Problema
+
+F3 debía calcular un ticket verificable con paquetes, despensa y sobras antes de
+que existan menús persistidos. El redondeo de unidades y céntimos podía romper
+la identidad contable, y el preview y la futura lista de F4 podían usar
+criterios de compra distintos.
+
+### Decisión
+
+- `app/services/pricing.py` concentra funciones puras: `scale_quantity`,
+  `scale_dish`, `purchasable_formats`, `plan_purchase`, `price_ingredient` y
+  `price_basket`.
+- Cantidades en milésimas de unidad base y céntimos enteros. `Decimal` se usa
+  solo para costes unitarios intermedios; el redondeo half-up se aplica una vez
+  por ingrediente y otra por ración mostrada.
+- `plan_purchase` es exacto: enumera los formatos no óptimos con la cota
+  `s_best / gcd(s_i, s_best)` y completa con el formato de menor coste unitario.
+  Si el número de combinaciones es enorme, usa programación dinámica sobre el
+  mcd de los tamaños. Desempata por coste, número de paquetes y `product_id`.
+- La despensa se resta antes de comprar (`net_need`). Se valora al coste
+  unitario del formato elegible más barato; si no hay compra, al producto por
+  defecto. El consumo comprado se asigna a los formatos comprados por coste
+  unitario ascendente. El valor de las sobras es el residuo exacto
+  `ticket − consumo_comprado` para garantizar la identidad.
+- El consumo de cada ingrediente se reparte entre las apariciones del plato con
+  el método del mayor resto; la suma por entrada coincide con el total.
+- `POST /api/pricing/preview` no persiste nada y no aplica filtros de alérgenos.
+  Usa la despensa del perfil salvo que la petición envíe una explícita. Si un
+  ingrediente no tiene producto comprable, devuelve 409 `PRODUCT_UNAVAILABLE`.
+- `grams_per_unit` pasa a ser obligatorio para ingredientes con
+  `base_unit=unit`.
+
+### Justificación
+
+- La identidad contable es un requisito Must y debe cumplirse por ingrediente,
+  no solo en el total.
+- La enumeración con cota es exacta y rápida con los 1-3 formatos reales; la
+  programación dinámica cubre catálogos anómalos sin añadir un solver externo.
+- Compartir `plan_purchase` entre preview y lista evita que F4 muestre un ticket
+  distinto para el mismo menú.
+- El preview de coste no debe ocultar platos por alérgenos: la UI de F2 ya
+  explica la elegibilidad y F4 aplica el filtro estricto al generar.
+
+### Alternativas
+
+- Fuerza bruta completa sobre todos los paquetes: descartada por crecimiento con
+  necesidades grandes.
+- CP-SAT por ingrediente: descartado por coste de construcción y por no
+  necesitar un solver para 1-3 formatos.
+- Redondear cada línea de consumo: descartada; rompe la identidad por céntimos.
+- Valorar siempre la despensa al producto por defecto: descartada; la regla
+  acordada usa el formato más barato cuando hay compra.
+- Aplicar alérgenos en el preview: descartado; el preview es de coste y el
+  contrato lo separa de la generación.
+
+### Resultado
+
+- 20 tests puros, 11 de API y 1 de seed; identidad verificada con despensa 0,
+  parcial, completa y sobre-despensa.
+- Smoke manual con la copia local real (3 platos): ticket 22,85 €, consumo
+  4,48 €, sobras 18,37 € e identidad correcta.
+
+---
+
 ## 2026-10-26 — Seed, mapeo explícito y cobertura de F2
 
 ### Problema

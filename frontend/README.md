@@ -13,7 +13,7 @@ npm run dev
 - El servidor de Vite proxya `/api` a `http://127.0.0.1:8000` (backend).
 - El layout consulta `/api/health` y muestra «API conectada» o «API no disponible».
 - `Menú` guarda personas, días y presupuesto en el perfil local.
-- `Platos` busca y filtra el catálogo, muestra la composición y permite «no me gusta» por plato o ingrediente.
+- `Platos` busca y filtra el catálogo, muestra la composición, el coste de consumo/ticket del plato y permite «no me gusta» por plato o ingrediente.
 - `Ajustes` muestra el estado del catálogo y gestiona alérgenos, exclusiones y despensa.
 - Tailwind CSS 4 + shadcn/ui, TanStack Query, React Router, React Hook Form + Zod y Lucide.
 
@@ -28,6 +28,7 @@ npm run build         # tsc -b + vite build
 ```
 
 Los tests usan MSW y handlers por defecto para `/api/health`, catálogo, perfil,
-alérgenos, ingredientes, platos, exclusiones y despensa; no hay red real.
+alérgenos, ingredientes, platos, exclusiones, despensa y preview de coste; no hay
+red real.
 
 No hay recetas ni pasos de cocina en ninguna pantalla.

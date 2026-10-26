@@ -26,13 +26,14 @@ MERCADONA/
 │   │   ├── db.py            # motor SQLite, PRAGMA, Base, sesiones
 │   │   ├── security.py      # allowlist de Host local
 │   │   ├── allergens.py     # lista canónica y etiquetas de alérgenos
-│   │   ├── api/             # health, catalog, domain, errors
-│   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py
+│   │   ├── api/             # health, catalog, domain, pricing, presenters, errors
+│   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py, pricing.py
 │   │   ├── models/          # catalog.py, ingredients.py, dishes.py, profile.py, types.py
 │   │   ├── services/        # mercadona_client.py, catalog_normalizer.py, catalog_sync.py,
-│   │   │                    # seed.py, allergen_sync.py, eligibility.py
+│   │   │                    # seed.py, allergen_sync.py, eligibility.py, pricing.py
 │   │   └── data/            # ingredients.yaml, dishes.yaml
-│   └── tests/               # API, config, db, seguridad, cliente, catálogo, dominio y fixtures
+│   └── tests/               # API, config, db, seguridad, cliente, catálogo, dominio,
+│                            # coste y fixtures
 ├── frontend/
 │   ├── package.json
 │   ├── package-lock.json
@@ -46,6 +47,7 @@ MERCADONA/
 │       ├── index.css        # Tailwind 4 + tema shadcn/ui
 │       ├── components/
 │       │   ├── catalog/CatalogStatusCard.tsx
+│       │   ├── dishes/DishCostCard.tsx
 │       │   ├── layout/AppLayout.tsx
 │       │   ├── layout/BackendStatus.tsx
 │       │   ├── preferences/AllergenPreferencesCard.tsx
@@ -68,7 +70,7 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario persistente de personas/días/presupuesto, catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de estado del catálogo y tarjetas de alérgenos, exclusiones y despensa. La lógica de menú llega en F4.
+- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario persistente de personas/días/presupuesto, catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de coste de consumo/ticket por plato y ración, tarjeta de estado del catálogo y tarjetas de alérgenos, exclusiones y despensa. La lógica de menú llega en F4.
 - **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health`, `/api/catalog/*` y `/api/*` de dominio. La sync de arranque y la carga del seed corren en segundo plano desde el lifespan.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Rechaza rutas dentro de OneDrive. Constantes `POSTAL_CODE="22002"`, `EXPECTED_WAREHOUSE="4389"` y `LOCAL_HOSTS`.
 - **Seguridad (`app/security.py`):** `HostValidationMiddleware` acepta solo `127.0.0.1`, `localhost` y `::1`; el resto devuelve `400 INVALID_HOST`.
@@ -79,7 +81,7 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 - **SeedService:** carga idempotente de `ingredients.yaml` y `dishes.yaml` con upsert por slug, versión por hash, soft delete y `--dry-run` (F2.6). Valida estructura, cobertura y mapeo contra el catálogo (F2.7).
 - **AllergenSyncService:** descarga el detalle de los productos mapeados, interpreta `nutrition_information` (`x99`, ingredientes, «puede contener») y persiste `allergen_status` y `product_allergens` (F2.4). Política fail-closed.
 - **EligibilityService:** productos elegibles por ingrediente, unión de alérgenos ingrediente/producto, exclusiones por ingrediente/plato/etiqueta y disponibilidad; base de F4.2 (F2.4/F2.8).
-- **PricingService:** unidades base, necesidad neta, paquetes, ticket, consumo, despensa y sobras. Pendiente (F3).
+- **PricingService:** funciones puras con `Decimal` y céntimos enteros (F3): escalado por personas/raciones, formatos comprables, necesidad neta con despensa, `plan_purchase` canónico, consumo, ticket, sobras e identidad contable. El preview de F3 y la lista de F4 comparten `plan_purchase`.
 - **OptimizerService:** CP-SAT en dos etapas con presupuesto duro. Pendiente (F4).
 - **MenuService:** persistencia de menús, bloqueos, cambios, regeneración y lista. Pendiente (F4).
 - **Operación local:** `run.ps1` resuelve `CESTA_DATA_DIR`, inicializa la base, arranca backend y frontend y limpia procesos; `scripts/init_db.py` crea el SQLite con sus PRAGMA; `check.ps1` agrega toda la calidad; `finish-phase.ps1` cierra la fase con commit y push tras validar `check.ps1` y rechazar archivos prohibidos.
@@ -97,7 +99,7 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 Rutas:
 
 - `/` — crear menú: personas, días y presupuesto persistidos en el perfil.
-- `/dishes` — catálogo de platos con búsqueda, filtros, detalle y «no me gusta».
+- `/dishes` — catálogo de platos con búsqueda, filtros, detalle, «no me gusta» y coste del plato.
 - `/settings` — alérgenos, exclusiones, despensa y estado del catálogo.
 - `*` — página no encontrada.
 
@@ -147,6 +149,17 @@ Contrato observado el 2026-10-25: `/api/categories/` devuelve `{count,next,previ
 - API de dominio: `/api/allergens`, `/api/ingredients`, `/api/dishes`, `/api/dishes/{id}`, `/api/profile`, `/api/exclusions`, `/api/pantry`. `GET /api/dishes` acepta `q`, `meal_type`, `tag`, `light` y `only_eligible`.
 - UI: Menú persiste el perfil; Platos busca, filtra y permite «no me gusta» por plato o ingrediente; Ajustes gestiona alérgenos, exclusiones, despensa y catálogo.
 
+## Coste
+
+Implementado en `app/services/pricing.py` (F3), con esquemas en `app/schemas/pricing.py` y endpoint en `app/api/pricing.py`.
+
+- `scale_quantity(quantity_milli, people, base_servings)` redondea half-up por plato antes de multiplicar por sus apariciones.
+- `purchasable_formats(ingredient)` exige producto publicado, precio y cantidad positivos, formato fijo (`approx_size=False`, `selling_method=0`) y la misma unidad base que el ingrediente.
+- `plan_purchase(ingredient, net_need)` minimiza `Σ q × precio` sujeto a cubrir la necesidad. Usa enumeración exacta con una cota derivada del formato de menor coste unitario y un respaldo de programación dinámica para formatos con cocientes enormes. Desempata por coste, paquetes y `product_id`.
+- `price_ingredient` aplica `net_need = max(0, need − pantry)`, asigna el consumo a los formatos comprados por coste unitario ascendente, valora la despensa al formato elegible más barato (o al producto por defecto si no hay compra) y calcula las sobras como residuo exacto del ticket.
+- `price_basket` agrega ingredientes, reparte el consumo por aparición con el método del mayor resto y verifica la identidad global.
+- `POST /api/pricing/preview` no persiste nada ni aplica filtros de alérgenos: es un preview de coste. Si no se envía despensa, usa la del perfil. Devuelve coste por plato y ración, ingredientes, paquetes y totales. `PRODUCT_UNAVAILABLE` (409) si un ingrediente no tiene producto comprable.
+
 ## APIs
 
 Prefijo `/api`:
@@ -156,7 +169,7 @@ Prefijo `/api`:
 - `/allergens`, `/ingredients` — implementados (F2.8)
 - `/dishes`, `/dishes/{id}` — implementados (F2.8)
 - `/profile`, `/exclusions`, `/pantry` — implementados (F2.8)
-- `/pricing/preview`
+- `/pricing/preview` — implementado (F3.5)
 - `/menus/generate`, `/menus`, `/menus/{id}`
 - `/menus/{id}/entries/{entry_id}`, `/swap`, `/exclude`
 - `/menus/{id}/regenerate`
@@ -214,7 +227,10 @@ Perfil + exclusiones + alérgenos + despensa
 Elegibilidad fail-closed
     │
     ▼
-Optimizador CP-SAT (2 etapas)
+Coste puro: plan_purchase + despensa + sobras (F3)
+    │
+    ▼
+Optimizador CP-SAT (2 etapas) (F4)
     │
     ▼
 Menú + coste + lista de la compra

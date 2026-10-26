@@ -21,6 +21,30 @@ describe('DishesPage', () => {
     expect(screen.getByText(/300 g para 2 raciones/)).toBeInTheDocument();
   });
 
+  it('muestra el coste del plato con las personas del perfil', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('/api/profile', () =>
+        HttpResponse.json({
+          id: 1,
+          people: 4,
+          days: 7,
+          budget_cents: 9000,
+          allergen_codes: [],
+        }),
+      ),
+    );
+    renderApp(['/dishes']);
+
+    await user.click(await screen.findByRole('button', { name: 'Ver ingredientes' }));
+
+    expect(await screen.findByText('Coste del plato')).toBeInTheDocument();
+    // 144 céntimos por ración × 4 personas = 5,76 € de consumo.
+    expect(await screen.findByText(/5,76/)).toBeInTheDocument();
+    expect(screen.getByText(/por ración/)).toBeInTheDocument();
+    expect(screen.getByText('Compra estimada')).toBeInTheDocument();
+  });
+
   it('envía la exclusión de un plato', async () => {
     const user = userEvent.setup();
     const post = vi.fn(async ({ request }: { request: Request }) => {

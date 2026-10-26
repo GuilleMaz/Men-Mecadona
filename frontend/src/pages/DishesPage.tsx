@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { DishCostCard } from '@/components/dishes/DishCostCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import {
   fetchAllergens,
   fetchDish,
   fetchDishes,
+  fetchProfile,
   type DishSummary,
 } from '@/lib/domain';
 import {
@@ -244,6 +246,8 @@ export function DishesPage() {
     queryFn: () => fetchDishes({ onlyEligible: false, limit: 100 }),
   });
   const allergensQuery = useQuery({ queryKey: ['allergens'], queryFn: fetchAllergens });
+  const profileQuery = useQuery({ queryKey: ['profile'], queryFn: fetchProfile });
+  const people = profileQuery.data?.people ?? 2;
   const dishMutation = useMutation({
     mutationFn: createExclusion,
     onSuccess: async () => {
@@ -439,7 +443,12 @@ export function DishesPage() {
         </div>
       ) : null}
 
-      {selectedDishId !== null ? <DishDetailCard dishId={selectedDishId} /> : null}
+      {selectedDishId !== null ? (
+        <div className="space-y-4">
+          <DishDetailCard dishId={selectedDishId} />
+          <DishCostCard dishId={selectedDishId} people={people} />
+        </div>
+      ) : null}
 
       <p className="text-xs text-muted-foreground">
         Alérgenos mostrados con la lista canónica de la app. Confirma siempre el etiquetado del

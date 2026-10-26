@@ -75,6 +75,8 @@ class SeedIngredient(BaseModel):
             raise ValueError("Cada ingrediente debe tener exactamente un producto por defecto.")
         if self.grams_per_unit is not None and self.base_unit != "unit":
             raise ValueError("grams_per_unit solo tiene sentido con base_unit='unit'.")
+        if self.base_unit == "unit" and self.grams_per_unit is None:
+            raise ValueError("Los ingredientes por pieza necesitan grams_per_unit.")
         return self
 
 

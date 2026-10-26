@@ -14,7 +14,7 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
   `GET /api/catalog/categories`, `GET /api/catalog/products?q=&category_id=&limit=&offset=`.
 - Dominio: `GET /api/allergens`, `GET /api/ingredients`, `GET /api/dishes`,
   `GET /api/dishes/{id}`, `GET/PUT /api/profile`, `GET/POST/DELETE /api/exclusions`,
-  `GET/PUT /api/pantry`.
+  `GET/PUT /api/pantry`, `POST /api/pricing/preview`.
 - Documentación interactiva: `http://127.0.0.1:8000/docs`.
 
 Para arrancar backend y frontend juntos, usa `.\run.ps1` desde la raíz. Para
@@ -89,6 +89,27 @@ uv run python ..\scripts\validate_seed.py
 
 `sync_catalog.py` también recarga el seed y sincroniza alérgenos tras una sync
 correcta.
+
+## Coste y preview (F3)
+
+- `app/services/pricing.py` concentra el motor puro: escalado por personas y
+  raciones, formatos comprables, necesidad neta con despensa, `plan_purchase`,
+  consumo, ticket y sobras.
+- Cantidades en milésimas y céntimos enteros; `Decimal` solo para costes
+  unitarios intermedios y redondeo half-up al final.
+- `plan_purchase` minimiza el ticket y permite mezclar formatos; desempata por
+  menos paquetes y `product_id`. F4 reutiliza la misma función para la lista.
+- La identidad `ticket + pantry_consumption = consumption + leftover` se cumple
+  por ingrediente y por cesta.
+- `POST /api/pricing/preview` no persiste menús ni aplica filtros de alérgenos.
+  Recibe `people`, `dishes` y `pantry` opcional (si falta, usa la del perfil).
+  Devuelve coste por plato y ración, ingredientes, paquetes y totales. Un
+  ingrediente sin producto comprable devuelve `409 PRODUCT_UNAVAILABLE`.
+- `grams_per_unit` es obligatorio en ingredientes con `base_unit=unit`.
+
+```powershell
+uv run pytest tests/test_pricing.py tests/test_pricing_api.py
+```
 
 Seguridad local: el middleware de `Host` solo acepta `127.0.0.1`, `localhost` y
 `::1`; el resto devuelve `400 INVALID_HOST`. Los tests de API envían un `Host`

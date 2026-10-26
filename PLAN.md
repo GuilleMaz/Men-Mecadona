@@ -1,6 +1,6 @@
 # PLAN.md — Cesta
 
-> **Estado:** F2 completada el 2026-10-26. Siguiente fase: F3 (coste puro y preview).
+> **Estado:** F3 completada el 2026-10-26. Siguiente fase: F4 (optimizador, menú y lista de la compra).
 > **Última actualización:** 2026-10-26
 > **Nombre provisional:** Cesta
 > **Ubicación:** `C:\Users\guill\OneDrive\Escritorio\OpenCode\MERCADONA`

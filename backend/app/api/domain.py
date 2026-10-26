@@ -12,6 +12,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.allergens import ALLERGEN_CODES, ALLERGEN_LABELS
 from app.api.errors import ApiError
+from app.api.presenters import ingredient_out
 from app.db import get_session
 from app.models.dishes import Dish
 from app.models.ingredients import Ingredient
@@ -24,7 +25,6 @@ from app.schemas.domain import (
     DishSummary,
     ExclusionCreate,
     ExclusionOut,
-    IngredientOut,
     IngredientPage,
     PantryItemOut,
     PantryUpdate,
@@ -72,24 +72,6 @@ def _sort_allergens(codes: set[str] | frozenset[str]) -> list[str]:
 def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
     return "".join(char for char in normalized if not unicodedata.combining(char)).casefold()
-
-
-def _ingredient_out(ingredient: Ingredient) -> IngredientOut:
-    return IngredientOut(
-        id=ingredient.id,
-        slug=ingredient.slug,
-        name=ingredient.name,
-        category=ingredient.category,
-        group=ingredient.group,  # type: ignore[arg-type]
-        base_unit=ingredient.base_unit,  # type: ignore[arg-type]
-        grams_per_unit=ingredient.grams_per_unit,
-        protein_source=ingredient.protein_source,
-        serving_group=ingredient.serving_group,  # type: ignore[arg-type]
-        serving_size_milli=ingredient.serving_size_milli,
-        allergens=list(ingredient.allergens_json or []),
-        tags=list(ingredient.tags_json or []),
-        active=ingredient.active,
-    )
 
 
 def _dish_summary(result: DishEligibility) -> DishSummary:
@@ -146,7 +128,7 @@ def _dish_detail(result: DishEligibility) -> DishDetail:
         ]
         ingredients.append(
             DishIngredientOut(
-                ingredient=_ingredient_out(ingredient),
+                ingredient=ingredient_out(ingredient),
                 quantity_milli=link.quantity_milli,
                 products=products,
             )
@@ -187,7 +169,7 @@ def list_ingredients(
         .offset(offset)
     ).all()
     return IngredientPage(
-        items=[_ingredient_out(ingredient) for ingredient in ingredients],
+        items=[ingredient_out(ingredient) for ingredient in ingredients],
         total=total,
         limit=limit,
         offset=offset,
@@ -395,7 +377,7 @@ def get_pantry(session: SessionDep) -> list[PantryItemOut]:
     return [
         PantryItemOut(
             id=item.id,
-            ingredient=_ingredient_out(item.ingredient),
+            ingredient=ingredient_out(item.ingredient),
             quantity_milli=item.quantity_milli,
         )
         for item in _pantry_items(session, profile)

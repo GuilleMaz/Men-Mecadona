@@ -1,6 +1,6 @@
 ﻿# TASKS.md — Cesta
 
-> **Estado global:** F2 completada el 2026-10-26 (F2.1-F2.10). Siguiente fase: F3.
+> **Estado global:** F3 completada el 2026-10-26 (F3.1-F3.7). Siguiente fase: F4.
 > **Última actualización:** 2026-10-26
 > **Plan de referencia:** `PLAN.md`
 
@@ -284,7 +284,9 @@
 
 **Estado F2:** cumplido el 2026-10-26. 110 ingredientes, 212 mapeos, 60 platos, 212 productos mapeados con alérgenos (210 enriquecidos en la primera carga real, 2 fallos transitorios reintentables), `validate_seed.py` en verde, `GET /api/dishes` y UI de Ajustes/Platos operativas.
 
----## F3 — Motor de costes puro y preview
+---
+
+## F3 — Motor de costes puro y preview
 
 **Objetivo:** calcular el coste real con paquetes, despensa y sobras, sin depender todavía de menús persistidos.
 
@@ -292,41 +294,47 @@
 
 **Estimación:** 2-3 días.
 
-- [ ] **F3.1 — Unidades y conversión**
+- [x] **F3.1 — Unidades y conversión**
   - `quantity_milli` en mg, µl o mili-unidades.
   - `grams_per_unit` para ingredientes por pieza.
   - Validar que plato y producto usan la misma unidad base.
   - **DoD:** casos dorados de huevos, cebolla, pollo y aceite.
+  - **Resultado:** `app/services/pricing.py` con `scale_quantity`, `scale_dish` y `purchasable_formats`; los productos con unidad distinta, precio/cantidad ausentes, peso variable o mostrador se excluyen. `grams_per_unit` pasa a ser obligatorio para `base_unit=unit`. Casos dorados de huevos, cebolla, pollo y aceite en tests.
 
-- [ ] **F3.2 — Necesidad neta y despensa**
+- [x] **F3.2 — Necesidad neta y despensa**
   - `net_need = max(0, need − pantry)`.
   - Despensa parcial, completa y sobre-despensa.
   - **DoD:** nunca se generan paquetes negativos; la necesidad neta se calcula antes de `ceil`.
+  - **Resultado:** `price_ingredient` resta la despensa antes de `plan_purchase`. Tests de despensa parcial, completa y sobre-despensa; el consumo de despensa se valora aparte y los paquetes nunca son negativos.
 
-- [ ] **F3.3 — Paquetes y plan de compra**
+- [x] **F3.3 — Paquetes y plan de compra**
   - Implementar `plan_purchase(ingrediente, necesidad_neta)`: combinación de paquetes que minimiza coste total, permite mezclar formatos y desempata por menos paquetes, menor precio y `product_id`.
   - Calcular paquetes por producto.
   - Asignar consumo a formatos comprados por precio unitario ascendente.
   - Calcular sobras.
   - **DoD:** `used + leftover = purchased`; no hay doble conteo; `preview.ticket == shopping_list.ticket` para el mismo menú.
+  - **Resultado:** plan exacto por enumeración con cota del formato de mejor coste unitario y respaldo de programación dinámica para formatos patológicos. Consumo asignado a los formatos comprados más baratos; `used + leftover = purchased` por línea y total. La lista y el preview comparten el mismo plan canónico.
 
-- [ ] **F3.4 — Identidad contable**
+- [x] **F3.4 — Identidad contable**
   - `ticket + pantry_consumption = consumption + leftover`.
   - Redondeo half-up solo al final.
   - **DoD:** test de identidad con despensa 0, parcial y total.
+  - **Resultado:** cada ingrediente redondea su consumo una sola vez con `ROUND_HALF_UP`; el valor de las sobras es el residuo exacto del ticket. Identidad verificada por ingrediente y por cesta con despensa 0, parcial, completa y sobre-despensa.
 
-- [ ] **F3.5 — Endpoint de preview**
+- [x] **F3.5 — Endpoint de preview**
   - `POST /api/pricing/preview` con platos, personas y despensa.
   - No persiste menú ni aplica filtros de alérgenos; el preview es de coste.
   - Devuelve coste, ticket, consumo, despensa y sobras.
   - **DoD:** el preview coincide con el cálculo puro y no crea filas en `menus`; `preview.ticket == shopping_list.ticket` para el mismo conjunto de platos.
+  - **Resultado:** endpoint implementado con `PricingPreviewIn/Out`; usa la despensa del perfil si se omite, admite override explícito y devuelve coste por plato y por ración, ingredientes y líneas de compra. No escribe en la base y no aplica alérgenos. `PRODUCT_UNAVAILABLE` 409 si un ingrediente no tiene producto comprable.
 
-- [ ] **F3.6 — UI de coste en plato**
+- [x] **F3.6 — UI de coste en plato**
   - Mostrar coste de consumo por ración y por plato.
   - Mostrar ingredientes y productos asociados.
   - **DoD:** el coste cambia al actualizar precios o personas.
+  - **Resultado:** `DishCostCard` en el detalle de plato con consumo, coste por ración, ticket, despensa, sobras y líneas de compra. Usa las personas del perfil; al cambiar el perfil se recalcula. El detalle ya muestra ingredientes y productos.
 
-- [ ] **F3.7 — Tests de coste**
+- [x] **F3.7 — Tests de coste**
   - Aceite 5 L vs 1 L.
   - Huevos por unidades.
   - Pollo 500 g.
@@ -335,8 +343,11 @@
   - Despensa parcial, completa y sobre-despensa.
   - `preview.ticket == shopping_list.ticket` para un menú fijo.
   - **DoD:** todos los casos documentados pasan.
+  - **Resultado:** 32 tests backend nuevos (20 puros, 11 de API y 1 de seed) y 1 test frontend nuevo. Cubren aceite 5 L vs 1 L, huevos por unidades, pollo de 500 g, pack 6 × 125 g, 1 persona vs 4 personas, formatos mezclados, empates, respaldo de programación dinámica, despensa parcial/completa/sobre-despensa, identidad, reparto de céntimos por entrada, repeticiones del mismo plato, alérgenos ignorados en el preview, errores 404/409/422 y ausencia de persistencia.
 
 **DoD de F3:** coste, ticket, despensa y sobras exactos y verificables; preview sin persistencia.
+
+**Estado F3:** cumplido el 2026-10-26. 193 tests backend y 27 frontend en verde; `check.ps1` completo en verde. Smoke real con la copia local: tres platos, ticket 22,85 €, consumo 4,48 €, sobras 18,37 € e identidad contable correcta.
 
 ---
 

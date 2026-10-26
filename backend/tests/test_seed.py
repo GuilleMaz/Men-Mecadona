@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -243,3 +245,21 @@ def test_seed_dry_run_does_not_persist(
     with catalog_session_factory() as session:
         assert session.scalar(select(func.count()).select_from(Ingredient)) == 0
         assert session.scalar(select(func.count()).select_from(Dish)) == 0
+
+
+def test_unit_ingredients_require_grams_per_unit() -> None:
+    """F3.1: los ingredientes por pieza necesitan su peso medio."""
+    base = {
+        "slug": "eggs",
+        "name": "Huevos",
+        "category": "eggs",
+        "group": "protein",
+        "base_unit": "unit",
+        "serving_group": "protein",
+        "serving_size_milli": 2_000,
+        "products": [SeedProduct(external_id="eggs-12", priority=1, is_default=True)],
+    }
+    with pytest.raises(ValidationError):
+        SeedIngredient(**base)  # type: ignore[arg-type]
+    ingredient = SeedIngredient(**base, grams_per_unit=60)  # type: ignore[arg-type]
+    assert ingredient.grams_per_unit == 60

@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-10-26 — F3: motor de costes puro y preview
+
+### Cambios
+
+- Backend: `app/services/pricing.py` con funciones puras para escalar cantidades
+  por personas/raciones, seleccionar formatos comprables, calcular necesidad
+  neta con despensa, ejecutar el plan de compra canónico y valorar consumo,
+  ticket y sobras.
+- `plan_purchase` exacto con enumeración y cota por coste unitario, respaldo de
+  programación dinámica para formatos patológicos y desempate estable por coste,
+  paquetes y `product_id`.
+- Consumo asignado a los formatos comprados de menor coste unitario; despensa
+  valorada al formato elegible más barato o al producto por defecto si no hay
+  compra; sobras como residuo exacto del ticket.
+- Identidad contable `ticket + pantry_consumption = consumption + leftover` por
+  ingrediente y por cesta, con redondeo half-up solo al final.
+- Reparto de consumo por aparición de plato con el método del mayor resto.
+- API `POST /api/pricing/preview`: personas, platos y despensa opcional (perfil
+  por defecto). No persiste, no aplica alérgenos y devuelve coste por plato y
+  ración, ingredientes, paquetes, ticket, consumo, despensa y sobras.
+- Esquemas `PricingPreviewIn/Out` y presentador compartido `ingredient_out`.
+- `grams_per_unit` obligatorio para ingredientes con `base_unit=unit`.
+- Frontend: `DishCostCard` en el detalle de plato con coste de consumo, coste
+  por ración, ticket, despensa, sobras y líneas de compra; usa las personas del
+  perfil. Handlers MSW y test del coste.
+- Documentación: README raíz/backend/frontend, `TASKS.md`, `PLAN.md`,
+  `AGENTS.md` y `project-memory/`.
+
+### Verificación
+
+- `uv run ruff check .`, `ruff format --check .`, `mypy app`: OK.
+- `uv run pytest`: 193 tests en verde, sin red (32 nuevos: 20 puros, 11 de API y
+  1 de seed).
+- `npm run lint`, `format:check`, `typecheck`, `test` (27 tests, 1 nuevo) y
+  `build`: OK.
+- Casos cubiertos: aceite 5 L vs 1 L, huevos por unidades, pollo 500 g, pack
+  6 × 125 g, 1 vs 4 personas, despensa parcial/completa/sobre-despensa,
+  formatos mezclados, empates, repeticiones, alérgenos ignorados en preview y
+  errores 404/409/422.
+- Smoke real contra la copia local: 3 platos, ticket 22,85 €, consumo 4,48 €,
+  despensa 0,00 €, sobras 18,37 € e identidad correcta.
+
+### Archivos
+
+- `backend/app/services/pricing.py`, `backend/app/schemas/pricing.py`,
+  `backend/app/api/pricing.py`, `backend/app/api/presenters.py`
+- `backend/app/api/domain.py`, `backend/app/main.py`,
+  `backend/app/schemas/seed.py`
+- `backend/tests/test_pricing.py`, `backend/tests/test_pricing_api.py`,
+  `backend/tests/test_seed.py`, `backend/tests/domain_fixtures.py`
+- `frontend/src/lib/domain.ts`, `frontend/src/components/dishes/DishCostCard.tsx`,
+  `frontend/src/pages/DishesPage.tsx`, `frontend/src/pages/DishesPage.test.tsx`,
+  `frontend/src/test/server.ts`
+- `README.md`, `backend/README.md`, `frontend/README.md`, `PLAN.md`, `TASKS.md`,
+  `AGENTS.md`
+- `project-memory/**`
+
+### Motivo
+
+- Cerrar F3 con el coste, ticket, despensa y sobras exactos y verificables, y un
+  preview sin persistencia, antes de construir el optimizador y la lista de F4.
+
 ## 2026-10-26 — F2: ingredientes, platos, alérgenos y preferencias
 
 ### Cambios

@@ -4,8 +4,8 @@ Aplicación web local que genera un menú de **comidas y cenas** para N personas
 N días y un presupuesto, con productos y precios de la tienda online de Mercadona.
 Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiquetas.
 
-> Estado: F2 completada (ingredientes, platos, alérgenos y preferencias). F3
-> añadirá el motor de costes puro y el preview. La documentación de alcance está
+> Estado: F3 completada (motor de costes puro y preview). F4 añadirá el
+> optimizador, el menú y la lista de la compra. La documentación de alcance está
 > en `PLAN.md` y el detalle de ejecución en `TASKS.md`.
 
 ## Requisitos
@@ -50,7 +50,8 @@ uv run python ..\scripts\validate_seed.py
 
 El estado y el progreso se ven en `Ajustes` → `Catálogo de Mercadona`; las
 preferencias (alérgenos, exclusiones y despensa) en la misma pantalla, y el
-catálogo de platos en `Platos`.
+catálogo de platos en `Platos`. Al abrir un plato, su detalle muestra el coste de
+consumo, el coste por ración y el ticket de compra con los precios actuales.
 
 Para detener ambos servicios, pulsa `Ctrl+C`.
 
@@ -63,16 +64,30 @@ Para detener ambos servicios, pulsa `Ctrl+C`.
 Ejecuta Ruff, mypy y pytest en backend; ESLint, Prettier, TypeScript, Vitest y
 build en frontend; y Ruff sobre los scripts de Python de la raíz.
 
+## Coste y preview
+
+`POST /api/pricing/preview` calcula el coste de un conjunto de platos para N
+personas sin persistir ningún menú y sin aplicar filtros de alérgenos. Devuelve
+coste de consumo, ticket, despensa, sobras, coste por plato y por ración, y la
+compra estimada. Si no se envía despensa, usa la del perfil.
+
+Reglas verificadas:
+
+- la necesidad neta resta la despensa antes de calcular paquetes;
+- el plan de compra mezcla formatos si sale más barato y minimiza el ticket;
+- `ticket + despensa = consumo + sobras` se cumple por ingrediente y por cesta;
+- el preview y la futura lista de la compra comparten el mismo plan canónico.
+
 ## Cierre de fase
 
 Cada fase se cierra con un único comando:
 
 ```powershell
-.\finish-phase.ps1 -Phase F2 -Summary "ingredientes platos y preferencias"
+.\finish-phase.ps1 -Phase F3 -Summary "coste puro y preview"
 ```
 
 El script ejecuta `check.ps1`, rechaza secretos, bases de datos, `node_modules` y
-`.venv`, crea el commit `F2: ingredientes platos y preferencias` y lo sube a
+`.venv`, crea el commit `F3: coste puro y preview` y lo sube a
 GitHub. Si la calidad falla, no se hace commit. Si el push falla, el commit queda
 local y el script termina con error para poder reintentarlo.
 

@@ -29,7 +29,7 @@ def make_product(
     name: str | None = None,
     package_quantity_milli: int | None = 1_000_000,
     package_unit: str = "g",
-    package_price_cents: int = 100,
+    package_price_cents: int | None = 100,
     allergen_status: str = "known",
     published: bool = True,
     approx_size: bool = False,

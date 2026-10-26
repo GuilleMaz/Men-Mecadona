@@ -2,32 +2,34 @@
 
 ## Estado
 
-F2 completada el 2026-10-26. F2.1-F2.10 cerradas: dominio, seed, mapeo, alérgenos, API, UI y tests.
+F3 completada el 2026-10-26. F3.1-F3.7 cerradas: unidades, despensa, plan de compra, identidad contable, preview, UI y tests.
 
-- Backend: Ruff, formato, mypy strict y 161 tests en verde.
-- Frontend: ESLint, Prettier, TypeScript estricto, 26 tests y build en verde.
+- Backend: Ruff, formato, mypy strict y 193 tests en verde.
+- Frontend: ESLint, Prettier, TypeScript estricto, 27 tests y build en verde.
 - Catálogo real: 152/152 subcategorías, 4.540 productos vistos, 4.288 únicos, 178 categorías, 7,74 s, `success`, CP 22002 / almacén 4389.
 - Dominio: 110 ingredientes, 212 mapeos únicos, 60 platos sin pasos; `validate_seed.py` en verde.
 - Alérgenos: 212 productos mapeados; 210 actualizados en la primera carga real (2 fallos transitorios reintentables), 11-12 `unknown`, 29 `partial`.
+- Coste: `plan_purchase` canónico exacto; identidad `ticket + pantry_consumption = consumption + leftover`; preview sin persistencia; smoke real con 3 platos e identidad correcta.
 - `run.ps1` aplica `alembic upgrade head` antes de arrancar; el arranque carga el seed y refresca alérgenos en segundo plano.
-- F1 publicada en `origin/main` con el commit `e938016`.
+- F1 publicada en `origin/main` con el commit `e938016`; F2 con `0c9909c`.
 - Base SQLite en `%LOCALAPPDATA%\Cesta`, fuera de OneDrive.
 
 ## Alta prioridad
 
-- F3.1: unidades y conversión (`quantity_milli`, `grams_per_unit`).
-- F3.2: necesidad neta y despensa parcial/completa/sobre-despensa.
-- F3.3: `plan_purchase` canónico, paquetes, consumo y sobras.
-- F3.4: identidad contable `ticket + pantry = consumption + leftover`.
-- F3.5: `POST /api/pricing/preview` sin persistencia.
-- F3.6: UI de coste por plato/ración.
-- F3.7: tests de coste (aceite 5 L vs 1 L, huevos, pollo, pack, personas, despensa, preview == lista).
-- Al cerrar F2/F3: no mezclar cambios de fases.
+- F4.1: modelos `menus`, `menu_entries`, `menu_entry_ingredients` y `shopping_items` con migración.
+- F4.2: filtro de elegibilidad fail-closed reutilizando `EligibilityService`.
+- F4.3: modelo CP-SAT con `x`, `q` y `violation[k]`, demanda por coeficientes y presupuesto duro.
+- F4.4: objetivo lexicográfico en dos etapas e inviabilidad (`budget` como preview; resto 422).
+- F4.5: persistencia de menús, plan de compra materializado y recálculo transaccional.
+- F4.6: API completa de menús, swaps, bloqueos, regeneración, revalidación, lista y export.
+- F4.7: UI de rejilla días × comida/cena, barra de presupuesto y estados.
+- F4.8: UI de lista de la compra con checkboxes, «ya lo tengo», sobras y total sticky.
+- F4.9: tests de 1/2/3/7/14 días, 1/2/4/10 personas, presupuestos, bloqueos, variedad, optimalidad por fuerza bruta y dry-run.
+- Al cerrar F3/F4: no mezclar cambios de fases.
 
 ## Prioridad media
 
-- F4: optimizador, menú, lista y ajustes.
-- F5: resiliencia, seguridad, historial, export y documentación.
+- F5: resiliencia de precios, responsive/accesibilidad, exportación, documentación, rendimiento, build local y tests de integración.
 
 ## Baja prioridad / backlog
 
@@ -69,10 +71,14 @@ F2 completada el 2026-10-26. F2.1-F2.10 cerradas: dominio, seed, mapeo, alérgen
 - El intérprete usado por `uv` es el Python 3.13.5 de Anaconda; si se desinstala, `uv sync` deberá resolver otro 3.13.
 - Dependencias de frontend muy recientes (React Router 8, Vitest 5, MSW 3, TypeScript 6, ESLint 10): revisar notas de migración al añadir features.
 - El seed se carga tras la sync; si el catálogo cambia y un producto mapeado desaparece, `validate_seed.py` lo detecta y el mapeo se queda sin producto.
+- F4 debe materializar la lista con `plan_purchase` y verificar `ticket_canónico ≤ ticket_solver ≤ budget`; no debe recalcular con otro criterio.
+- El consumo por entrada se reparte con el mayor resto; cualquier cambio de reparto debe conservar la suma exacta.
+- La valoración de la despensa usa el formato elegible más barato o el producto por defecto si no hay compra; documentar cualquier cambio en `decisions.md`.
 
 ## Siguiente acción recomendada
 
-1. F3.1 y F3.2: conversión de unidades y necesidad neta con despensa.
-2. F3.3 y F3.4: `plan_purchase`, consumo, sobras e identidad contable.
-3. F3.5-F3.7: preview, UI de coste y tests.
-4. Al cerrar F3: `.\finish-phase.ps1 -Phase F3 -Summary "coste puro y preview"`.
+1. F4.1 y F4.2: migración de menús y filtro de elegibilidad fail-closed.
+2. F4.3 y F4.4: modelo CP-SAT, objetivo lexicográfico e inviabilidad.
+3. F4.5 y F4.6: persistencia, plan de compra, recálculo y API.
+4. F4.7-F4.9: UI, lista, tests y dry-run.
+5. Al cerrar F4: `.\finish-phase.ps1 -Phase F4 -Summary "optimizador menu y lista"`.

@@ -6,6 +6,9 @@ import type {
   Ingredient,
   PantryItem,
   PantryItemInput,
+  PricingIngredientCost,
+  PricingPreview,
+  PricingPreviewInput,
   Profile,
   ProfileUpdate,
 } from '@/lib/domain';
@@ -182,6 +185,103 @@ function exclusionFromBody(body: Record<string, unknown>): Exclusion {
   };
 }
 
+const PRICING_INGREDIENTS: PricingIngredientCost[] = [
+  {
+    ingredient: INGREDIENTS[2]!,
+    need_milli: 300000,
+    pantry_milli: 0,
+    pantry_used_milli: 0,
+    net_need_milli: 300000,
+    purchased_milli: 500000,
+    leftover_milli: 200000,
+    ticket_cents: 450,
+    consumption_cents: 270,
+    pantry_consumption_cents: 0,
+    leftover_value_cents: 180,
+    products: [
+      {
+        product_id: 10,
+        external_id: '1002',
+        name: 'Pollo',
+        package_quantity_milli: 500000,
+        package_unit: 'g',
+        package_price_cents: 450,
+        packages: 1,
+        quantity_milli: 500000,
+        subtotal_cents: 450,
+        used_milli: 300000,
+        leftover_milli: 200000,
+      },
+    ],
+  },
+  {
+    ingredient: INGREDIENTS[0]!,
+    need_milli: 160000,
+    pantry_milli: 0,
+    pantry_used_milli: 0,
+    net_need_milli: 160000,
+    purchased_milli: 1000000,
+    leftover_milli: 840000,
+    ticket_cents: 115,
+    consumption_cents: 18,
+    pantry_consumption_cents: 0,
+    leftover_value_cents: 97,
+    products: [
+      {
+        product_id: 11,
+        external_id: '1001',
+        name: 'Arroz',
+        package_quantity_milli: 1000000,
+        package_unit: 'g',
+        package_price_cents: 115,
+        packages: 1,
+        quantity_milli: 1000000,
+        subtotal_cents: 115,
+        used_milli: 160000,
+        leftover_milli: 840000,
+      },
+    ],
+  },
+  {
+    ingredient: INGREDIENTS[1]!,
+    need_milli: 100000,
+    pantry_milli: 0,
+    pantry_used_milli: 0,
+    net_need_milli: 100000,
+    purchased_milli: 0,
+    leftover_milli: 0,
+    ticket_cents: 0,
+    consumption_cents: 0,
+    pantry_consumption_cents: 0,
+    leftover_value_cents: 0,
+    products: [],
+  },
+];
+
+function pricingPreviewFor(body: PricingPreviewInput): PricingPreview {
+  const people = body.people;
+  const perServing = 144;
+  const consumption = perServing * people;
+  const ticket = 565 + Math.max(0, people - 2) * perServing;
+  return {
+    people,
+    dish_count: body.dishes.length,
+    ticket_cents: ticket,
+    consumption_cents: consumption,
+    pantry_consumption_cents: 0,
+    leftover_value_cents: Math.max(0, ticket - consumption),
+    dishes: body.dishes.map((entry, index) => ({
+      index,
+      dish_id: entry.dish_id,
+      dish_name: DISH.name,
+      servings: people,
+      consumption_cents: consumption,
+      per_serving_cents: perServing,
+    })),
+    ingredients: PRICING_INGREDIENTS,
+  };
+}
+
 /**
  * Servidor MSW para los tests. Los handlers por defecto permiten montar el
  * layout completo sin red real; cada test puede sobrescribirlos con `server.use`.
@@ -236,5 +336,9 @@ export const server = setupServer(
       };
     });
     return HttpResponse.json(items);
+  }),
+  http.post('/api/pricing/preview', async ({ request }) => {
+    const body = (await request.json()) as PricingPreviewInput;
+    return HttpResponse.json(pricingPreviewFor(body));
   }),
 );

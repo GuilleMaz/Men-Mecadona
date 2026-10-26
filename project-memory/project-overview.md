@@ -8,8 +8,8 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F2 completada el 2026-10-26 (F2.1-F2.10). Siguiente fase: F3 (coste puro y preview).
-- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389), catálogo persistente con sync parcial, ingredientes/platos con seed idempotente, alérgenos fail-closed, perfil, exclusiones y despensa. Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario de perfil persistente, catálogo de platos con filtros, «no me gusta», alérgenos, exclusiones, despensa y estado del catálogo.
+- **Fase:** F3 completada el 2026-10-26 (F3.1-F3.7). Siguiente fase: F4 (optimizador, menú y lista de la compra).
+- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389), catálogo persistente con sync parcial, ingredientes/platos con seed idempotente, alérgenos fail-closed, perfil, exclusiones, despensa y motor de costes puro con preview. Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario de perfil persistente, catálogo de platos con filtros, «no me gusta», alérgenos, exclusiones, despensa, estado del catálogo y coste por plato/ración.
 - **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
 - **Integración Mercadona:** sync real validada: 26 secciones, 152/152 subcategorías, 4.540 productos vistos, 4.288 productos únicos persistidos, 178 categorías y 7,74 s con concurrencia 4. Tests con fixtures sintéticas y respx, sin red.
 - **Catálogo:** migraciones Alembic (`render_as_batch`), upsert por `external_id`, normalización a céntimos y milésimas, fallo parcial sin ocultar productos de categorías fallidas, lock de proceso y refresh de arranque a las 24 h.
@@ -21,7 +21,8 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`, `README.md` y `SECURITY.md`.
 - **Memoria:** actualizada con informes de los spikes y las decisiones de F1/F2 en `decisions.md`.
 - **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad.
-- **Calidad:** backend con Ruff, formato, mypy (strict) y 161 tests; frontend con ESLint, Prettier, TypeScript estricto, 26 tests y build de producción.
+- **Coste (F3):** `plan_purchase` canónico exacto, necesidad neta con despensa, ticket, consumo, sobras e identidad `ticket + pantry_consumption = consumption + leftover`; preview sin persistencia y sin filtros de alérgenos.
+- **Calidad:** backend con Ruff, formato, mypy (strict) y 193 tests; frontend con ESLint, Prettier, TypeScript estricto, 27 tests y build de producción.
 - **Última actualización:** 2026-10-26.
 
 ## Tecnologías
@@ -82,11 +83,17 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - F2.8: API de platos, ingredientes, alérgenos, perfil, exclusiones y despensa.
 - F2.9: UI de perfil, catálogo de platos, alérgenos, exclusiones y despensa.
 - F2.10: 41 tests backend y 10 frontend nuevos, sin red.
+- F3.1: unidades, escalado por personas/raciones y validación de unidad base producto/ingrediente; `grams_per_unit` obligatorio por pieza.
+- F3.2: necesidad neta con despensa parcial, completa y sobre-despensa.
+- F3.3: `plan_purchase` canónico exacto, mezcla de formatos, consumo por coste unitario ascendente y sobras.
+- F3.4: identidad contable por ingrediente y por cesta, con redondeo half-up solo al final.
+- F3.5: `POST /api/pricing/preview` sin persistencia, con despensa del perfil u override y sin filtros de alérgenos.
+- F3.6: `DishCostCard` con coste de consumo, coste por ración, ticket, despensa, sobras y líneas de compra.
+- F3.7: 32 tests backend y 1 frontend nuevos; casos de aceite 5 L vs 1 L, huevos, pollo, pack 6 × 125 g, 1 vs 4 personas y despensa.
 - Pipeline de cierre: `finish-phase.ps1` ejecuta la calidad, crea el commit y lo sube a GitHub.
 
 ## Pendientes
 
-- F3: coste puro y preview.
 - F4: optimizador, menú y lista.
 - F5: calidad, seguridad y entrega.
 - Backlog posterior: CP configurable, LAN/móvil, historial de precios, PDF, PWA, Docker, macros.

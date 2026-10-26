@@ -117,6 +117,65 @@ export type PantryItemInput = {
   quantity_milli: number;
 };
 
+export type PricingPreviewDishInput = {
+  dish_id: number;
+};
+
+export type PricingPreviewInput = {
+  people: number;
+  dishes: PricingPreviewDishInput[];
+  pantry?: PantryItemInput[];
+};
+
+export type PricingProductLine = {
+  product_id: number;
+  external_id: string;
+  name: string;
+  package_quantity_milli: number;
+  package_unit: string;
+  package_price_cents: number;
+  packages: number;
+  quantity_milli: number;
+  subtotal_cents: number;
+  used_milli: number;
+  leftover_milli: number;
+};
+
+export type PricingIngredientCost = {
+  ingredient: Ingredient;
+  need_milli: number;
+  pantry_milli: number;
+  pantry_used_milli: number;
+  net_need_milli: number;
+  purchased_milli: number;
+  leftover_milli: number;
+  ticket_cents: number;
+  consumption_cents: number;
+  pantry_consumption_cents: number;
+  leftover_value_cents: number;
+  products: PricingProductLine[];
+};
+
+export type PricingDishCost = {
+  index: number;
+  dish_id: number;
+  dish_name: string;
+  servings: number;
+  consumption_cents: number;
+  per_serving_cents: number;
+};
+
+export type PricingPreview = {
+  people: number;
+  dish_count: number;
+  ticket_cents: number;
+  consumption_cents: number;
+  pantry_consumption_cents: number;
+  leftover_value_cents: number;
+  dishes: PricingDishCost[];
+  ingredients: PricingIngredientCost[];
+};
+
 type ApiErrorBody = {
   error?: {
     code?: string;
@@ -254,5 +313,13 @@ export function updatePantry(items: PantryItemInput[]): Promise<PantryItem[]> {
   return requestJson<PantryItem[]>('/api/pantry', {
     method: 'PUT',
     body: JSON.stringify({ items }),
+  });
+}
+
+/** Preview de coste sin persistir menú ni aplicar filtros de alérgenos. */
+export function fetchPricingPreview(payload: PricingPreviewInput): Promise<PricingPreview> {
+  return requestJson<PricingPreview>('/api/pricing/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }

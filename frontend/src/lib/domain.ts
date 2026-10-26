@@ -176,21 +176,24 @@ export type PricingPreview = {
   ingredients: PricingIngredientCost[];
 };
 
-type ApiErrorBody = {
+export type ApiErrorBody = {
   error?: {
     code?: string;
     message?: string;
+    details?: Record<string, unknown>;
   };
 };
 
-/** Error con el código estable que devuelve la API. */
+/** Error con el código estable y los detalles que devuelve la API. */
 export class DomainRequestError extends Error {
   readonly code: string | undefined;
+  readonly details: Record<string, unknown> | undefined;
 
-  constructor(message: string, code?: string) {
+  constructor(message: string, code?: string, details?: Record<string, unknown>) {
     super(message);
     this.name = 'DomainRequestError';
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -198,13 +201,14 @@ async function readError(response: Response): Promise<DomainRequestError> {
   try {
     const payload = (await response.json()) as ApiErrorBody;
     const message = payload.error?.message ?? `La API respondió con estado ${response.status}`;
-    return new DomainRequestError(message, payload.error?.code);
+    return new DomainRequestError(message, payload.error?.code, payload.error?.details);
   } catch {
     return new DomainRequestError(`La API respondió con estado ${response.status}`);
   }
 }
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+/** Petición JSON con el sobre de errores homogéneo de la API. */
+export async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...init,
     headers: {

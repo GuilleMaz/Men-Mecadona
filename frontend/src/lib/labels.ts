@@ -22,6 +22,45 @@ export const MEAL_LABELS: Record<string, string> = {
   dinner: 'Cena',
 };
 
+export const MENU_STATUS_LABELS: Record<string, string> = {
+  optimal: 'Óptimo',
+  feasible: 'Factible',
+  relaxed: 'Relajado',
+};
+
+export const PRICE_STATUS_LABELS: Record<string, string> = {
+  current: 'Precios actuales',
+  stale: 'Precios desactualizados',
+};
+
+export const PROTEIN_LABELS: Record<string, string> = {
+  chicken: 'Pollo',
+  turkey: 'Pavo',
+  beef: 'Ternera',
+  pork: 'Cerdo',
+  fish: 'Pescado',
+  tuna: 'Atún',
+  salmon: 'Salmón',
+  eggs: 'Huevo',
+  egg: 'Huevo',
+  legumes: 'Legumbre',
+  legume: 'Legumbre',
+  tofu: 'Tofu',
+  cheese: 'Queso',
+  seafood: 'Marisco',
+  lamb: 'Cordero',
+  rabbit: 'Conejo',
+};
+
+export const RELAXATION_LABELS: Record<string, string> = {
+  protein_sources: 'Falta variedad de proteínas',
+  fish: 'Menos pescado del recomendado',
+  legumes: 'Menos legumbres de las recomendadas',
+  red_meat: 'Más carne roja de la recomendada',
+  light_dinners: 'Cenas menos ligeras de lo recomendado',
+  carb_sources: 'Falta variedad de hidratos',
+};
+
 export const EXCLUSION_REASON_LABELS: Record<string, string> = {
   dish_excluded: 'plato excluido',
   tag_excluded: 'etiqueta excluida',
@@ -43,6 +82,30 @@ export function tagLabel(tag: string): string {
 
 export function mealLabel(meal: string): string {
   return MEAL_LABELS[meal] ?? meal;
+}
+
+export function proteinLabel(protein: string): string {
+  return PROTEIN_LABELS[protein] ?? protein;
+}
+
+/** Importe en céntimos formateado como euros. */
+export function formatEuro(cents: number): string {
+  return euroFormatter.format(cents / 100);
+}
+
+const dateTimeFormatter = new Intl.DateTimeFormat('es-ES', {
+  dateStyle: 'long',
+  timeStyle: 'short',
+  timeZone: 'UTC',
+});
+
+/** Fecha ISO-8601 en hora UTC, o un texto de reserva si falta. */
+export function formatDateTime(iso: string | null): string {
+  if (!iso) return 'sin fecha';
+  const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return 'sin fecha';
+  return dateTimeFormatter.format(date);
 }
 
 export function formatQuantity(quantityMilli: number, baseUnit: string): string {

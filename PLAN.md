@@ -597,7 +597,7 @@ Prefijo `/api`. Errores homogéneos:
 | POST | `/api/menus/{id}/regenerate` | Regenera respetando bloqueos |
 | POST | `/api/menus/{id}/revalidate` | Recalcula precios, ticket y lista actuales |
 | GET | `/api/menus/{id}/shopping-list` | Lista de la compra |
-| PATCH | `/api/menus/{id}/shopping-list/items/{item_id}` | Marca comprado |
+| PATCH | `/api/menus/{id}/shopping-list/items/{item_id}` | Marca comprado o «ya lo tengo» |
 | GET | `/api/menus/{id}/export` | Exporta markdown/CSV |
 
 ### 10.1 Generación
@@ -895,7 +895,7 @@ Para que 14 días × 2 comidas sean viables:
 - ≥ 4 cenas ligeras;
 - ≥ 1 verdura y ≥ 1 hidrato disponibles cada día.
 
-`validate_seed` comprueba estos umbrales y la elegibilidad con exclusiones por defecto. El dry-run del optimizador se ejecuta en F4.9, cuando el modelo ya existe.
+`validate_seed` comprueba estos umbrales y la elegibilidad con exclusiones por defecto. El dry-run del optimizador se ejecuta con `scripts/dry_run_menu.py`.
 
 ### 13.3 Formato YAML
 
@@ -940,7 +940,7 @@ Script obligatorio antes de generar menús:
 - no hay platos sin proteína o sin verdura cuando corresponda;
 - la elegibilidad con exclusiones por defecto deja al menos `días × 2` platos para 14 días.
 
-El dry-run del optimizador para los escenarios de 1, 2, 7 y 14 días se ejecuta en F4.9, cuando el modelo ya existe.
+El dry-run del optimizador para los escenarios de 1, 2, 7 y 14 días se ejecuta con `scripts/dry_run_menu.py`.
 
 Si falla, la app muestra un error claro y no genera el menú.
 

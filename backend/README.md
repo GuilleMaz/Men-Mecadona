@@ -15,6 +15,13 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - Dominio: `GET /api/allergens`, `GET /api/ingredients`, `GET /api/dishes`,
   `GET /api/dishes/{id}`, `GET/PUT /api/profile`, `GET/POST/DELETE /api/exclusions`,
   `GET/PUT /api/pantry`, `POST /api/pricing/preview`.
+- Menús: `POST /api/menus/generate`, `GET /api/menus`, `GET /api/menus/{id}`,
+  `PATCH /api/menus/{id}/entries/{entry_id}`,
+  `POST /api/menus/{id}/entries/{entry_id}/swap|exclude`,
+  `POST /api/menus/{id}/regenerate|revalidate`,
+  `GET /api/menus/{id}/shopping-list`,
+  `PATCH /api/menus/{id}/shopping-list/items/{item_id}` y
+  `GET /api/menus/{id}/export?format=markdown|csv`.
 - Documentación interactiva: `http://127.0.0.1:8000/docs`.
 
 Para arrancar backend y frontend juntos, usa `.\run.ps1` desde la raíz. Para
@@ -111,7 +118,7 @@ correcta.
 uv run pytest tests/test_pricing.py tests/test_pricing_api.py
 ```
 
-## Menús y optimizador (F4.1-F4.5)
+## Menús y optimizador (F4.1-F4.9)
 
 - `app/models/menu.py`: `menus`, `menu_entries`, `menu_entry_ingredients` y
   `shopping_items`, con snapshot de nombre, coste, proteína y precios de compra.
@@ -119,6 +126,7 @@ uv run pytest tests/test_pricing.py tests/test_pricing_api.py
   presupuesto).
 - `app/schemas/menu.py`: `MenuSettings` versionado con alérgenos, exclusiones,
   despensa, `max_repeats` y versión del optimizador.
+  `app/schemas/menu_api.py`: contrato de entrada/salida de la API.
 - `app/services/optimizer.py`: CP-SAT en dos etapas (variedad y ticket), con
   presupuesto duro, demanda por paquetes elegibles `P_i`, mínimos diarios,
   pista greedy, fallback sin presupuesto y diagnóstico de `budget`, `repeats`,
@@ -128,11 +136,28 @@ uv run pytest tests/test_pricing.py tests/test_pricing_api.py
   conservación de `checked`, snapshot de composición por entrada, validación de
   sync 22002/4389 y mutaciones `swap`/`exclude`/`regenerate`/`revalidate`/«ya lo
   tengo». La revalidación no persiste un ticket por encima del presupuesto.
-- La API pública de menús llega en F4.6; F4.1-F4.5 se prueban por servicio.
+- `app/api/menus.py`: API fina sobre el servicio. `generate` hereda del perfil
+  los campos omitidos, devuelve el preview `infeasible`/`timeout` sin persistir y
+  mapea `MenuServiceError`/`OptimizerError` al sobre homogéneo. La lista agrupa
+  por sección, incluye el snapshot de despensa y calcula coste por comida, día y
+  persona. `PATCH .../shopping-list/items/{id}` acepta `checked` o
+  `already_have`; el export CSV neutraliza fórmulas (`=`, `+`, `-`, `@`).
+- Tests: horizontes y personas, presupuesto exacto/imposible, pescado, alérgeno
+  `unknown`, producto compartido, `base_servings`, bloqueos/regeneración,
+  preview contra lista y `num_search_workers=1` con semilla fija.
 
 ```powershell
-uv run pytest tests/test_optimizer.py tests/test_menu_service.py tests/test_menu_integration.py
+uv run pytest tests/test_menus_api.py tests/test_optimizer.py tests/test_menu_horizons.py tests/test_menu_service.py tests/test_menu_integration.py
 ```
+
+Dry-run y benchmark manuales, sin persistir menús:
+
+```powershell
+uv run python ..\scripts\dry_run_menu.py --days 1,2,7,14 --people 1,2,4,10
+uv run python ..\scripts\benchmark_menu.py --runs 20 --days 14 --people 4
+```
+
+Estado actual: 336 tests backend en verde; benchmark 14d/4p con p95 4,30 s.
 
 Seguridad local: el middleware de `Host` solo acepta `127.0.0.1`, `localhost` y
 `::1`; el resto devuelve `400 INVALID_HOST`. Los tests de API envían un `Host`

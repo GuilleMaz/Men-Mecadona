@@ -4,10 +4,10 @@ Aplicación web local que genera un menú de **comidas y cenas** para N personas
 N días y un presupuesto, con productos y precios de la tienda online de Mercadona.
 Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiquetas.
 
-> Estado: F4.1-F4.5 completadas (modelos de menú, elegibilidad, optimizador
-> CP-SAT, inviabilidad y servicio transaccional de menús). F4.6-F4.9 añadirán la
-> API pública, la UI de menú/lista y la batería completa de pruebas. La
-> documentación de alcance está en `PLAN.md` y el detalle de ejecución en
+> Estado: F4.1-F4.9 completadas (modelos de menú, elegibilidad, optimizador
+> CP-SAT, inviabilidad, servicio transaccional, API pública, UI de menú/lista y
+> batería completa de pruebas). Siguiente: F5 (calidad, resiliencia y entrega).
+> La documentación de alcance está en `PLAN.md` y el detalle de ejecución en
 > `TASKS.md`.
 
 ## Requisitos
@@ -55,6 +55,15 @@ preferencias (alérgenos, exclusiones y despensa) en la misma pantalla, y el
 catálogo de platos en `Platos`. Al abrir un plato, su detalle muestra el coste de
 consumo, el coste por ración y el ticket de compra con los precios actuales.
 
+En `Menú` se indica personas, días y presupuesto. Al generar se abre
+`/menus/:id` con la rejilla de comidas y cenas, el estado del menú, la barra de
+presupuesto y las acciones de bloquear, cambiar, «no me gusta», revalidar y
+regenerar. Si el mínimo no cabe, se muestra un modal con mínimo, déficit y
+sugerencias, y no se guarda ningún menú. La lista de la compra está en
+`/menus/:id/shopping-list`, agrupada por secciones, con checkboxes, «ya lo
+tengo», total sticky, sobras, coste por comida/día/persona y la identidad
+contable visible.
+
 Para detener ambos servicios, pulsa `Ctrl+C`.
 
 ## Calidad
@@ -64,7 +73,8 @@ Para detener ambos servicios, pulsa `Ctrl+C`.
 ```
 
 Ejecuta Ruff, mypy y pytest en backend; ESLint, Prettier, TypeScript, Vitest y
-build en frontend; y Ruff sobre los scripts de Python de la raíz.
+build en frontend; y Ruff sobre los scripts de Python de la raíz. Estado actual:
+336 tests backend, 49 tests frontend y build de producción en verde.
 
 ## Coste y preview
 
@@ -80,10 +90,9 @@ Reglas verificadas:
 - `ticket + despensa = consumo + sobras` se cumple por ingrediente y por cesta;
 - el preview y la futura lista de la compra comparten el mismo plan canónico.
 
-## Optimizador y menús
+## Optimizador, menús y API
 
-El backend ya puede generar y persistir un menú bajo presupuesto con el catálogo
-sintético de pruebas y con el catálogo real:
+El backend genera y persiste menús bajo presupuesto con el catálogo real:
 
 - `app/services/optimizer.py` resuelve `días × 2` huecos con CP-SAT en dos
   etapas: primero minimiza las violaciones de variedad y después el ticket.
@@ -94,18 +103,36 @@ sintético de pruebas y con el catálogo real:
   contable.
 - La revalidación conserva el snapshot válido y marca `stale` si el nuevo ticket
   no cabe en el presupuesto; nunca se guarda un menú válido por encima del límite.
-- La API pública de menús y la UI de rejilla/lista llegan en F4.6-F4.8.
+- La API `/api/menus` permite generar, consultar el historial y el detalle,
+  bloquear/desbloquear, cambiar, excluir, regenerar, revalidar, consultar la
+  lista, marcar comprados, aplicar «ya lo tengo» y exportar en markdown o CSV.
+- `POST /api/menus/generate` con `null`/campos omitidos hereda los alérgenos,
+  exclusiones y despensa del perfil; una lista explícita los reemplaza.
+- Un swap, una exclusión o «ya lo tengo» que superen el presupuesto devuelven
+  `BUDGET_EXCEEDED` y no se aplican. `regenerate` conserva los bloqueos.
+
+Comprobaciones manuales:
+
+```powershell
+cd backend
+uv run python ..\scripts\dry_run_menu.py --days 1,2,7,14 --people 1,2,4,10
+uv run python ..\scripts\benchmark_menu.py --runs 20 --days 14 --people 4
+```
+
+`dry_run_menu.py` no persiste menús y `benchmark_menu.py` mide el p95 del solver
+(sin persistir). En el equipo de desarrollo, 20 ejecuciones de 14 días/4 personas
+dieron un p95 de 4,30 s.
 
 ## Cierre de fase
 
 Cada fase se cierra con un único comando:
 
 ```powershell
-.\finish-phase.ps1 -Phase F3 -Summary "coste puro y preview"
+.\finish-phase.ps1 -Phase F4 -Summary "optimizador, menu y lista"
 ```
 
 El script ejecuta `check.ps1`, rechaza secretos, bases de datos, `node_modules` y
-`.venv`, crea el commit `F3: coste puro y preview` y lo sube a
+`.venv`, crea el commit `F4: optimizador, menu y lista` y lo sube a
 GitHub. Si la calidad falla, no se hace commit. Si el push falla, el commit queda
 local y el script termina con error para poder reintentarlo.
 

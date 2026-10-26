@@ -45,7 +45,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 _ALLERGEN_ORDER = {code: index for index, code in enumerate(ALLERGEN_CODES)}
 
 
-def _get_or_create_profile(session: Session) -> Profile:
+def get_or_create_profile(session: Session) -> Profile:
     profile = session.get(Profile, 1)
     if profile is None:
         profile = Profile(id=1, people=2, days=7, budget_cents=7000, allergen_codes_json=[])
@@ -188,7 +188,7 @@ def list_dishes(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> DishPage:
     """Catálogo de platos con filtros y elegibilidad según preferencias."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     preferences = preferences_from_profile(session, profile)
     results = evaluate_dishes(session, preferences)
     term = _normalize_text(q.strip()) if q and q.strip() else None
@@ -223,7 +223,7 @@ def list_dishes(
 @router.get("/dishes/{dish_id}", response_model=DishDetail)
 def get_dish(dish_id: int, session: SessionDep) -> DishDetail:
     """Detalle del plato con composición, alérgenos y productos asociados."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     preferences = preferences_from_profile(session, profile)
     results = evaluate_dishes(session, preferences, dish_id=dish_id)
     if not results:
@@ -234,13 +234,13 @@ def get_dish(dish_id: int, session: SessionDep) -> DishDetail:
 @router.get("/profile", response_model=ProfileOut)
 def get_profile(session: SessionDep) -> ProfileOut:
     """Perfil local; se crea con valores por defecto la primera vez."""
-    return _profile_out(_get_or_create_profile(session))
+    return _profile_out(get_or_create_profile(session))
 
 
 @router.put("/profile", response_model=ProfileOut)
 def update_profile(payload: ProfileUpdate, session: SessionDep) -> ProfileOut:
     """Actualiza personas, días, presupuesto y alérgenos declarados."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     profile.people = payload.people
     profile.days = payload.days
     profile.budget_cents = payload.budget_cents
@@ -296,14 +296,14 @@ def _load_exclusions(session: Session, profile: Profile) -> list[Exclusion]:
 @router.get("/exclusions", response_model=list[ExclusionOut])
 def list_exclusions(session: SessionDep) -> list[ExclusionOut]:
     """Exclusiones activas del perfil."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     return [_exclusion_out(exclusion) for exclusion in _load_exclusions(session, profile)]
 
 
 @router.post("/exclusions", response_model=ExclusionOut, status_code=status.HTTP_201_CREATED)
 def create_exclusion(payload: ExclusionCreate, session: SessionDep) -> ExclusionOut:
     """Crea una exclusión por ingrediente, plato o etiqueta."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     if payload.ingredient_id is not None:
         ingredient = session.get(Ingredient, payload.ingredient_id)
         if ingredient is None or not ingredient.active:
@@ -350,7 +350,7 @@ def create_exclusion(payload: ExclusionCreate, session: SessionDep) -> Exclusion
 @router.delete("/exclusions/{exclusion_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_exclusion(exclusion_id: int, session: SessionDep) -> Response:
     """Elimina una exclusión del perfil."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     exclusion = session.get(Exclusion, exclusion_id)
     if exclusion is None or exclusion.profile_id != profile.id:
         raise ApiError("NOT_FOUND", "La exclusión no existe.", status_code=404)
@@ -373,7 +373,7 @@ def _pantry_items(session: Session, profile: Profile) -> list[PantryItem]:
 @router.get("/pantry", response_model=list[PantryItemOut])
 def get_pantry(session: SessionDep) -> list[PantryItemOut]:
     """Despensa por ingrediente y cantidad en unidad base."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     return [
         PantryItemOut(
             id=item.id,
@@ -387,7 +387,7 @@ def get_pantry(session: SessionDep) -> list[PantryItemOut]:
 @router.put("/pantry", response_model=list[PantryItemOut])
 def update_pantry(payload: PantryUpdate, session: SessionDep) -> list[PantryItemOut]:
     """Reemplaza la despensa completa del perfil."""
-    profile = _get_or_create_profile(session)
+    profile = get_or_create_profile(session)
     ingredient_ids = [item.ingredient_id for item in payload.items]
     if ingredient_ids:
         found = set(

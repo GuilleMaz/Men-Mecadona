@@ -13,7 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.api import catalog, domain, health, pricing
+from app.api import catalog, domain, health, menus, pricing
 from app.api.errors import (
     ApiError,
     api_exception_handler,
@@ -153,6 +153,7 @@ def create_app(
     application.include_router(catalog.router, prefix=API_PREFIX)
     application.include_router(domain.router, prefix=API_PREFIX)
     application.include_router(pricing.router, prefix=API_PREFIX)
+    application.include_router(menus.router, prefix=API_PREFIX)
     return application
 
 

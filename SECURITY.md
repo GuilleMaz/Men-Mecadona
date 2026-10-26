@@ -1,7 +1,7 @@
 # Seguridad local de Cesta
 
 Cesta es una aplicación local de un solo usuario. No hay login ni exposición a la
-LAN en el MVP. Esta checklist cubre la F0 y se revisará en F5.
+LAN en el MVP. Esta checklist cubre F0-F4 y se revisará en F5.
 
 ## Checklist
 
@@ -17,6 +17,8 @@ LAN en el MVP. Esta checklist cubre la F0 y se revisará en F5.
 - [x] Las únicas llamadas externas son las de lectura del catálogo de Mercadona.
 - [x] La app no se expone en LAN; el acceso móvil queda fuera del MVP.
 - [x] Los tests no llaman a Mercadona ni a servicios externos.
+- [x] El export CSV neutraliza fórmulas (`=`, `+`, `-`, `@`) y escapa comillas, comas y saltos.
+- [x] Las respuestas de la API no exponen `raw_json`, credenciales ni detalles internos del catálogo.
 
 ## Comprobaciones automáticas
 

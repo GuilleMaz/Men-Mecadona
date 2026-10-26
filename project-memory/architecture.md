@@ -26,8 +26,8 @@ MERCADONA/
 │   │   ├── db.py            # motor SQLite, PRAGMA, Base, sesiones
 │   │   ├── security.py      # allowlist de Host local
 │   │   ├── allergens.py     # lista canónica y etiquetas de alérgenos
-│   │   ├── api/             # health, catalog, domain, pricing, presenters, errors
-│   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py, pricing.py, menu.py
+│   │   ├── api/             # health, catalog, domain, pricing, menus, presenters, errors
+│   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py, pricing.py, menu.py, menu_api.py
 │   │   ├── models/          # catalog.py, ingredients.py, dishes.py, profile.py, menu.py, types.py
 │   │   ├── services/        # mercadona_client.py, catalog_normalizer.py, catalog_sync.py,
 │   │   │                    # seed.py, allergen_sync.py, eligibility.py, pricing.py,
@@ -51,16 +51,19 @@ MERCADONA/
 │       │   ├── dishes/DishCostCard.tsx
 │       │   ├── layout/AppLayout.tsx
 │       │   ├── layout/BackendStatus.tsx
+│       │   ├── menu/        # BudgetBar, MenuEntryCard, MenuGrid, MenuHeader, diálogos
 │       │   ├── preferences/AllergenPreferencesCard.tsx
 │       │   ├── preferences/ExclusionsCard.tsx
 │       │   ├── preferences/PantryCard.tsx
-│       │   └── ui/          # button, card, input, label
-│       ├── pages/           # MenuPage, DishesPage, SettingsPage, NotFoundPage
-│       ├── lib/             # utils.ts, catalog.ts, domain.ts, labels.ts
+│       │   ├── shopping/    # ShoppingSection, ShoppingTotals, ShoppingPantry
+│       │   └── ui/          # button, card, input, label, dialog
+│       ├── pages/           # MenuPage, MenuDetailPage, ShoppingListPage, DishesPage, SettingsPage, NotFoundPage
+│       ├── lib/             # utils.ts, catalog.ts, domain.ts, menu.ts, labels.ts
 │       └── test/            # setup, servidor MSW, render-app
 ├── scripts/                 # check_mercadona.py, spike_catalog.py, spike_ortools.py,
 │                            # init_db.py, sync_catalog.py, load_seed.py,
-│                            # validate_seed.py, sync_allergens.py
+│                            # validate_seed.py, sync_allergens.py, dry_run_menu.py,
+│                            # benchmark_menu.py
 ├── run.ps1                  # backend + frontend, SQLite fuera de OneDrive
 ├── check.ps1                # lint + tipos + tests + build
 └── finish-phase.ps1         # calidad + commit + push a GitHub
@@ -71,8 +74,8 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario persistente de personas/días/presupuesto, catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de coste de consumo/ticket por plato y ración, tarjeta de estado del catálogo y tarjetas de alérgenos, exclusiones y despensa. La lógica de menú llega en F4.
-- **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health`, `/api/catalog/*` y `/api/*` de dominio. La sync de arranque y la carga del seed corren en segundo plano desde el lifespan.
+- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario persistente de personas/días/presupuesto, generación con modal de menú inviable, rejilla días × comida/cena, barra de presupuesto, acciones de bloqueo/swap/exclusión/regeneración, lista de la compra con secciones, checkboxes y «ya lo tengo», catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de coste de consumo/ticket por plato y ración, tarjeta de estado del catálogo y tarjetas de alérgenos, exclusiones y despensa.
+- **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health`, `/api/catalog/*`, `/api/*` de dominio y `/api/menus/*`. La sync de arranque y la carga del seed corren en segundo plano desde el lifespan.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Rechaza rutas dentro de OneDrive. Constantes `POSTAL_CODE="22002"`, `EXPECTED_WAREHOUSE="4389"` y `LOCAL_HOSTS`.
 - **Seguridad (`app/security.py`):** `HostValidationMiddleware` acepta solo `127.0.0.1`, `localhost` y `::1`; el resto devuelve `400 INVALID_HOST`.
 - **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición. `create_engine_for_url` permite que Alembic y los tests usen una URL concreta.
@@ -99,7 +102,9 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 Rutas:
 
-- `/` — crear menú: personas, días y presupuesto persistidos en el perfil.
+- `/` — crear menú: personas, días y presupuesto persistidos en el perfil; genera y muestra el modal de inviabilidad.
+- `/menus/:id` — menú guardado: rejilla, barra de presupuesto, estado, `stale`, bloqueo, swap, «no me gusta», regeneración y exportación.
+- `/menus/:id/shopping-list` — lista agrupada, checkboxes, «ya lo tengo», totales e identidad contable.
 - `/dishes` — catálogo de platos con búsqueda, filtros, detalle, «no me gusta» y coste del plato.
 - `/settings` — alérgenos, exclusiones, despensa y estado del catálogo.
 - `*` — página no encontrada.
@@ -183,18 +188,19 @@ Prefijo `/api`:
 - `/dishes`, `/dishes/{id}` — implementados (F2.8)
 - `/profile`, `/exclusions`, `/pantry` — implementados (F2.8)
 - `/pricing/preview` — implementado (F3.5)
-- `/menus/generate`, `/menus`, `/menus/{id}`
-- `/menus/{id}/entries/{entry_id}`, `/swap`, `/exclude`
-- `/menus/{id}/regenerate`
-- `/menus/{id}/revalidate`
-- `/menus/{id}/shopping-list`
-- `/menus/{id}/export`
+- `/menus/generate`, `/menus`, `/menus/{id}` — implementados (F4.6)
+- `/menus/{id}/entries/{entry_id}`, `/swap`, `/exclude` — implementados (F4.6)
+- `/menus/{id}/regenerate`, `/menus/{id}/revalidate` — implementados (F4.6)
+- `/menus/{id}/shopping-list` y `/menus/{id}/shopping-list/items/{item_id}` — implementados (F4.6)
+- `/menus/{id}/export?format=markdown|csv` — implementado (F4.6)
 
 Los errores usan el sobre `{"error": {"code", "message", "details"}}`; `INVALID_HOST`
 (400) cubre una cabecera `Host` no local. Los endpoints de catálogo añaden
 `CATALOG_EMPTY` (503), `SYNC_IN_PROGRESS` (409), `NOT_FOUND` (404) y
 `VALIDATION_ERROR` (422). Los de dominio añaden `INVALID_EXCLUSION` (422) y
-`NOT_FOUND` (404).
+`NOT_FOUND` (404). Los de menús añaden `NO_ELIGIBLE_DISHES` (422),
+`NO_FEASIBLE_MENU` (422), `BUDGET_EXCEEDED` (422), `PRODUCT_UNAVAILABLE` (409),
+`WAREHOUSE_UNAVAILABLE` (503) y `NOT_FOUND` (404); `reason` viaja en `details`.
 
 ## Base de Datos
 
@@ -249,7 +255,10 @@ Optimizador CP-SAT (2 etapas) (F4.3-F4.4)
 Menú + coste + lista de la compra (F4.5)
     │
     ▼
-React UI
+API /api/menus: generación, ajustes, lista y export (F4.6)
+    │
+    ▼
+React UI: menú y lista de la compra (F4.7-F4.8)
 ```
 
 ## Notas

@@ -1,5 +1,95 @@
 # Decisions
 
+## 2026-10-26 — API, UI y benchmark de menús (F4.6-F4.9)
+
+### Problema
+
+F4.6-F4.9 debían exponer el servicio de menús sin duplicar su lógica, congelar el
+contrato que consume la UI, mostrar los estados de generación y `stale`, permitir
+ajustes y lista de la compra, y demostrar el rendimiento con horizontes y personas
+reales sin hacer la suite diaria lenta o dependiente de la base local.
+
+### Decisión
+
+- `app/api/menus.py` es un router fino sobre `MenuService` y `optimize_menu`. Los
+  campos omitidos de `generate` heredan alérgenos, exclusiones y despensa del
+  perfil; una lista explícita los reemplaza. El perfil sigue siendo la fuente de
+  verdad de la UI.
+- Los estados terminales del optimizador se separan de los errores: `infeasible`
+  y `timeout` se devuelven como `MenuGenerateResponse` con HTTP 200 y sin
+  persistir; `NO_ELIGIBLE_DISHES`, `NO_FEASIBLE_MENU`, `BUDGET_EXCEEDED`,
+  `PRODUCT_UNAVAILABLE` y `WAREHOUSE_UNAVAILABLE` usan el sobre homogéneo con
+  `reason` dentro de `details`.
+- `PATCH /menus/{id}/shopping-list/items/{item_id}` acepta exactamente
+  `{checked}` o `{already_have: true}`. La segunda opción reutiliza
+  `set_pantry_sufficient`, recalcula la lista y devuelve la lista completa; no
+  crea una ruta nueva ni toca la despensa global.
+- La lista se agrupa por sección padre de la categoría del producto. Como
+  `shopping_items` no persiste la unidad del paquete, se deriva de
+  `ingredient.base_unit`; el plan de compra ya garantiza que el formato comprado
+  comparte esa unidad.
+- El export markdown/CSV se genera desde el snapshot y la lista canónicos. El CSV
+  neutraliza celdas que empiezan por `=`, `+`, `-` o `@`, y cita comas, comillas y
+  saltos con `csv.writer`; el markdown escapa `|`.
+- La UI usa el contrato de `lib/menu.ts` y TanStack Query. El diálogo modal se
+  copió sin añadir una dependencia de Radix Dialog: atrapa el foco, cierra con
+  Escape, bloquea el scroll y devuelve el foco al abrir/cerrar.
+- `regenerate` puede devolver `SOLVER_TIMEOUT` con HTTP 200 y sobre de error. El
+  cliente detecta el sobre en una respuesta 200 y lo convierte en
+  `DomainRequestError`; la UI conserva el menú anterior.
+- El benchmark y el dry-run son scripts manuales, no tests de la suite: leen la
+  base real, no persisten menús y permiten medir 20 ejecuciones sin alargar
+  `check.ps1`. Los tests de F4.9 usan catálogos sintéticos y límites cortos.
+
+### Justificación
+
+- Mantener toda la escritura en `MenuService` evita que la API contradiga la
+  lista canónica, el reparto de céntimos o el presupuesto.
+- Heredar del perfil simplifica la UI y conserva el snapshot reproducible; la
+  API sigue aceptando valores explícitos para tests e integraciones.
+- Devolver la lista completa tras un PATCH evita que el frontend tenga que
+  adivinar qué líneas desaparecieron al aplicar «ya lo tengo».
+- Los scripts manuales permiten cumplir el DoD de rendimiento (p95 < 10 s) sin
+  introducir un benchmark lento o dependiente del catálogo real en CI.
+
+### Resultado
+
+- 37 tests de API, 29 de F4.9 y suite final de **336 tests backend** y **49
+  frontend** en verde; Ruff, formato, mypy, ESLint, Prettier, TypeScript y build
+  correctos.
+- Smoke real por API sobre una copia de la base: generación `optimal` de 1 día/2
+  personas con ticket 13,50 €, 2 entradas, 8 líneas de compra en 5 secciones,
+  identidad contable correcta y preview imposible con mínimo 10,55 €.
+- Dry-run: 16/16 escenarios válidos (1/2/7/14 días × 1/2/4/10 personas).
+- Benchmark 14 días/4 personas, 20 ejecuciones: p50 4,07 s y **p95 4,30 s**.
+
+### Alternativas
+
+- Duplicar la lógica de compra en el router: descartado; rompería
+  `preview.ticket == shopping_list.ticket`.
+- Persistir previews `infeasible`: descartado; un menú guardado debe ser válido.
+- Ruta separada para «ya lo tengo»: descartada; el PATCH de la línea ya conoce el
+  ingrediente y devuelve la lista recalculada.
+- Añadir Radix Dialog: descartado para no introducir una dependencia nueva por un
+  solo componente.
+- Ejecutar 20 generaciones en pytest: descartado; el benchmark manual mide el
+  equipo real sin hacer frágil la suite.
+
+### Limitaciones conocidas
+
+- `GET /api/menus` no filtra por perfil porque el MVP tiene un perfil único.
+- El timeout de `regenerate` usa HTTP 200 con sobre de error por compatibilidad
+  con `MenuService`; el cliente lo normaliza, pero un consumidor externo debe
+  inspeccionar el cuerpo.
+- `exclude` con `scope="menu"` sigue sustituyendo todas las apariciones del plato,
+  incluidas las bloqueadas; es una decisión de producto revisable.
+- Si la despensa cubre un ingrediente completo no hay línea de compra; la UI
+  muestra esa despensa desde `settings_json`/`pantry_items`.
+- La unidad del paquete se deriva del ingrediente; si en el futuro se añade
+  `package_unit` a `shopping_items`, debe usarse el snapshot.
+
+---
+
 ## 2026-10-26 — Menús persistidos, CP-SAT y lista canónica (F4.1-F4.5)
 
 ### Problema

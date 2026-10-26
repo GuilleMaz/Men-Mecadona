@@ -1,5 +1,72 @@
 # Changelog
 
+## 2026-10-26 — F4.6-F4.9: API, UI de menú/lista y pruebas de rendimiento
+
+### Cambios
+
+- Backend: `app/api/menus.py` con generación, historial paginado, detalle,
+  bloqueo/desbloqueo, swap, exclude, regenerate, revalidate, lista de la compra,
+  checkbox/«ya lo tengo» y export markdown/CSV. `app/schemas/menu_api.py` congela
+  el contrato de entrada/salida. `generate` resuelve preferencias explícitas o
+  del perfil, devuelve `infeasible`/`timeout` sin persistir y mapea
+  `MenuServiceError`/`OptimizerError` con `reason` en `details`.
+- Lista de la compra: agrupación por sección padre de la categoría, snapshot de
+  despensa desde `settings_json`, coste por comida/día/persona con redondeo
+  half-up, subtotales e identidad contable. `already_have` reutiliza
+  `MenuService.set_pantry_sufficient` y devuelve la lista recalculada.
+- Export: markdown sin pasos de cocina y CSV con escape de fórmulas (`=`, `+`,
+  `-`, `@`), comillas, comas y saltos.
+- Frontend: `lib/menu.ts` con tipos y cliente; `MenuPage` genera y muestra el
+  modal de inviabilidad, timeout y error; `MenuDetailPage` con rejilla días ×
+  comida/cena, cabecera de estado/precios/CP/almacén, barra de presupuesto,
+  banner `stale` y acciones de bloqueo/swap/exclusión/regeneración;
+  `ShoppingListPage` con secciones, checkboxes, «ya lo tengo», total sticky,
+  despensa, sobras, costes e identidad. Diálogo accesible copiado sin nuevas
+  dependencias.
+- MSW: estado mutable determinista para menús y lista, con reset entre tests.
+- Scripts: `dry_run_menu.py` (16 escenarios, sin persistir) y
+  `benchmark_menu.py` (p50/p95/min/max, DoD < 10 s).
+- Tests: 37 de API de menús, 29 de F4.9 y 26 de frontend; suite final de 336
+  backend y 49 frontend.
+- Documentación: README raíz/backend/frontend, `TASKS.md`, `AGENTS.md` y
+  `project-memory/`.
+
+### Verificación
+
+- `.\check.ps1`: Ruff, formato, mypy strict, 336 tests backend, ESLint,
+  Prettier, TypeScript, 49 tests frontend y build: todo en verde (139,7 s).
+- Smoke real por API sobre una copia de la base: generación `optimal` de 1
+  día/2 personas con ticket 13,50 €, swap real a 19,30 €, exclude a 18,00 €,
+  regenerate a 14,65 €, lista de 10 líneas con identidad correcta, «ya lo tengo»
+  a 10,95 € y 9 líneas, y preview imposible con mínimo 10,55 € y déficit 10,54 €.
+- Dry-run: 16/16 escenarios válidos (1/2/7/14 días × 1/2/4/10 personas).
+- Benchmark 14 días/4 personas con 20 ejecuciones: p50 4,07 s, p95 4,30 s,
+  mínimo 3,66 s y máximo 4,47 s.
+- Migraciones sin cambios; `alembic check` no aplica a esta fase.
+
+### Archivos
+
+- `backend/app/api/menus.py`, `backend/app/schemas/menu_api.py`,
+  `backend/app/main.py`, `backend/app/api/domain.py`
+- `backend/tests/test_menus_api.py`, `backend/tests/test_menu_horizons.py`,
+  `backend/tests/test_menu_scripts.py`
+- `frontend/src/lib/menu.ts`, `frontend/src/lib/domain.ts`,
+  `frontend/src/lib/labels.ts`, `frontend/src/App.tsx`,
+  `frontend/src/pages/MenuPage.tsx`, `MenuDetailPage.tsx`,
+  `ShoppingListPage.tsx` y sus tests
+- `frontend/src/components/menu/**`, `frontend/src/components/shopping/**`,
+  `frontend/src/components/ui/dialog.tsx`, `frontend/src/test/server.ts`
+- `scripts/dry_run_menu.py`, `scripts/benchmark_menu.py`
+- `README.md`, `backend/README.md`, `frontend/README.md`, `TASKS.md`,
+  `AGENTS.md`, `project-memory/**`
+
+### Motivo
+
+- Cerrar F4 con el flujo completo por API y UI, la lista exacta bajo presupuesto,
+  los ajustes de menú y una batería de pruebas que cubre horizontes, personas,
+  presupuestos, alérgenos y rendimiento, antes de empezar la fase de calidad y
+  entrega F5.
+
 ## 2026-10-26 — F4.1-F4.5: menús persistidos, optimizador y lista canónica
 
 ### Cambios

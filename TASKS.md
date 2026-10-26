@@ -1,6 +1,6 @@
 ﻿# TASKS.md — Cesta
 
-> **Estado global:** F4.1-F4.5 completadas el 2026-10-26. Siguiente: F4.6-F4.9.
+> **Estado global:** F4.1-F4.9 completadas el 2026-10-26. Siguiente: F5.
 > **Última actualización:** 2026-10-26
 > **Plan de referencia:** `PLAN.md`
 
@@ -252,7 +252,7 @@
   - **DoD:** el seed actual pasa; los errores de prueba se detectan; la cobertura es medible.
   - **Resultado:** `scripts/validate_seed.py` valida estructura, derivación, cobertura y catálogo; el seed actual pasa con 0 avisos. Tests sintéticos detectan producto compartido, unidad incompatible, ingrediente ausente y flags incoherentes.
 
-  El dry-run del optimizador para 1, 2, 7 y 14 días y 1, 2, 4 y 10 personas se añade en F4.9, cuando el modelo existe.
+  El dry-run del optimizador para 1, 2, 7 y 14 días y 1, 2, 4 y 10 personas se ejecuta en F4.9 con `scripts/dry_run_menu.py`.
 
 - [x] **F2.8 — API de platos y preferencias**
   - `GET /api/dishes`, `GET /api/dishes/{id}`.
@@ -403,7 +403,7 @@
   - **DoD:** `ticket == Σ shopping_items.subtotal`; un swap caro devuelve `BUDGET_EXCEEDED`; `preview.ticket == shopping_list.ticket` para el mismo menú.
   - **Resultado:** `MenuService` transaccional con reparto exacto de céntimos por entrada, lista materializada solo con `plan_purchase`, preservación de `checked`, swap/exclude/regenerate/revalidate/«ya lo tengo» y rollback ante presupuesto. La revalidación conserva el snapshot válido y registra `revalidated_ticket_cents`/`stale` si los precios cambian; los recálculos usan la composición persistida de cada entrada, no la del plato vivo. Se valida que la sync sea de 22002/4389. Tests de identidades, swap caro, recálculo de precios, despensa, bloqueos, alérgenos, producto no disponible y preview; smoke real con 8 líneas, ticket 13,50 € e identidad correcta.
 
-- [ ] **F4.6 — API de menús**
+- [x] **F4.6 — API de menús**
   - `POST /api/menus/generate`
   - `GET /api/menus` paginado, `GET /api/menus/{id}`
   - `PATCH .../entries/{id}` solo `locked` (bloquear/desbloquear)
@@ -415,8 +415,9 @@
   - `PATCH .../shopping-list/items/{id}`
   - `GET .../export`
   - **DoD:** flujo completo por API; contrato de estados/errores tipado; `404 NOT_FOUND` para recursos inexistentes.
+  - **Resultado:** router `app/api/menus.py` con los 11 endpoints y esquemas en `app/schemas/menu_api.py`. `generate` resuelve preferencias explícitas o del perfil (`null` hereda), evalúa elegibilidad, llama al optimizador y persiste con `MenuService`; `infeasible` y `timeout` responden sin persistir. Errores con `reason` en `details`, `404` para menú/entrada/línea, lista agrupada por sección con costes por comida/día/persona y despensa del snapshot, «ya lo tengo» sin mutar la despensa global y export markdown/CSV con escape de fórmulas. 37 tests de API.
 
-- [ ] **F4.7 — UI del menú**
+- [x] **F4.7 — UI del menú**
   - Rejilla días × comida/cena.
   - Tarjetas con coste, etiquetas y acciones.
   - Barra de presupuesto.
@@ -425,15 +426,17 @@
   - Acciones: bloquear/desbloquear, cambiar, no me gusta, regenerar.
   - Estados: generando, óptimo, factible, relajado, inviable, sin platos, timeout, error, `stale`.
   - **DoD:** se puede generar, cambiar, bloquear/desbloquear y regenerar desde la UI; CP/almacén/fecha visibles.
+  - **Resultado:** `/` guarda el perfil y genera con estados de carga, preview inviable, timeout y error; `/menus/:id` muestra rejilla por día, cabecera con estado/precios/CP/almacén, banner `stale`, barra de presupuesto y acciones de bloqueo, swap, «no me gusta» (menú/perfil) y regeneración. Diálogos accesibles sin dependencias nuevas y estados `optimal`/`feasible`/`relaxed`/`timed_out`.
 
-- [ ] **F4.8 — Lista de la compra UI**
+- [x] **F4.8 — Lista de la compra UI**
   - Agrupación por secciones.
   - Checkboxes y “ya lo tengo”.
   - “Ya lo tengo” actualiza el snapshot de despensa del menú y recalcula; no muta la despensa global.
   - Total sticky, sobras y coste por comida/día/persona.
   - **DoD:** la lista coincide con la API; `ticket == Σ subtotales`; identidad contable visible.
+  - **Resultado:** `/menus/:id/shopping-list` agrupa por sección, marca comprados, aplica «ya lo tengo» sobre el snapshot del menú, muestra despensa, sobras, coste por comida/día/persona, total sticky, identidad contable y `ticket == Σ subtotales`. Sin mutar la despensa global.
 
-- [ ] **F4.9 — Tests del optimizador y del menú**
+- [x] **F4.9 — Tests del optimizador y del menú**
   - 1, 2, 3, 7 y 14 días.
   - 1, 2, 4 y 10 personas.
   - Presupuesto exacto, ajustado e imposible.
@@ -447,8 +450,11 @@
   - Dry-run de 1/2/7/14 días y 1/2/4/10 personas.
   - `num_search_workers=1` y semilla fija.
   - **DoD:** tests verdes; generación p95 < 10 s con 20 ejecuciones en el equipo de desarrollo.
+  - **Resultado:** 29 tests nuevos en `test_menu_horizons.py` y `test_menu_scripts.py` (horizontes/personas, presupuesto exacto/imposible, pescado, `unknown`, producto compartido, `base_servings`, bloqueos/regeneración, preview contra lista, workers/semilla). `scripts/dry_run_menu.py` validó **16/16** escenarios y `scripts/benchmark_menu.py` midió **p95 4,30 s** en 20 ejecuciones de 14 días/4 personas. Suite final: **336 tests backend, 0 fallos**.
 
 **DoD de F4:** menú completo, bajo presupuesto, con ajustes, lista exacta y explicaciones.
+
+**Estado F4:** cumplido el 2026-10-26. Checkpoint `fd563f5` para F4.1-F4.5; API, UI y pruebas de F4.6-F4.9 verificadas con `check.ps1` (336 tests backend, 49 frontend, build) y smoke real sobre copia del catálogo: generación de 1 día/2 personas con ticket 13,50 €, swap 19,30 €, exclude 18,00 €, regenerate 14,65 €, lista de 10 líneas, «ya lo tengo» 10,95 €/9 líneas, identidad contable y preview imposible con mínimo 10,55 €.
 
 ---
 

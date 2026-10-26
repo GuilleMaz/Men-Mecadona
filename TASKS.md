@@ -106,7 +106,7 @@
 
 **DoD de F0:** esqueleto ejecutable, cliente Mercadona validado para 22002/4389, OR-Tools validado, base fuera de OneDrive y scripts de calidad.
 
-**Estado F0:** cumplido el 2026-10-26. `.\run.ps1` arranca ambos servicios y `.\check.ps1` deja lint, tipos, tests y build en verde.
+**Estado F0:** cumplido el 2026-10-26. `.\run.ps1` arranca ambos servicios, `.\check.ps1` deja lint, tipos, tests y build en verde y `finish-phase.ps1` publicó el commit `be7e149` en `origin/main`.
 
 ---
 

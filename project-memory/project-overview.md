@@ -14,7 +14,7 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - **Integración Mercadona:** catálogo validado (26 secciones, 152/152 subcategorías, 4.291 productos únicos, 100 % precios parseables, 6,37 s con concurrencia 4); tests con fixtures sintéticas y respx, sin red.
 - **OR-Tools:** CP-SAT 9.15.6755 validado en Windows/Python 3.13 con un toy de 28 huecos, 60 platos, 120 ingredientes y paquetes: 3,46-3,47 s por ejecución, etapa 1 óptima y etapa 2 factible bajo presupuesto.
 - **Arranque:** `.\run.ps1` arranca backend y frontend, inicializa SQLite fuera de OneDrive y limpia procesos; `.\check.ps1` ejecuta lint, tipos, tests y build.
-- **Cierre de fase:** `.\finish-phase.ps1 -Phase Fx -Summary "..."` ejecuta la calidad, crea el commit de la fase y lo sube a GitHub; `-NoPush` y `-SkipChecks` son escapes documentados.
+- **Cierre de fase:** `.\finish-phase.ps1 -Phase Fx -Summary "..."` ejecuta la calidad, crea el commit de la fase y lo sube a GitHub; `-NoPush` y `-SkipChecks` son escapes documentados. F0 se publicó en `origin/main` con `be7e149`.
 - **Seguridad local:** bind a `127.0.0.1`, CORS solo en desarrollo, allowlist de `Host` y rechazo de bases de datos dentro de OneDrive. Checklist en `SECURITY.md`.
 - **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`, `README.md` y `SECURITY.md`.
 - **Memoria:** actualizada con informes de los spikes de catálogo y OR-Tools en `decisions.md`.

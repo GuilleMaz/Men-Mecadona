@@ -9,6 +9,7 @@ F0 completada el 2026-10-26. F0.1-F0.10 cerradas: backend FastAPI, frontend Reac
 - OR-Tools 9.15.6755: toy de 28 huecos/60 platos/120 ingredientes resuelto en 3,46-3,47 s; etapa 1 óptima y etapa 2 factible bajo presupuesto.
 - `.\run.ps1` arranca backend y frontend; `.\check.ps1` ejecuta toda la calidad.
 - `.\finish-phase.ps1 -Phase Fx -Summary "..."` cierra la fase: calidad, commit y push a GitHub.
+- F0 publicada en `origin/main` con el commit `be7e149`.
 - Base SQLite en `%LOCALAPPDATA%\Cesta`, fuera de OneDrive.
 
 ## Alta prioridad

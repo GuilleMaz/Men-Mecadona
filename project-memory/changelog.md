@@ -14,7 +14,8 @@
 
 ### Verificación
 
-- Pendiente de la primera ejecución del pipeline sobre F0.
+- Primera ejecución sobre F0: `check.ps1` en verde (50 tests de backend, 10 de frontend y build), commit `be7e149` y push a `origin/main`.
+- `finish-phase.ps1` rechaza `Phase` inválida y remotos inexistentes antes de tocar el árbol de trabajo.
 
 ### Archivos
 

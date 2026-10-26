@@ -27,7 +27,9 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db import create_db_engine  # noqa: E402
 from app.models.catalog import Category, Product  # noqa: E402
+from app.services.allergen_sync import AllergenSyncService  # noqa: E402
 from app.services.catalog_sync import CatalogSyncService  # noqa: E402
+from app.services.seed import SeedService  # noqa: E402
 
 
 async def _run() -> int:
@@ -59,6 +61,24 @@ async def _run() -> int:
         print(f"Tiempo: {elapsed:.2f} s")
         if result.error:
             print(f"Error: {result.error}")
+
+        if result.status in {"success", "partial"}:
+            seed_result = SeedService(factory).load()
+            print(
+                f"Seed cargado: {seed_result.ingredients} ingredientes, {seed_result.dishes} platos"
+            )
+            if seed_result.missing_products or seed_result.skipped_products:
+                print(
+                    "AVISO: "
+                    f"{len(seed_result.missing_products)} productos ausentes y "
+                    f"{len(seed_result.skipped_products)} no mapeables."
+                )
+            allergen_result = await AllergenSyncService(factory).run()
+            print(
+                "Alérgenos actualizados: "
+                f"{allergen_result.updated}/{allergen_result.products_seen} "
+                f"({len(allergen_result.failed)} fallos)"
+            )
         return 0 if result.status in {"success", "partial"} else 1
     finally:
         engine.dispose()

@@ -101,6 +101,29 @@ class MercadonaProductGroup(_MercadonaModel):
     products: list[MercadonaProduct] = Field(default_factory=list)
 
 
+class MercadonaNutritionInformation(_MercadonaModel):
+    """Información de ingredientes y alérgenos del detalle de producto.
+
+    Los campos son HTML con negritas y pueden venir vacíos. `x99` es el
+    centinela que usa Mercadona cuando no hay una declaración explícita.
+    """
+
+    allergens: str | None = None
+    ingredients: str | None = None
+
+
+class MercadonaProductDetail(_MercadonaModel):
+    """Detalle de producto usado solo para enriquecer alérgenos (F2.4)."""
+
+    model_config = ConfigDict(extra="ignore", coerce_numbers_to_str=True)
+
+    id: str
+    ean: str | None = None
+    display_name: str
+    published: bool = True
+    nutrition_information: MercadonaNutritionInformation | None = None
+
+
 class MercadonaCategoryDetail(_MercadonaModel):
     """Detalle de una subcategoría con sus grupos y productos."""
 

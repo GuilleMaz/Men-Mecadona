@@ -31,3 +31,22 @@ class AllergenCode(StrEnum):
 #: Orden canónico usado por la API y los tests.
 ALLERGEN_CODES: tuple[str, ...] = tuple(code.value for code in AllergenCode)
 ALLERGEN_CODE_SET: frozenset[str] = frozenset(ALLERGEN_CODES)
+
+#: Nombres para la UI; el dominio y la API usan los códigos en inglés.
+ALLERGEN_LABELS: dict[str, str] = {
+    "gluten": "Gluten",
+    "crustaceans": "Crustáceos",
+    "eggs": "Huevo",
+    "fish": "Pescado",
+    "peanuts": "Cacahuetes",
+    "soybeans": "Soja",
+    "milk": "Leche",
+    "nuts": "Frutos de cáscara",
+    "celery": "Apio",
+    "mustard": "Mostaza",
+    "sesame": "Sésamo",
+    "sulphites": "Sulfitos",
+    "lupin": "Altramuces",
+    "molluscs": "Moluscos",
+    "unknown": "Sin confirmar",
+}

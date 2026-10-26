@@ -1,5 +1,84 @@
 # Changelog
 
+## 2026-10-26 — F2: ingredientes, platos, alérgenos y preferencias
+
+### Cambios
+
+- Backend: modelos `Ingredient`, `IngredientProduct`, `Dish`, `DishIngredient`,
+  `Profile`, `Exclusion` y `PantryItem` con CHECKs, FKs, índices únicos parciales
+  y `UNIQUE(product_id)`; migración `20261026_0002`.
+- Seed: `backend/app/data/ingredients.yaml` (110 ingredientes, 212 mapeos a
+  productos) y `dishes.yaml` (60 platos sin pasos, 30 de comida, 45 de cena, 19
+  cenas ligeras). Flags y etiquetas derivados de la composición.
+- `SeedService` idempotente con `seed_version` por hash, soft delete, upsert de
+  mapeos y componentes, y `dry-run`. Scripts `load_seed.py` y
+  `validate_seed.py`.
+- Alérgenos: `MercadonaClient.get_product`, DTOs de detalle, parser HTML con
+  `x99`, ingredientes y «puede contener», `AllergenSyncService` fail-closed y
+  enriquecimiento de los 212 productos mapeados reales (12 `unknown`, 29
+  `partial`, 0 fallos). Script `sync_allergens.py`.
+- Elegibilidad reutilizable: `app/services/eligibility.py` con `P_i`, unión
+  ingrediente/producto, exclusiones y motivos estables. Base de F4.2.
+- API: `/api/allergens`, `/api/ingredients`, `/api/dishes`,
+  `/api/dishes/{id}`, `/api/profile`, `/api/exclusions`, `/api/pantry`.
+  Filtros `q`, `meal_type`, `tag`, `light`, `only_eligible`; perfil con
+  `allergen_codes` opcional (si se omite, se conserva); despensa transaccional.
+- Arranque: la sync recarga el seed y enriquece alérgenos al terminar; si no
+  toca sync, el seed se carga en segundo plano. `run.ps1` sigue aplicando
+  migraciones antes de arrancar.
+- Frontend: formulario de menú persistente; catálogo de platos con búsqueda,
+  momento, etiqueta, ligero, visibilidad de no elegibles, detalle y «no me
+  gusta» por plato o ingrediente; Ajustes con alérgenos, exclusiones y despensa.
+  MSW con handlers de dominio.
+- Documentación: README raíz/backend/frontend, `TASKS.md`, `PLAN.md` y
+  `project-memory/`.
+
+### Verificación
+
+- `uv run ruff check .`, `ruff format --check .`, `mypy app`: OK.
+- `uv run pytest`: 161 tests en verde, sin red (41 nuevos).
+- `npm run lint`, `format:check`, `typecheck`, `test` (26 tests, 10 nuevos) y
+  `build`: OK.
+- `uv run alembic upgrade head` sobre base nueva: 12 tablas + `alembic_version`;
+  `alembic check`: sin deriva.
+- Seed contra copia del catálogo real: 110 ingredientes, 212 mapeos, 60 platos;
+  dos cargas consecutivas conservan IDs; `validate_seed.py` → OK (0 avisos).
+- Sync real de alérgenos: 212 productos mapeados; 212 actualizados en la prueba
+  aislada y 210 en la base real (2 fallos transitorios reintentables); 11-12
+  `unknown`, 29 `partial`.
+- API real: `/api/dishes` devuelve 60 platos; con gluten declarado y alérgenos
+  enriquecidos, `only_eligible=true` devuelve 7 platos (fail-closed).
+- UI: tests de menú, catálogo, detalle, exclusiones, alérgenos y despensa.
+
+### Archivos
+
+- `backend/app/models/ingredients.py`, `backend/app/models/dishes.py`,
+  `backend/app/models/profile.py`, `backend/app/models/__init__.py`
+- `backend/alembic/versions/20261026_0002_domain.py`
+- `backend/app/data/ingredients.yaml`, `backend/app/data/dishes.yaml`
+- `backend/app/schemas/seed.py`, `backend/app/schemas/domain.py`,
+  `backend/app/schemas/mercadona.py`
+- `backend/app/services/seed.py`, `backend/app/services/allergen_sync.py`,
+  `backend/app/services/eligibility.py`, `backend/app/services/mercadona_client.py`
+- `backend/app/api/domain.py`, `backend/app/main.py`, `backend/app/allergens.py`,
+  `backend/app/models/catalog.py` (relación de alérgenos)
+- `backend/tests/domain_fixtures.py`, `backend/tests/test_seed.py`,
+  `backend/tests/test_allergens.py`, `backend/tests/test_domain_api.py`,
+  `backend/tests/test_domain_migrations.py`, `backend/tests/test_catalog_migrations.py`
+- `frontend/src/lib/domain.ts`, `frontend/src/lib/labels.ts`,
+  `frontend/src/pages/MenuPage.tsx`, `frontend/src/pages/DishesPage.tsx`,
+  `frontend/src/pages/SettingsPage.tsx`,
+  `frontend/src/components/preferences/**`, `frontend/src/test/server.ts`
+- `scripts/load_seed.py`, `scripts/validate_seed.py`, `scripts/sync_allergens.py`,
+  `scripts/sync_catalog.py`, `backend/pyproject.toml`, `backend/uv.lock`
+- `README.md`, `backend/README.md`, `frontend/README.md`, `PLAN.md`, `TASKS.md`
+- `project-memory/**`
+
+### Motivo
+
+- Cerrar F2 con el catálogo de platos validado, alérgenos fail-closed y el
+  usuario configurable antes de construir el motor de costes de F3.
+
 ## 2026-10-26 — F1: catálogo y sincronización
 
 ### Cambios

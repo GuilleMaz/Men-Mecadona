@@ -12,6 +12,9 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - Salud: `GET http://127.0.0.1:8000/api/health` → `{"status":"ok"}`.
 - Catálogo: `GET /api/catalog/status`, `POST /api/catalog/sync`,
   `GET /api/catalog/categories`, `GET /api/catalog/products?q=&category_id=&limit=&offset=`.
+- Dominio: `GET /api/allergens`, `GET /api/ingredients`, `GET /api/dishes`,
+  `GET /api/dishes/{id}`, `GET/PUT /api/profile`, `GET/POST/DELETE /api/exclusions`,
+  `GET/PUT /api/pantry`.
 - Documentación interactiva: `http://127.0.0.1:8000/docs`.
 
 Para arrancar backend y frontend juntos, usa `.\run.ps1` desde la raíz. Para
@@ -28,7 +31,7 @@ uv run pytest
 
 La base de datos vive en `%LOCALAPPDATA%\Cesta\cesta.db` (o en `CESTA_DATA_DIR`),
 fuera de OneDrive. Se rechaza una ruta de datos dentro de OneDrive. Los YAML de
-ingredientes y platos irán en `app/data/`.
+ingredientes y platos viven en `app/data/`.
 
 Inicialización explícita de la base y migraciones:
 
@@ -63,6 +66,29 @@ uv run python ..\scripts\sync_catalog.py
 ```
 
 Los tests no llaman a Mercadona: usan fixtures sintéticas y `respx`.
+
+## Ingredientes, platos y preferencias (F2)
+
+- `app/data/ingredients.yaml`: 110 ingredientes con unidad base, grupo, ración,
+  alérgenos y 1-3 productos por `external_id`. Un producto pertenece a un solo
+  ingrediente.
+- `app/data/dishes.yaml`: 60 platos sin pasos; los flags `has_vegetables`,
+  `light`, `carbs` y `protein_sources` se derivan de la composición.
+- Cargador idempotente, `seed_version` por hash, soft delete y `--dry-run`.
+- Alérgenos: `GET /api/allergens`, parser de detalle con `x99` y política
+  fail-closed. Solo se descarga el detalle de los productos mapeados.
+- Perfil único, exclusiones por ingrediente/plato/etiqueta y despensa en
+  milésimas de la unidad base.
+
+```powershell
+uv run python ..\scripts\load_seed.py --dry-run
+uv run python ..\scripts\load_seed.py
+uv run python ..\scripts\sync_allergens.py
+uv run python ..\scripts\validate_seed.py
+```
+
+`sync_catalog.py` también recarga el seed y sincroniza alérgenos tras una sync
+correcta.
 
 Seguridad local: el middleware de `Host` solo acepta `127.0.0.1`, `localhost` y
 `::1`; el resto devuelve `400 INVALID_HOST`. Los tests de API envían un `Host`

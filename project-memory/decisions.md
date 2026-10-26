@@ -1,5 +1,143 @@
 # Decisions
 
+## 2026-10-26 — Seed, mapeo explícito y cobertura de F2
+
+### Problema
+
+El catálogo de Mercadona cambia entre syncs y muchos productos frescos tienen
+peso variable. Había que construir ~120 ingredientes y 50-60 platos sin recetas,
+garantizar que cada ingrediente tuviera al menos un producto comprable y que el
+seed pudiera recargarse sin duplicar ni perder datos de usuario.
+
+### Decisión
+
+- `ingredients.yaml` incluye el mapeo explícito a 1-3 productos por ingrediente,
+  con `external_id`, `priority` e `is_default`. No se mapea por heurística de
+  nombre.
+- Solo se aceptan productos fijos: `package_quantity_milli>0`,
+  `package_price_cents>0`, `package_unit` compatible con la unidad base,
+  `approx_size=False` y `selling_method=0`.
+- `dishes.yaml` contiene composición, no pasos. `has_vegetables`, `light`,
+  `carbs`, `protein_sources` y las etiquetas requeridas se derivan de la
+  composición; el YAML se compara con la derivación y falla si no coincide.
+- `SeedService` hace upsert por `slug`, preserva IDs de mapeos y componentes y
+  usa `seed_version` = hash de los dos YAML. Los elementos ausentes se marcan
+  `active=False` (soft delete). `--dry-run` revierte la transacción.
+- `scripts/validate_seed.py` valida estructura, cobertura y catálogo real;
+  `scripts/load_seed.py` permite cargar o simular la carga.
+
+### Justificación
+
+- El mapeo explícito es revisable y evita asignar un producto a un ingrediente
+  equivocado por parecido de nombre.
+- Excluir peso variable evita precios y cantidades que no se pueden garantizar.
+- El hash de versión permite saber qué seed generó un plato y reproducir la
+  carga; el soft delete no rompe futuros menús históricos.
+- La derivación de flags evita etiquetas subjetivas y mantiene la coherencia con
+  la composición.
+
+### Alternativas
+
+- Mapear por búsqueda de nombre/categoría: descartado por fragilidad.
+- Incluir productos `approx_size`: descartado; el precio del paquete no es
+  estable y el ticket dejaría de ser verificable.
+- Borrar filas ausentes del seed: descartado; rompería referencias históricas.
+- Guardar los flags solo en el YAML: descartado; no se podrían validar contra la
+  composición.
+
+### Resultado
+
+- 110 ingredientes, 212 mapeos únicos, 60 platos (30 de comida, 45 de cena, 19
+  cenas ligeras). `validate_seed.py` pasa con 0 avisos.
+- Dos cargas consecutivas conservan conteos e IDs; el dry-run no persiste.
+
+---
+
+## 2026-10-26 — Alérgenos: `x99`, parser y fail-closed
+
+### Problema
+
+La API de Mercadona devuelve los alérgenos en HTML y usa `x99` cuando no hay una
+declaración explícita. Algunos productos mencionan un alérgeno en los
+ingredientes sin listarlo en el campo de alérgenos. Ignorar esos casos podía
+introducir un alérgeno declarado por el usuario en un menú.
+
+### Decisión
+
+- `AllergenSyncService` descarga solo el detalle de los productos mapeados (212),
+  con concurrencia 4 y sin persistir el JSON completo.
+- El parser normaliza HTML y acentos, interpreta `Contiene`/`Puede contener` y
+  busca alérgenos también en la lista de ingredientes. `x99` sin ingredientes es
+  `unknown`; `x99` con ingredientes limpios es `known`; si los ingredientes
+  contradicen la declaración, el producto queda `partial`.
+- `product_allergens` guarda origen (`api`/`ingredients`) y confianza.
+- Política fail-closed: con alérgenos declarados, `P_i` solo incluye productos
+  `known` sin alérgeno coincidente. `partial`/`unknown` no entran. La unión
+  ingrediente/producto es la fuente de verdad.
+- Si `P_i` queda vacío, el ingrediente y sus platos son inelegibles; el producto
+  de respaldo es el siguiente elegible por prioridad, nunca uno con alérgeno.
+
+### Justificación
+
+- Es un requisito de seguridad y legal; “cuando sea posible” no es aceptable.
+- La lista de ingredientes permite detectar incoherencias sin inventar datos.
+- El estado `partial` hace visible la incertidumbre y la excluye cuando importa.
+
+### Alternativas
+
+- Tratar `x99` siempre como “sin alérgenos”: descartado; podía ocultar alérgenos
+  declarados solo en los ingredientes.
+- Tratar `x99` siempre como `unknown`: demasiado restrictivo para alimentos
+  básicos como patata o arroz.
+- Confiar solo en el campo de alérgenos: descartado; el caso de los sulfitos en
+  garbanzos demuestra que puede estar incompleto.
+- Filtrar solo a nivel de plato: insuficiente si cambia el producto elegido.
+
+### Resultado
+
+- 212 productos mapeados: 212 actualizados en la prueba aislada y 210 en la base
+  real (2 fallos transitorios reintentables); 11-12 `unknown`, 29 `partial`.
+- Tests de los 14 códigos, `unknown`, unión, respaldo, producto barato desconocido
+  y producto de respaldo con alérgeno.
+
+---
+
+## 2026-10-26 — Elegibilidad de platos reutilizable
+
+### Problema
+
+La UI de F2 y el optimizador de F4 necesitan el mismo criterio de elegibilidad.
+Duplicarlo podía hacer que el catálogo visible y el menú generado discreparan.
+
+### Decisión
+
+- `app/services/eligibility.py` centraliza `PreferenceSnapshot`,
+  `ingredient_eligibility`, `evaluate_dish` y `evaluate_dishes`.
+- `GET /api/dishes` devuelve `eligible` y `exclusion_reasons`, y acepta
+  `only_eligible`. La UI oculta los no elegibles por defecto, con opción de
+  mostrarlos.
+- Los motivos son códigos estables (`dish_excluded`, `tag_excluded`,
+  `ingredient_excluded`, `ingredient_allergen`, `no_eligible_product`).
+
+### Justificación
+
+- Un único criterio para UI, tests y F4.2.
+- La UI puede explicar por qué un plato no aparece sin duplicar reglas.
+- El optimizador podrá reutilizar la misma función sin cambiar contratos.
+
+### Alternativas
+
+- Filtrar solo en el frontend: descartado; el catálogo visible y el menú podían
+  discrepar.
+- Filtrar en el endpoint y no exponer motivos: peor UX y más difícil de testear.
+
+### Resultado
+
+- Tests de exclusión por ingrediente, plato y etiqueta, alérgeno intrínseco y
+  producto desconocido.
+
+---
+
 ## 2026-10-26 — Catálogo: upsert idempotente, fallo parcial y sync en segundo plano
 
 ### Problema

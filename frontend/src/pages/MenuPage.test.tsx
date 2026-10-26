@@ -1,8 +1,10 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { renderApp } from '@/test/render-app';
+import { server } from '@/test/server';
 
 describe('MenuPage', () => {
   it('acepta un menú válido y muestra el resumen', async () => {
@@ -14,6 +16,37 @@ describe('MenuPage', () => {
     const status = await screen.findByRole('status', { name: 'Resumen del menú' });
     expect(status).toHaveTextContent('2 personas · 7 días · 70,00');
     expect(status).toHaveTextContent('de presupuesto');
+  });
+
+  it('guarda el perfil con el presupuesto en céntimos', async () => {
+    const user = userEvent.setup();
+    let captured: unknown;
+    server.use(
+      http.put('/api/profile', async ({ request }) => {
+        captured = await request.json();
+        return HttpResponse.json({
+          id: 1,
+          people: 2,
+          days: 7,
+          budget_cents: 8550,
+          allergen_codes: [],
+        });
+      }),
+    );
+    renderApp();
+
+    const budget = screen.getByLabelText('Presupuesto total (€)');
+    await user.clear(budget);
+    await user.type(budget, '85.50');
+    await user.click(screen.getByRole('button', { name: 'Generar menú' }));
+
+    await waitFor(() => {
+      expect(captured).toMatchObject({
+        people: 2,
+        days: 7,
+        budget_cents: 8550,
+      });
+    });
   });
 
   it('rechaza cero días con un mensaje en español', async () => {

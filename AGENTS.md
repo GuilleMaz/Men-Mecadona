@@ -1,7 +1,7 @@
 # AGENTS.md — Cesta
 
 > Guía operativa para agentes que trabajen en este repositorio.
-> **Estado actual:** F1 completada el 2026-10-26 (F1.1-F1.8). Siguiente fase: F2.
+> **Estado actual:** F2 completada el 2026-10-26 (F2.1-F2.10). Siguiente fase: F3.
 > **Última actualización:** 2026-10-26
 
 ---

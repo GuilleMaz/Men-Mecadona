@@ -1,0 +1,1913 @@
+- slug: onion
+  name: Cebolla
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '69089'
+    priority: 1
+    is_default: true
+  - external_id: '69079'
+    priority: 2
+    is_default: false
+  - external_id: '13568'
+    priority: 3
+    is_default: false
+- slug: garlic
+  name: Ajo
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '86656'
+    priority: 1
+    is_default: true
+  - external_id: '61288'
+    priority: 2
+    is_default: false
+- slug: pepper
+  name: Pimiento rojo y verde
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '35221'
+    priority: 1
+    is_default: true
+  - external_id: '16124'
+    priority: 2
+    is_default: false
+  - external_id: '16005'
+    priority: 3
+    is_default: false
+- slug: tomato
+  name: Tomate triturado
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '16044'
+    priority: 1
+    is_default: true
+  - external_id: '16043'
+    priority: 2
+    is_default: false
+  - external_id: '16022'
+    priority: 3
+    is_default: false
+- slug: cherry-tomatoes
+  name: Tomates cherry
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '69990'
+    priority: 1
+    is_default: true
+  - external_id: '69414'
+    priority: 2
+    is_default: false
+- slug: carrot
+  name: Zanahoria
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '69669'
+    priority: 1
+    is_default: true
+  - external_id: '69586'
+    priority: 2
+    is_default: false
+  - external_id: '69722'
+    priority: 3
+    is_default: false
+- slug: potato
+  name: Patata
+  category: vegetables
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 150000
+  allergens: []
+  tags:
+  - carb_type:potato
+  products:
+  - external_id: '69166'
+    priority: 1
+    is_default: true
+  - external_id: '69098'
+    priority: 2
+    is_default: false
+  - external_id: '69484'
+    priority: 3
+    is_default: false
+- slug: green-beans
+  name: Judía verde
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '61283'
+    priority: 1
+    is_default: true
+  - external_id: '61282'
+    priority: 2
+    is_default: false
+  - external_id: '68131'
+    priority: 3
+    is_default: false
+- slug: peas
+  name: Guisantes
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: legumes
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '61200'
+    priority: 1
+    is_default: true
+  - external_id: '61215'
+    priority: 2
+    is_default: false
+  - external_id: '16416'
+    priority: 3
+    is_default: false
+- slug: broccoli
+  name: Brócoli
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '61261'
+    priority: 1
+    is_default: true
+  - external_id: '69622'
+    priority: 2
+    is_default: false
+- slug: cauliflower
+  name: Coliflor
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '61231'
+    priority: 1
+    is_default: true
+- slug: spinach
+  name: Espinaca
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '61279'
+    priority: 1
+    is_default: true
+  - external_id: '69730'
+    priority: 2
+    is_default: false
+  - external_id: '69984'
+    priority: 3
+    is_default: false
+- slug: chard
+  name: Acelga
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '69725'
+    priority: 1
+    is_default: true
+  - external_id: '16314'
+    priority: 2
+    is_default: false
+- slug: lettuce
+  name: Lechuga
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '69670'
+    priority: 1
+    is_default: true
+  - external_id: '69435'
+    priority: 2
+    is_default: false
+- slug: mushrooms
+  name: Champiñones
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '16618'
+    priority: 1
+    is_default: true
+  - external_id: '16625'
+    priority: 2
+    is_default: false
+  - external_id: '16616'
+    priority: 3
+    is_default: false
+- slug: avocado
+  name: Aguacate
+  category: fruits
+  group: fruit
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '14283'
+    priority: 1
+    is_default: true
+- slug: sweet-corn
+  name: Maíz dulce
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '16714'
+    priority: 1
+    is_default: true
+  - external_id: '16712'
+    priority: 2
+    is_default: false
+  - external_id: '61289'
+    priority: 3
+    is_default: false
+- slug: olives
+  name: Aceitunas
+  category: pantry
+  group: fat
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '33114'
+    priority: 1
+    is_default: true
+  - external_id: '21896'
+    priority: 2
+    is_default: false
+  - external_id: '33121'
+    priority: 3
+    is_default: false
+- slug: artichoke-hearts
+  name: Corazones de alcachofa
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '16040'
+    priority: 1
+    is_default: true
+  - external_id: '11958'
+    priority: 2
+    is_default: false
+  - external_id: '13865'
+    priority: 3
+    is_default: false
+- slug: asparagus
+  name: Espárragos
+  category: vegetables
+  group: vegetable
+  base_unit: g
+  protein_source: null
+  serving_group: vegetable
+  serving_size_milli: 150000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '16519'
+    priority: 1
+    is_default: true
+  - external_id: '61238'
+    priority: 2
+    is_default: false
+  - external_id: '69656'
+    priority: 3
+    is_default: false
+- slug: pickles
+  name: Pepinillos
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '11565'
+    priority: 1
+    is_default: true
+  - external_id: '29540'
+    priority: 2
+    is_default: false
+- slug: capers
+  name: Alcaparras
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '33190'
+    priority: 1
+    is_default: true
+- slug: frozen-berries
+  name: Frutos rojos congelados
+  category: fruits
+  group: fruit
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '61093'
+    priority: 1
+    is_default: true
+- slug: canned-peach
+  name: Melocotón en almíbar
+  category: fruits
+  group: fruit
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '15260'
+    priority: 1
+    is_default: true
+  - external_id: '60918'
+    priority: 2
+    is_default: false
+- slug: raisins
+  name: Pasas
+  category: fruits
+  group: fruit
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '23010'
+    priority: 1
+    is_default: true
+- slug: dates
+  name: Dátiles
+  category: fruits
+  group: fruit
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '15301'
+    priority: 1
+    is_default: true
+  - external_id: '22606'
+    priority: 2
+    is_default: false
+- slug: chicken-strips
+  name: Tiras de pechuga de pollo
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: chicken
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '56661'
+    priority: 1
+    is_default: true
+  - external_id: '56652'
+    priority: 2
+    is_default: false
+  - external_id: '18106'
+    priority: 3
+    is_default: false
+- slug: chicken-thighs
+  name: Jamoncitos de pollo
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: chicken
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '25183'
+    priority: 1
+    is_default: true
+  - external_id: '25182'
+    priority: 2
+    is_default: false
+  - external_id: '52426'
+    priority: 3
+    is_default: false
+- slug: chicken-mince
+  name: Carne picada de pollo
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: chicken
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '35774'
+    priority: 1
+    is_default: true
+- slug: turkey-slices
+  name: Lonchas de pechuga de pavo
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: turkey
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '17775'
+    priority: 1
+    is_default: true
+  - external_id: '60243'
+    priority: 2
+    is_default: false
+- slug: beef-mince
+  name: Carne picada de vacuno
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: beef
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '2868'
+    priority: 1
+    is_default: true
+  - external_id: '52776'
+    priority: 2
+    is_default: false
+- slug: beef-burger
+  name: Hamburguesa de vacuno
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: beef
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '2873'
+    priority: 1
+    is_default: true
+  - external_id: '35884'
+    priority: 2
+    is_default: false
+- slug: pork-mince
+  name: Carne picada de cerdo
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: pork
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '2867'
+    priority: 1
+    is_default: true
+- slug: pork-loin
+  name: Lomo de cerdo cocido
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: pork
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '21601'
+    priority: 1
+    is_default: true
+  - external_id: '22428'
+    priority: 2
+    is_default: false
+- slug: bacon
+  name: Bacon
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: pork
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '16252'
+    priority: 1
+    is_default: true
+  - external_id: '21628'
+    priority: 2
+    is_default: false
+- slug: chorizo
+  name: Chorizo
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: pork
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '59086'
+    priority: 1
+    is_default: true
+  - external_id: '12073'
+    priority: 2
+    is_default: false
+- slug: ham
+  name: Jamón cocido
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: pork
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '60329'
+    priority: 1
+    is_default: true
+  - external_id: '13988'
+    priority: 2
+    is_default: false
+- slug: sausages
+  name: Salchichas
+  category: meat
+  group: protein
+  base_unit: g
+  protein_source: pork
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - gluten
+  - milk
+  - sulphites
+  tags: []
+  products:
+  - external_id: '53056'
+    priority: 1
+    is_default: true
+  - external_id: '52884'
+    priority: 2
+    is_default: false
+- slug: salmon
+  name: Salmón
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: fish
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - fish
+  tags: []
+  products:
+  - external_id: '24511'
+    priority: 1
+    is_default: true
+  - external_id: '26749'
+    priority: 2
+    is_default: false
+  - external_id: '18817'
+    priority: 3
+    is_default: false
+- slug: hake
+  name: Merluza
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: fish
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - fish
+  tags: []
+  products:
+  - external_id: '26991'
+    priority: 1
+    is_default: true
+- slug: smoked-cod
+  name: Bacalao ahumado
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: fish
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - fish
+  tags: []
+  products:
+  - external_id: '13787'
+    priority: 1
+    is_default: true
+- slug: tuna
+  name: Atún
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: fish
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - fish
+  tags: []
+  products:
+  - external_id: '18071'
+    priority: 1
+    is_default: true
+  - external_id: '18002'
+    priority: 2
+    is_default: false
+  - external_id: '18055'
+    priority: 3
+    is_default: false
+- slug: sardines
+  name: Sardinas
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: fish
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - fish
+  tags: []
+  products:
+  - external_id: '18225'
+    priority: 1
+    is_default: true
+  - external_id: '18436'
+    priority: 2
+    is_default: false
+- slug: mackerel
+  name: Caballa
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: fish
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - fish
+  tags: []
+  products:
+  - external_id: '13628'
+    priority: 1
+    is_default: true
+  - external_id: '13632'
+    priority: 2
+    is_default: false
+- slug: shrimp
+  name: Gambas
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: seafood
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - crustaceans
+  tags: []
+  products:
+  - external_id: '24750'
+    priority: 1
+    is_default: true
+  - external_id: '87278'
+    priority: 2
+    is_default: false
+- slug: mussels
+  name: Mejillones
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: seafood
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - molluscs
+  tags: []
+  products:
+  - external_id: '62401'
+    priority: 1
+    is_default: true
+  - external_id: '18620'
+    priority: 2
+    is_default: false
+  - external_id: '18619'
+    priority: 3
+    is_default: false
+- slug: squid
+  name: Calamar
+  category: fish
+  group: protein
+  base_unit: g
+  protein_source: seafood
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - molluscs
+  tags: []
+  products:
+  - external_id: '18713'
+    priority: 1
+    is_default: true
+  - external_id: '18714'
+    priority: 2
+    is_default: false
+- slug: eggs
+  name: Huevos
+  category: eggs
+  group: protein
+  base_unit: unit
+  protein_source: eggs
+  serving_group: protein
+  serving_size_milli: 2000
+  allergens:
+  - eggs
+  tags: []
+  grams_per_unit: 60
+  products:
+  - external_id: '31504'
+    priority: 1
+    is_default: true
+  - external_id: '31540'
+    priority: 2
+    is_default: false
+- slug: lentils
+  name: Lentejas
+  category: legumes
+  group: protein
+  base_unit: g
+  protein_source: legumes
+  serving_group: protein
+  serving_size_milli: 80000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '5330'
+    priority: 1
+    is_default: true
+- slug: chickpeas
+  name: Garbanzos
+  category: legumes
+  group: protein
+  base_unit: g
+  protein_source: legumes
+  serving_group: protein
+  serving_size_milli: 80000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '5214'
+    priority: 1
+    is_default: true
+- slug: white-beans
+  name: Alubias blancas
+  category: legumes
+  group: protein
+  base_unit: g
+  protein_source: legumes
+  serving_group: protein
+  serving_size_milli: 80000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '5124'
+    priority: 1
+    is_default: true
+- slug: red-beans
+  name: Alubias rojas
+  category: legumes
+  group: protein
+  base_unit: g
+  protein_source: legumes
+  serving_group: protein
+  serving_size_milli: 80000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '67609'
+    priority: 1
+    is_default: true
+- slug: broad-beans
+  name: Habas
+  category: legumes
+  group: protein
+  base_unit: g
+  protein_source: legumes
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '61233'
+    priority: 1
+    is_default: true
+  - external_id: '61252'
+    priority: 2
+    is_default: false
+- slug: tofu
+  name: Tofu
+  category: other
+  group: protein
+  base_unit: g
+  protein_source: soy
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - soybeans
+  tags: []
+  products:
+  - external_id: '51097'
+    priority: 1
+    is_default: true
+- slug: seitan
+  name: Seitán
+  category: other
+  group: protein
+  base_unit: g
+  protein_source: seitan
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - gluten
+  tags: []
+  products:
+  - external_id: '19974'
+    priority: 1
+    is_default: true
+- slug: textured-soy
+  name: Soja texturizada
+  category: legumes
+  group: protein
+  base_unit: g
+  protein_source: soy
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - soybeans
+  tags: []
+  products:
+  - external_id: '13926'
+    priority: 1
+    is_default: true
+- slug: milk
+  name: Leche
+  category: dairy
+  group: dairy
+  base_unit: ml
+  protein_source: dairy
+  serving_group: protein
+  serving_size_milli: 200000
+  allergens:
+  - milk
+  tags: []
+  products:
+  - external_id: '10380'
+    priority: 1
+    is_default: true
+  - external_id: '10699'
+    priority: 2
+    is_default: false
+  - external_id: '10933'
+    priority: 3
+    is_default: false
+- slug: yogurt
+  name: Yogur natural
+  category: dairy
+  group: dairy
+  base_unit: g
+  protein_source: dairy
+  serving_group: protein
+  serving_size_milli: 200000
+  allergens:
+  - milk
+  tags: []
+  products:
+  - external_id: '22313'
+    priority: 1
+    is_default: true
+  - external_id: '20584'
+    priority: 2
+    is_default: false
+  - external_id: '20210'
+    priority: 3
+    is_default: false
+- slug: greek-yogurt
+  name: Yogur griego
+  category: dairy
+  group: dairy
+  base_unit: g
+  protein_source: dairy
+  serving_group: protein
+  serving_size_milli: 200000
+  allergens:
+  - milk
+  tags: []
+  products:
+  - external_id: '20559'
+    priority: 1
+    is_default: true
+  - external_id: '52421'
+    priority: 2
+    is_default: false
+- slug: grated-cheese
+  name: Queso rallado
+  category: dairy
+  group: dairy
+  base_unit: g
+  protein_source: dairy
+  serving_group: protein
+  serving_size_milli: 60000
+  allergens:
+  - milk
+  tags: []
+  products:
+  - external_id: '23621'
+    priority: 1
+    is_default: true
+  - external_id: '22216'
+    priority: 2
+    is_default: false
+  - external_id: '18344'
+    priority: 3
+    is_default: false
+- slug: fresh-cheese
+  name: Queso fresco
+  category: dairy
+  group: dairy
+  base_unit: g
+  protein_source: dairy
+  serving_group: protein
+  serving_size_milli: 100000
+  allergens:
+  - milk
+  tags: []
+  products:
+  - external_id: '52408'
+    priority: 1
+    is_default: true
+  - external_id: '51191'
+    priority: 2
+    is_default: false
+  - external_id: '51012'
+    priority: 3
+    is_default: false
+- slug: cured-cheese
+  name: Queso curado
+  category: dairy
+  group: dairy
+  base_unit: g
+  protein_source: dairy
+  serving_group: protein
+  serving_size_milli: 60000
+  allergens:
+  - milk
+  tags: []
+  products:
+  - external_id: '51111'
+    priority: 1
+    is_default: true
+  - external_id: '51630'
+    priority: 2
+    is_default: false
+- slug: butter
+  name: Mantequilla
+  category: dairy
+  group: fat
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - milk
+  tags: []
+  products:
+  - external_id: '20716'
+    priority: 1
+    is_default: true
+  - external_id: '20852'
+    priority: 2
+    is_default: false
+- slug: rice
+  name: Arroz redondo
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens: []
+  tags:
+  - carb_type:rice
+  products:
+  - external_id: '5044'
+    priority: 1
+    is_default: true
+  - external_id: '5000'
+    priority: 2
+    is_default: false
+  - external_id: '5042'
+    priority: 3
+    is_default: false
+- slug: basmati-rice
+  name: Arroz basmati
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens: []
+  tags:
+  - carb_type:rice
+  products:
+  - external_id: '5002'
+    priority: 1
+    is_default: true
+- slug: pasta
+  name: Pasta
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:pasta
+  products:
+  - external_id: '6357'
+    priority: 1
+    is_default: true
+  - external_id: '6358'
+    priority: 2
+    is_default: false
+- slug: macaroni
+  name: Macarrones
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:pasta
+  products:
+  - external_id: '6250'
+    priority: 1
+    is_default: true
+  - external_id: '6326'
+    priority: 2
+    is_default: false
+  - external_id: '6260'
+    priority: 3
+    is_default: false
+- slug: noodles
+  name: Fideos
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:noodles
+  products:
+  - external_id: '6261'
+    priority: 1
+    is_default: true
+  - external_id: '6256'
+    priority: 2
+    is_default: false
+- slug: bread
+  name: Pan de molde
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:bread
+  products:
+  - external_id: '13810'
+    priority: 1
+    is_default: true
+  - external_id: '82322'
+    priority: 2
+    is_default: false
+  - external_id: '82324'
+    priority: 3
+    is_default: false
+- slug: wholemeal-bread
+  name: Pan integral
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:bread
+  products:
+  - external_id: '82328'
+    priority: 1
+    is_default: true
+  - external_id: '17912.1'
+    priority: 2
+    is_default: false
+  - external_id: '11632.1'
+    priority: 3
+    is_default: false
+- slug: flour
+  name: Harina de trigo
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:flour
+  products:
+  - external_id: '29100'
+    priority: 1
+    is_default: true
+- slug: breadcrumbs
+  name: Pan rallado
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:bread
+  products:
+  - external_id: '82219'
+    priority: 1
+    is_default: true
+- slug: oats
+  name: Copos de avena
+  category: grains
+  group: carb
+  base_unit: g
+  protein_source: null
+  serving_group: carb
+  serving_size_milli: 60000
+  allergens:
+  - gluten
+  tags:
+  - carb_type:oats
+  products:
+  - external_id: '86341'
+    priority: 1
+    is_default: true
+  - external_id: '16807'
+    priority: 2
+    is_default: false
+- slug: olive-oil
+  name: Aceite de oliva
+  category: pantry
+  group: fat
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '4240'
+    priority: 1
+    is_default: true
+  - external_id: '4241'
+    priority: 2
+    is_default: false
+  - external_id: '4740'
+    priority: 3
+    is_default: false
+- slug: sunflower-oil
+  name: Aceite de girasol
+  category: pantry
+  group: fat
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '4040'
+    priority: 1
+    is_default: true
+  - external_id: '4041'
+    priority: 2
+    is_default: false
+- slug: vinegar
+  name: Vinagre de vino
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '4940'
+    priority: 1
+    is_default: true
+  - external_id: '4957'
+    priority: 2
+    is_default: false
+- slug: salt
+  name: Sal
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '19731'
+    priority: 1
+    is_default: true
+  - external_id: '16864'
+    priority: 2
+    is_default: false
+- slug: black-pepper
+  name: Pimienta negra
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34171'
+    priority: 1
+    is_default: true
+  - external_id: '34172'
+    priority: 2
+    is_default: false
+- slug: paprika
+  name: Pimentón dulce
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '60573'
+    priority: 1
+    is_default: true
+  - external_id: '34102'
+    priority: 2
+    is_default: false
+  - external_id: '34183'
+    priority: 3
+    is_default: false
+- slug: oregano
+  name: Orégano
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '5598'
+    priority: 1
+    is_default: true
+- slug: parsley
+  name: Perejil
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '5599'
+    priority: 1
+    is_default: true
+- slug: bay-leaf
+  name: Laurel
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '47994'
+    priority: 1
+    is_default: true
+- slug: cumin
+  name: Comino
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34120'
+    priority: 1
+    is_default: true
+  - external_id: '34121'
+    priority: 2
+    is_default: false
+- slug: curry
+  name: Curry
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34125'
+    priority: 1
+    is_default: true
+- slug: cinnamon
+  name: Canela
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34177'
+    priority: 1
+    is_default: true
+  - external_id: '52880'
+    priority: 2
+    is_default: false
+- slug: thyme
+  name: Tomillo
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '5547'
+    priority: 1
+    is_default: true
+- slug: rosemary
+  name: Romero
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '14981'
+    priority: 1
+    is_default: true
+- slug: basil
+  name: Albahaca
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34128'
+    priority: 1
+    is_default: true
+- slug: saffron
+  name: Azafrán
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34116'
+    priority: 1
+    is_default: true
+  - external_id: '8370'
+    priority: 2
+    is_default: false
+- slug: nutmeg
+  name: Nuez moscada
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34173'
+    priority: 1
+    is_default: true
+- slug: ginger
+  name: Jengibre
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '34149'
+    priority: 1
+    is_default: true
+- slug: cayenne
+  name: Cayena
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '21552'
+    priority: 1
+    is_default: true
+- slug: sugar
+  name: Azúcar
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '19897'
+    priority: 1
+    is_default: true
+  - external_id: '22349'
+    priority: 2
+    is_default: false
+- slug: honey
+  name: Miel
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '15430'
+    priority: 1
+    is_default: true
+  - external_id: '35843'
+    priority: 2
+    is_default: false
+- slug: almonds
+  name: Almendras
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - nuts
+  tags: []
+  products:
+  - external_id: '34865'
+    priority: 1
+    is_default: true
+  - external_id: '34014'
+    priority: 2
+    is_default: false
+- slug: walnuts
+  name: Nueces
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - nuts
+  tags: []
+  products:
+  - external_id: '52667'
+    priority: 1
+    is_default: true
+  - external_id: '34024'
+    priority: 2
+    is_default: false
+- slug: peanuts
+  name: Cacahuetes
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - peanuts
+  tags: []
+  products:
+  - external_id: '13451'
+    priority: 1
+    is_default: true
+  - external_id: '34031'
+    priority: 2
+    is_default: false
+- slug: sesame
+  name: Sésamo
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sesame
+  tags: []
+  products:
+  - external_id: '34964'
+    priority: 1
+    is_default: true
+- slug: mustard
+  name: Mostaza
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - mustard
+  tags: []
+  products:
+  - external_id: '23410'
+    priority: 1
+    is_default: true
+- slug: mayonnaise
+  name: Mayonesa
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - eggs
+  tags: []
+  products:
+  - external_id: '52728'
+    priority: 1
+    is_default: true
+  - external_id: '13406'
+    priority: 2
+    is_default: false
+- slug: ketchup
+  name: Kétchup
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '23579'
+    priority: 1
+    is_default: true
+- slug: soy-sauce
+  name: Salsa de soja
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - soybeans
+  - gluten
+  tags: []
+  products:
+  - external_id: '17360'
+    priority: 1
+    is_default: true
+  - external_id: '17382'
+    priority: 2
+    is_default: false
+- slug: vegetable-stock
+  name: Caldo de verduras
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - celery
+  tags: []
+  products:
+  - external_id: '18480'
+    priority: 1
+    is_default: true
+- slug: fish-stock
+  name: Caldo de pescado
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - fish
+  - celery
+  tags: []
+  products:
+  - external_id: '7325'
+    priority: 1
+    is_default: true
+- slug: chicken-stock
+  name: Caldo de pollo
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - celery
+  tags: []
+  products:
+  - external_id: '7313'
+    priority: 1
+    is_default: true
+- slug: white-wine
+  name: Vino blanco
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - sulphites
+  tags: []
+  products:
+  - external_id: '66105'
+    priority: 1
+    is_default: true
+  - external_id: '24077'
+    priority: 2
+    is_default: false
+- slug: tomato-paste
+  name: Tomate concentrado
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '16074'
+    priority: 1
+    is_default: true
+- slug: fried-tomato
+  name: Tomate frito
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '17108'
+    priority: 1
+    is_default: true
+  - external_id: '17151'
+    priority: 2
+    is_default: false
+  - external_id: '17330'
+    priority: 3
+    is_default: false
+- slug: lemon-juice
+  name: Zumo de limón
+  category: pantry
+  group: pantry
+  base_unit: ml
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens: []
+  tags: []
+  products:
+  - external_id: '4903'
+    priority: 1
+    is_default: true
+- slug: pistachios
+  name: Pistachos
+  category: pantry
+  group: pantry
+  base_unit: g
+  protein_source: null
+  serving_group: none
+  serving_size_milli: 100000
+  allergens:
+  - nuts
+  tags: []
+  products:
+  - external_id: '34262'
+    priority: 1
+    is_default: true
+  - external_id: '86190'
+    priority: 2
+    is_default: false

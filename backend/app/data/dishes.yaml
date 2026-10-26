@@ -1,0 +1,2039 @@
+- slug: chicken-rice-vegetables
+  name: Pollo con arroz y verduras
+  description: Pollo, arroz y pimiento con un toque de pimentón.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - rice
+  ingredients:
+  - ingredient: chicken-thighs
+    quantity: 400
+    unit: g
+  - ingredient: rice
+    quantity: 160
+    unit: g
+  - ingredient: pepper
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 100
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: paprika
+    quantity: 2
+    unit: g
+- slug: lentils-stew
+  name: Lentejas guisadas
+  description: Lentejas con chorizo, patata y zanahoria.
+  base_servings: 4
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - legumes
+  - pork
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - legume
+  - red_meat
+  - stew
+  ingredients:
+  - ingredient: lentils
+    quantity: 300
+    unit: g
+  - ingredient: chorizo
+    quantity: 100
+    unit: g
+  - ingredient: carrot
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 100
+    unit: g
+  - ingredient: potato
+    quantity: 200
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: paprika
+    quantity: 3
+    unit: g
+- slug: chickpeas-spinach
+  name: Garbanzos con espinacas
+  description: Garbanzos y espinacas con ajo y pan.
+  base_servings: 4
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - legumes
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - legume
+  - stew
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: chickpeas
+    quantity: 300
+    unit: g
+  - ingredient: spinach
+    quantity: 300
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: bread
+    quantity: 80
+    unit: g
+- slug: macaroni-tomato-tuna
+  name: Macarrones con tomate y atún
+  description: Macarrones con tomate, atún y un poco de queso.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - dairy
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: pasta
+  tags:
+  - fish
+  - pasta
+  ingredients:
+  - ingredient: macaroni
+    quantity: 200
+    unit: g
+  - ingredient: tomato
+    quantity: 400
+    unit: g
+  - ingredient: tuna
+    quantity: 120
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: grated-cheese
+    quantity: 40
+    unit: g
+- slug: salmon-potato-broccoli
+  name: Salmón con patata y brócoli
+  description: Salmón al horno con patata y brócoli.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - fish
+  ingredients:
+  - ingredient: salmon
+    quantity: 300
+    unit: g
+  - ingredient: potato
+    quantity: 400
+    unit: g
+  - ingredient: broccoli
+    quantity: 300
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: lemon-juice
+    quantity: 10
+    unit: ml
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+- slug: hake-rice-green-beans
+  name: Merluza con arroz y judía verde
+  description: Merluza con arroz y judía verde.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - fish
+  - rice
+  ingredients:
+  - ingredient: hake
+    quantity: 300
+    unit: g
+  - ingredient: rice
+    quantity: 160
+    unit: g
+  - ingredient: green-beans
+    quantity: 250
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: parsley
+    quantity: 2
+    unit: g
+- slug: beef-meatballs-tomato
+  name: Albóndigas de ternera con tomate
+  description: Albóndigas de ternera en salsa de tomate.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - beef
+  - eggs
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - red_meat
+  ingredients:
+  - ingredient: beef-mince
+    quantity: 300
+    unit: g
+  - ingredient: eggs
+    quantity: 1
+    unit: unit
+  - ingredient: breadcrumbs
+    quantity: 30
+    unit: g
+  - ingredient: tomato
+    quantity: 400
+    unit: g
+  - ingredient: onion
+    quantity: 100
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+- slug: chicken-curry-rice
+  name: Pollo al curry con arroz
+  description: Pollo con arroz basmati, tomate y yogur.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - chicken
+  - dairy
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - rice
+  - spicy
+  ingredients:
+  - ingredient: chicken-strips
+    quantity: 300
+    unit: g
+  - ingredient: basmati-rice
+    quantity: 160
+    unit: g
+  - ingredient: curry
+    quantity: 5
+    unit: g
+  - ingredient: onion
+    quantity: 100
+    unit: g
+  - ingredient: tomato
+    quantity: 200
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: yogurt
+    quantity: 100
+    unit: g
+- slug: chicken-shrimp-paella
+  name: Paella de pollo y gambas
+  description: Arroz con pollo, gambas, pimiento y guisantes.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - chicken
+  - legumes
+  - seafood
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - legume
+  - rice
+  - seafood
+  ingredients:
+  - ingredient: chicken-thighs
+    quantity: 250
+    unit: g
+  - ingredient: shrimp
+    quantity: 150
+    unit: g
+  - ingredient: rice
+    quantity: 180
+    unit: g
+  - ingredient: pepper
+    quantity: 150
+    unit: g
+  - ingredient: peas
+    quantity: 100
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 20
+    unit: ml
+  - ingredient: saffron
+    quantity: 0.1
+    unit: g
+- slug: potato-omelette-salad
+  name: Tortilla de patata con ensalada
+  description: Tortilla de patata y cebolla con ensalada.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - eggs
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - salad
+  - vegetarian
+  ingredients:
+  - ingredient: eggs
+    quantity: 4
+    unit: unit
+  - ingredient: potato
+    quantity: 400
+    unit: g
+  - ingredient: onion
+    quantity: 100
+    unit: g
+  - ingredient: olive-oil
+    quantity: 30
+    unit: ml
+  - ingredient: lettuce
+    quantity: 100
+    unit: g
+  - ingredient: tomato
+    quantity: 150
+    unit: g
+  - ingredient: vinegar
+    quantity: 10
+    unit: ml
+- slug: pasta-vegetables
+  name: Pasta con verduras
+  description: Pasta con pimiento, champiñones y tomate.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - dairy
+  has_vegetables: true
+  light: false
+  carbs: pasta
+  tags:
+  - pasta
+  - vegetarian
+  ingredients:
+  - ingredient: pasta
+    quantity: 200
+    unit: g
+  - ingredient: pepper
+    quantity: 150
+    unit: g
+  - ingredient: mushrooms
+    quantity: 200
+    unit: g
+  - ingredient: tomato
+    quantity: 300
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: grated-cheese
+    quantity: 30
+    unit: g
+- slug: chicken-mushroom-rice
+  name: Pollo con arroz y champiñones
+  description: Arroz con pollo y champiñones.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - rice
+  ingredients:
+  - ingredient: chicken-strips
+    quantity: 300
+    unit: g
+  - ingredient: rice
+    quantity: 160
+    unit: g
+  - ingredient: mushrooms
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+- slug: pork-potatoes
+  name: Lomo de cerdo con patatas
+  description: Lomo de cerdo con patata, zanahoria y pimentón.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - pork
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - red_meat
+  ingredients:
+  - ingredient: pork-loin
+    quantity: 300
+    unit: g
+  - ingredient: potato
+    quantity: 400
+    unit: g
+  - ingredient: carrot
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: paprika
+    quantity: 2
+    unit: g
+- slug: chickpeas-chorizo
+  name: Garbanzos con chorizo
+  description: Garbanzos con chorizo, patata y pimentón.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - legumes
+  - pork
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - legume
+  - red_meat
+  - stew
+  ingredients:
+  - ingredient: chickpeas
+    quantity: 300
+    unit: g
+  - ingredient: chorizo
+    quantity: 100
+    unit: g
+  - ingredient: potato
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: paprika
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+- slug: lentils-rice
+  name: Lentejas con arroz
+  description: Lentejas con arroz, zanahoria y comino.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - legumes
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - legume
+  - stew
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: lentils
+    quantity: 250
+    unit: g
+  - ingredient: rice
+    quantity: 100
+    unit: g
+  - ingredient: carrot
+    quantity: 100
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: cumin
+    quantity: 2
+    unit: g
+- slug: hake-vegetables
+  name: Merluza con verduras
+  description: Merluza con brócoli, zanahoria y patata.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - fish
+  ingredients:
+  - ingredient: hake
+    quantity: 300
+    unit: g
+  - ingredient: broccoli
+    quantity: 250
+    unit: g
+  - ingredient: carrot
+    quantity: 150
+    unit: g
+  - ingredient: potato
+    quantity: 300
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+- slug: roast-chicken-potatoes
+  name: Pollo asado con patatas
+  description: Jamoncitos de pollo con patata, romero y ajo.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags: []
+  ingredients:
+  - ingredient: chicken-thighs
+    quantity: 500
+    unit: g
+  - ingredient: potato
+    quantity: 500
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: rosemary
+    quantity: 2
+    unit: g
+  - ingredient: olive-oil
+    quantity: 20
+    unit: ml
+  - ingredient: onion
+    quantity: 100
+    unit: g
+- slug: rice-vegetables-egg
+  name: Arroz con verduras y huevo
+  description: Arroz salteado con huevo, guisantes y zanahoria.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - eggs
+  - legumes
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - legume
+  - rice
+  - vegetarian
+  ingredients:
+  - ingredient: rice
+    quantity: 180
+    unit: g
+  - ingredient: eggs
+    quantity: 2
+    unit: unit
+  - ingredient: peas
+    quantity: 100
+    unit: g
+  - ingredient: carrot
+    quantity: 100
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: soy-sauce
+    quantity: 10
+    unit: ml
+- slug: bolognese-pasta
+  name: Pasta boloñesa
+  description: Pasta con carne picada de vacuno y tomate.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - beef
+  has_vegetables: true
+  light: false
+  carbs: pasta
+  tags:
+  - pasta
+  - red_meat
+  ingredients:
+  - ingredient: pasta
+    quantity: 200
+    unit: g
+  - ingredient: beef-mince
+    quantity: 250
+    unit: g
+  - ingredient: tomato
+    quantity: 400
+    unit: g
+  - ingredient: onion
+    quantity: 100
+    unit: g
+  - ingredient: carrot
+    quantity: 100
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: oregano
+    quantity: 2
+    unit: g
+- slug: chicken-noodle-soup
+  name: Sopa de fideos con pollo
+  description: Sopa de fideos con pollo, zanahoria y caldo.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: false
+  carbs: noodles
+  tags:
+  - soup
+  ingredients:
+  - ingredient: noodles
+    quantity: 80
+    unit: g
+  - ingredient: chicken-strips
+    quantity: 200
+    unit: g
+  - ingredient: carrot
+    quantity: 100
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: chicken-stock
+    quantity: 1000
+    unit: ml
+  - ingredient: parsley
+    quantity: 2
+    unit: g
+- slug: white-beans-tomato
+  name: Alubias blancas con tomate
+  description: Alubias blancas con tomate, ajo y pimentón.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - legumes
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - legume
+  - stew
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: white-beans
+    quantity: 300
+    unit: g
+  - ingredient: tomato
+    quantity: 300
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: paprika
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: bread
+    quantity: 80
+    unit: g
+- slug: sardines-potatoes
+  name: Sardinas con patatas
+  description: Sardinas con patata y pimiento.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - fish
+  ingredients:
+  - ingredient: sardines
+    quantity: 200
+    unit: g
+  - ingredient: potato
+    quantity: 400
+    unit: g
+  - ingredient: pepper
+    quantity: 150
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: vinegar
+    quantity: 10
+    unit: ml
+  - ingredient: parsley
+    quantity: 2
+    unit: g
+- slug: chicken-potatoes-carrots
+  name: Pollo con patatas y zanahorias
+  description: Pollo guisado con patata, zanahoria y tomillo.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - stew
+  ingredients:
+  - ingredient: chicken-thighs
+    quantity: 400
+    unit: g
+  - ingredient: potato
+    quantity: 400
+    unit: g
+  - ingredient: carrot
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: thyme
+    quantity: 2
+    unit: g
+- slug: rice-peppers-shrimp
+  name: Arroz con gambas y pimientos
+  description: Arroz con gambas, pimiento y pimentón.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - seafood
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - rice
+  - seafood
+  ingredients:
+  - ingredient: rice
+    quantity: 180
+    unit: g
+  - ingredient: shrimp
+    quantity: 150
+    unit: g
+  - ingredient: pepper
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: paprika
+    quantity: 2
+    unit: g
+- slug: turkey-sandwich-salad
+  name: Bocadillo de pavo con ensalada
+  description: Pan con pavo, lechuga y tomate.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - turkey
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - salad
+  - sandwich
+  ingredients:
+  - ingredient: bread
+    quantity: 120
+    unit: g
+  - ingredient: turkey-slices
+    quantity: 120
+    unit: g
+  - ingredient: lettuce
+    quantity: 80
+    unit: g
+  - ingredient: tomato
+    quantity: 100
+    unit: g
+  - ingredient: olive-oil
+    quantity: 5
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+- slug: pasta-salmon-spinach
+  name: Pasta con salmón y espinacas
+  description: Pasta con salmón, espinacas y queso.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - dairy
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: pasta
+  tags:
+  - fish
+  - pasta
+  ingredients:
+  - ingredient: pasta
+    quantity: 200
+    unit: g
+  - ingredient: salmon
+    quantity: 250
+    unit: g
+  - ingredient: spinach
+    quantity: 250
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: milk
+    quantity: 100
+    unit: ml
+  - ingredient: grated-cheese
+    quantity: 30
+    unit: g
+- slug: tofu-rice-vegetables
+  name: Tofu con arroz y verduras
+  description: Tofu salteado con arroz, brócoli y pimiento.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - soy
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - rice
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: tofu
+    quantity: 300
+    unit: g
+  - ingredient: rice
+    quantity: 160
+    unit: g
+  - ingredient: broccoli
+    quantity: 250
+    unit: g
+  - ingredient: pepper
+    quantity: 100
+    unit: g
+  - ingredient: soy-sauce
+    quantity: 15
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+- slug: broad-beans-ham
+  name: Habas con jamón
+  description: Habas con jamón, cebolla y pimentón.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources:
+  - legumes
+  - pork
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - legume
+  - red_meat
+  - stew
+  ingredients:
+  - ingredient: broad-beans
+    quantity: 400
+    unit: g
+  - ingredient: ham
+    quantity: 100
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: paprika
+    quantity: 2
+    unit: g
+  - ingredient: bread
+    quantity: 80
+    unit: g
+- slug: seitan-peppers-rice
+  name: Seitán con pimientos y arroz
+  description: Seitán con arroz, pimiento y salsa de soja.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - seitan
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - rice
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: seitan
+    quantity: 250
+    unit: g
+  - ingredient: rice
+    quantity: 160
+    unit: g
+  - ingredient: pepper
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: soy-sauce
+    quantity: 15
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+- slug: textured-soy-bolognese
+  name: Boloñesa de soja texturizada
+  description: Pasta con soja texturizada, tomate y zanahoria.
+  base_servings: 2
+  meal_types:
+  - lunch
+  protein_sources:
+  - soy
+  has_vegetables: true
+  light: false
+  carbs: pasta
+  tags:
+  - pasta
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: textured-soy
+    quantity: 100
+    unit: g
+  - ingredient: pasta
+    quantity: 200
+    unit: g
+  - ingredient: tomato
+    quantity: 400
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: carrot
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: oregano
+    quantity: 2
+    unit: g
+- slug: chicken-avocado-salad
+  name: Ensalada de pollo y aguacate
+  description: Ensalada de pollo, aguacate, lechuga y tomate.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - salad
+  ingredients:
+  - ingredient: chicken-strips
+    quantity: 250
+    unit: g
+  - ingredient: avocado
+    quantity: 150
+    unit: g
+  - ingredient: lettuce
+    quantity: 120
+    unit: g
+  - ingredient: tomato
+    quantity: 150
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+- slug: vegetable-omelette
+  name: Tortilla de verduras
+  description: Tortilla con pimiento, cebolla y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - eggs
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - vegetarian
+  ingredients:
+  - ingredient: eggs
+    quantity: 3
+    unit: unit
+  - ingredient: pepper
+    quantity: 100
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: vegetable-soup
+  name: Sopa de verduras
+  description: Sopa de zanahoria, patata, cebolla y judía verde.
+  base_servings: 4
+  meal_types:
+  - dinner
+  protein_sources: []
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - soup
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: carrot
+    quantity: 150
+    unit: g
+  - ingredient: potato
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: green-beans
+    quantity: 150
+    unit: g
+  - ingredient: vegetable-stock
+    quantity: 1000
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: cauliflower-soup
+  name: Crema de coliflor
+  description: Crema de coliflor con patata y pan.
+  base_servings: 4
+  meal_types:
+  - dinner
+  protein_sources: []
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - soup
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: cauliflower
+    quantity: 400
+    unit: g
+  - ingredient: potato
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: vegetable-stock
+    quantity: 1000
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: cheese-walnut-salad
+  name: Ensalada de queso y nueces
+  description: Ensalada con queso fresco, nueces, lechuga y tomate.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - dairy
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - salad
+  - vegetarian
+  ingredients:
+  - ingredient: fresh-cheese
+    quantity: 150
+    unit: g
+  - ingredient: walnuts
+    quantity: 60
+    unit: g
+  - ingredient: lettuce
+    quantity: 120
+    unit: g
+  - ingredient: tomato
+    quantity: 150
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+- slug: salmon-spinach
+  name: Salmón con espinacas
+  description: Salmón con espinacas, ajo y limón.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - fish
+  ingredients:
+  - ingredient: salmon
+    quantity: 250
+    unit: g
+  - ingredient: spinach
+    quantity: 250
+    unit: g
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: lemon-juice
+    quantity: 10
+    unit: ml
+- slug: hake-steamed-vegetables
+  name: Merluza con verduras al vapor
+  description: Merluza con brócoli, zanahoria y limón.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - fish
+  ingredients:
+  - ingredient: hake
+    quantity: 250
+    unit: g
+  - ingredient: broccoli
+    quantity: 200
+    unit: g
+  - ingredient: carrot
+    quantity: 150
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: lemon-juice
+    quantity: 10
+    unit: ml
+  - ingredient: parsley
+    quantity: 2
+    unit: g
+- slug: tofu-stir-fry
+  name: Salteado de tofu y verduras
+  description: Tofu con brócoli, pimiento y salsa de soja.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - soy
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: tofu
+    quantity: 250
+    unit: g
+  - ingredient: broccoli
+    quantity: 200
+    unit: g
+  - ingredient: pepper
+    quantity: 100
+    unit: g
+  - ingredient: soy-sauce
+    quantity: 15
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+- slug: mushroom-egg-scramble
+  name: Revuelto de champiñones y huevo
+  description: Huevos revueltos con champiñones y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - eggs
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - vegetarian
+  ingredients:
+  - ingredient: eggs
+    quantity: 3
+    unit: unit
+  - ingredient: mushrooms
+    quantity: 200
+    unit: g
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: chickpea-tuna-salad
+  name: Ensalada de garbanzos y atún
+  description: Ensalada de garbanzos, atún, tomate y cebolla.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - fish
+  - legumes
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - fish
+  - legume
+  - salad
+  ingredients:
+  - ingredient: chickpeas
+    quantity: 250
+    unit: g
+  - ingredient: tuna
+    quantity: 100
+    unit: g
+  - ingredient: tomato
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 60
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+- slug: chicken-sandwich
+  name: Bocadillo de pollo
+  description: Pan con pollo, tomate y lechuga.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - sandwich
+  ingredients:
+  - ingredient: bread
+    quantity: 120
+    unit: g
+  - ingredient: chicken-strips
+    quantity: 150
+    unit: g
+  - ingredient: tomato
+    quantity: 100
+    unit: g
+  - ingredient: lettuce
+    quantity: 60
+    unit: g
+  - ingredient: olive-oil
+    quantity: 5
+    unit: ml
+- slug: lentil-soup
+  name: Sopa de lentejas
+  description: Sopa de lentejas con zanahoria y caldo de verduras.
+  base_servings: 4
+  meal_types:
+  - dinner
+  protein_sources:
+  - legumes
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - legume
+  - soup
+  - stew
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: lentils
+    quantity: 200
+    unit: g
+  - ingredient: carrot
+    quantity: 100
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: vegetable-stock
+    quantity: 1000
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: pasta-salad
+  name: Ensalada de pasta
+  description: Pasta con tomate, aceitunas y pimientos asados.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources: []
+  has_vegetables: true
+  light: false
+  carbs: pasta
+  tags:
+  - pasta
+  - salad
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: pasta
+    quantity: 180
+    unit: g
+  - ingredient: tomato
+    quantity: 150
+    unit: g
+  - ingredient: olives
+    quantity: 80
+    unit: g
+  - ingredient: pepper
+    quantity: 100
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+- slug: spinach-omelette
+  name: Tortilla de espinacas
+  description: Tortilla de espinacas con cebolla y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - eggs
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - vegetarian
+  ingredients:
+  - ingredient: eggs
+    quantity: 3
+    unit: unit
+  - ingredient: spinach
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 60
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: chicken-cheese-quesadilla
+  name: Quesadilla de pollo y queso
+  description: Pan con pollo, queso y tomate.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - chicken
+  - dairy
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - sandwich
+  ingredients:
+  - ingredient: bread
+    quantity: 120
+    unit: g
+  - ingredient: chicken-strips
+    quantity: 150
+    unit: g
+  - ingredient: grated-cheese
+    quantity: 80
+    unit: g
+  - ingredient: tomato
+    quantity: 100
+    unit: g
+  - ingredient: olive-oil
+    quantity: 5
+    unit: ml
+- slug: salmon-avocado-salad
+  name: Ensalada de salmón y aguacate
+  description: Salmón con aguacate, lechuga y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: bread
+  tags:
+  - fish
+  - salad
+  ingredients:
+  - ingredient: salmon
+    quantity: 200
+    unit: g
+  - ingredient: avocado
+    quantity: 150
+    unit: g
+  - ingredient: lettuce
+    quantity: 100
+    unit: g
+  - ingredient: bread
+    quantity: 60
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+- slug: gazpacho
+  name: Gazpacho
+  description: Gazpacho de tomate con pan, vinagre y ajo.
+  base_servings: 4
+  meal_types:
+  - dinner
+  protein_sources: []
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - soup
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: tomato
+    quantity: 600
+    unit: g
+  - ingredient: pepper
+    quantity: 100
+    unit: g
+  - ingredient: bread
+    quantity: 60
+    unit: g
+  - ingredient: olive-oil
+    quantity: 20
+    unit: ml
+  - ingredient: vinegar
+    quantity: 10
+    unit: ml
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+  - ingredient: salt
+    quantity: 2
+    unit: g
+- slug: egg-fried-rice
+  name: Arroz salteado con huevo
+  description: Arroz con huevo, guisantes y zanahoria.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - eggs
+  - legumes
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - legume
+  - rice
+  - vegetarian
+  ingredients:
+  - ingredient: rice
+    quantity: 180
+    unit: g
+  - ingredient: eggs
+    quantity: 2
+    unit: unit
+  - ingredient: peas
+    quantity: 100
+    unit: g
+  - ingredient: carrot
+    quantity: 80
+    unit: g
+  - ingredient: soy-sauce
+    quantity: 10
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+- slug: chickpea-spinach-dinner
+  name: Garbanzos con espinacas y ajo
+  description: Garbanzos con espinacas, ajo y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - legumes
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - legume
+  - stew
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: chickpeas
+    quantity: 250
+    unit: g
+  - ingredient: spinach
+    quantity: 200
+    unit: g
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: lentil-cheese-salad
+  name: Ensalada de lentejas y queso
+  description: Lentejas con queso fresco, tomate y lechuga.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - dairy
+  - legumes
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - legume
+  - salad
+  - vegetarian
+  ingredients:
+  - ingredient: lentils
+    quantity: 200
+    unit: g
+  - ingredient: fresh-cheese
+    quantity: 100
+    unit: g
+  - ingredient: tomato
+    quantity: 150
+    unit: g
+  - ingredient: lettuce
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+- slug: grilled-chicken-salad
+  name: Ensalada de pollo a la plancha
+  description: Pollo con lechuga, tomate y zanahoria.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - chicken
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - salad
+  ingredients:
+  - ingredient: chicken-strips
+    quantity: 200
+    unit: g
+  - ingredient: lettuce
+    quantity: 100
+    unit: g
+  - ingredient: tomato
+    quantity: 150
+    unit: g
+  - ingredient: carrot
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+- slug: fish-soup
+  name: Sopa de pescado
+  description: Sopa de merluza con patata, tomate y caldo de pescado.
+  base_servings: 4
+  meal_types:
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - fish
+  - soup
+  ingredients:
+  - ingredient: hake
+    quantity: 250
+    unit: g
+  - ingredient: potato
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: tomato
+    quantity: 200
+    unit: g
+  - ingredient: fish-stock
+    quantity: 1000
+    unit: ml
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: stuffed-peppers
+  name: Pimientos rellenos
+  description: Pimientos rellenos de carne, arroz y tomate.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - beef
+  - dairy
+  has_vegetables: true
+  light: false
+  carbs: rice
+  tags:
+  - red_meat
+  ingredients:
+  - ingredient: pepper
+    quantity: 300
+    unit: g
+  - ingredient: beef-mince
+    quantity: 200
+    unit: g
+  - ingredient: rice
+    quantity: 100
+    unit: g
+  - ingredient: tomato
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 60
+    unit: g
+  - ingredient: grated-cheese
+    quantity: 40
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+- slug: spinach-chickpeas
+  name: Espinacas con garbanzos
+  description: Espinacas con garbanzos, ajo y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - legumes
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - legume
+  - stew
+  - vegan
+  - vegetarian
+  ingredients:
+  - ingredient: spinach
+    quantity: 250
+    unit: g
+  - ingredient: chickpeas
+    quantity: 250
+    unit: g
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: shrimp-vegetables
+  name: Gambas con verduras
+  description: Gambas salteadas con brócoli, pimiento y soja.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - seafood
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - seafood
+  ingredients:
+  - ingredient: shrimp
+    quantity: 150
+    unit: g
+  - ingredient: broccoli
+    quantity: 200
+    unit: g
+  - ingredient: pepper
+    quantity: 100
+    unit: g
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: soy-sauce
+    quantity: 10
+    unit: ml
+- slug: caesar-salad
+  name: Ensalada César con pollo
+  description: Pollo con lechuga, pan, queso y mayonesa.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - chicken
+  - dairy
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - salad
+  ingredients:
+  - ingredient: chicken-strips
+    quantity: 200
+    unit: g
+  - ingredient: lettuce
+    quantity: 120
+    unit: g
+  - ingredient: bread
+    quantity: 60
+    unit: g
+  - ingredient: grated-cheese
+    quantity: 40
+    unit: g
+  - ingredient: mayonnaise
+    quantity: 40
+    unit: ml
+  - ingredient: tomato
+    quantity: 100
+    unit: g
+- slug: potato-omelette
+  name: Tortilla de patata
+  description: Tortilla de patata y cebolla.
+  base_servings: 4
+  meal_types:
+  - dinner
+  protein_sources:
+  - eggs
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - vegetarian
+  ingredients:
+  - ingredient: eggs
+    quantity: 4
+    unit: unit
+  - ingredient: potato
+    quantity: 400
+    unit: g
+  - ingredient: onion
+    quantity: 80
+    unit: g
+  - ingredient: olive-oil
+    quantity: 20
+    unit: ml
+- slug: tuna-tomato-salad
+  name: Ensalada de atún y tomate
+  description: Atún con tomate, cebolla, aceitunas y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - fish
+  - salad
+  ingredients:
+  - ingredient: tuna
+    quantity: 120
+    unit: g
+  - ingredient: tomato
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 60
+    unit: g
+  - ingredient: olives
+    quantity: 60
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g
+- slug: mackerel-potato-salad
+  name: Ensalada de caballa y patata
+  description: Caballa con patata, judía verde y vinagre.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - fish
+  has_vegetables: true
+  light: false
+  carbs: potato
+  tags:
+  - fish
+  - salad
+  ingredients:
+  - ingredient: mackerel
+    quantity: 200
+    unit: g
+  - ingredient: potato
+    quantity: 300
+    unit: g
+  - ingredient: green-beans
+    quantity: 150
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: vinegar
+    quantity: 5
+    unit: ml
+  - ingredient: parsley
+    quantity: 2
+    unit: g
+- slug: mussels-tomato
+  name: Mejillones con tomate
+  description: Mejillones con tomate, ajo y pan.
+  base_servings: 2
+  meal_types:
+  - dinner
+  protein_sources:
+  - seafood
+  has_vegetables: true
+  light: true
+  carbs: bread
+  tags:
+  - seafood
+  - stew
+  ingredients:
+  - ingredient: mussels
+    quantity: 300
+    unit: g
+  - ingredient: tomato
+    quantity: 300
+    unit: g
+  - ingredient: onion
+    quantity: 60
+    unit: g
+  - ingredient: garlic
+    quantity: 3
+    unit: g
+  - ingredient: olive-oil
+    quantity: 10
+    unit: ml
+  - ingredient: bread
+    quantity: 60
+    unit: g

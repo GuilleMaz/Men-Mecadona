@@ -2,50 +2,30 @@
 
 ## Estado
 
-F1 completada el 2026-10-26. F1.1-F1.8 cerradas: modelos de catálogo, migraciones Alembic, normalizador, sync parcial, API de catálogo, refresh de arranque, UI de ajustes y tests.
+F2 completada el 2026-10-26. F2.1-F2.10 cerradas: dominio, seed, mapeo, alérgenos, API, UI y tests.
 
-- Backend: Ruff, formato, mypy strict y 120 tests en verde.
-- Frontend: ESLint, Prettier, TypeScript estricto, 16 tests y build en verde.
+- Backend: Ruff, formato, mypy strict y 161 tests en verde.
+- Frontend: ESLint, Prettier, TypeScript estricto, 26 tests y build en verde.
 - Catálogo real: 152/152 subcategorías, 4.540 productos vistos, 4.288 únicos, 178 categorías, 7,74 s, `success`, CP 22002 / almacén 4389.
-- `run.ps1` aplica `alembic upgrade head` antes de arrancar; el arranque refresca el catálogo en segundo plano si está vacío o tiene más de 24 h.
-- `POST /api/catalog/sync` responde 202 y ejecuta la sync en segundo plano; `GET /api/catalog/status` expone progreso y errores.
-- F0 publicada en `origin/main` con el commit `be7e149`.
+- Dominio: 110 ingredientes, 212 mapeos únicos, 60 platos sin pasos; `validate_seed.py` en verde.
+- Alérgenos: 212 productos mapeados; 210 actualizados en la primera carga real (2 fallos transitorios reintentables), 11-12 `unknown`, 29 `partial`.
+- `run.ps1` aplica `alembic upgrade head` antes de arrancar; el arranque carga el seed y refresca alérgenos en segundo plano.
+- F1 publicada en `origin/main` con el commit `e938016`.
 - Base SQLite en `%LOCALAPPDATA%\Cesta`, fuera de OneDrive.
 
 ## Alta prioridad
 
-- F2.1: modelos de dominio (`Ingredient`, `IngredientProduct`, `Dish`, `DishIngredient`, `Profile`, `Exclusion`, `PantryItem`).
-- F2.2: seed de ~120 ingredientes con unidad base, grupo, ración y alérgenos.
-- F2.3: mapeo ingrediente → producto validado contra el catálogo real.
-- F2.4: alérgenos fail-closed y detalle de producto para los mapeados.
-- F2.5: seed de 50-60 platos sin pasos y cobertura mínima.
-- F2.6: cargador de seed idempotente.
-- F2.7: validador de seed y cobertura.
-- F2.8: API de platos, alérgenos, perfil, exclusiones y despensa.
-- F2.9: UI de configuración y catálogo de platos.
-- F2.10: tests de F2.
-
-## Notas de la API de Mercadona (2026-10-26)
-
-- `/api/categories/` devuelve un sobre `{count,next,previous,results}`; hoy 26 secciones y 152 subcategorías en una sola página.
-- El detalle de una subcategoría trae `products` vacío y los productos dentro de `categories[].products` (los ids hijos no son consultables por separado: devuelven 404).
-- El producto usa `display_name` (no `name`); `unit_price` es el precio del paquete y `bulk_price` el precio por unidad base.
-- `pack_size` puede ser decimal (1.5) y representa el tamaño de cada unidad del pack; `unit_size` es la cantidad total y `total_units` el número de unidades.
-- El id de producto puede ser texto con sufijo de variante (`"81649.1"`): `external_id` es TEXT.
-- Bajo ráfagas, la API responde 403 de forma transitoria; el cliente reintenta 403/429/5xx con 4 intentos y backoff desde 1 s.
-- Sync real del 2026-10-26: 4.540 entradas, 4.288 productos únicos, 152/152 subcategorías, 0 fallos, 7,74 s, 178 categorías. Los productos sin formato reconocible quedan con cantidad `NULL`.
-- El catálogo incluye secciones no alimentarias (limpieza, higiene, mascotas); `is_food` las marca de forma heurística y el mapeo de F2.3 seguirá siendo explícito.
-
-## Notas de OR-Tools (2026-10-26)
-
-- El modelo toy usa cotas de `q[p]` ajustadas al mínimo necesario; añadir `+1` empeoraba la etapa 1 y el ticket.
-- La etapa 1 de variedad se prueba óptima en menos de 0,4 s.
-- La etapa 2 puede agotar sus 3 s y devolver `feasible`; no declarar `optimal` sin prueba. El contrato de F4.4 ya lo contempla.
-- Los límites son de tiempo real: con semilla fija y un worker, los tickets pueden variar entre repeticiones. Los tests de optimalidad deben usar instancias pequeñas que terminen antes del límite.
+- F3.1: unidades y conversión (`quantity_milli`, `grams_per_unit`).
+- F3.2: necesidad neta y despensa parcial/completa/sobre-despensa.
+- F3.3: `plan_purchase` canónico, paquetes, consumo y sobras.
+- F3.4: identidad contable `ticket + pantry = consumption + leftover`.
+- F3.5: `POST /api/pricing/preview` sin persistencia.
+- F3.6: UI de coste por plato/ración.
+- F3.7: tests de coste (aceite 5 L vs 1 L, huevos, pollo, pack, personas, despensa, preview == lista).
+- Al cerrar F2/F3: no mezclar cambios de fases.
 
 ## Prioridad media
 
-- F3: coste puro, identidad contable y preview.
 - F4: optimizador, menú, lista y ajustes.
 - F5: resiliencia, seguridad, historial, export y documentación.
 
@@ -69,6 +49,7 @@ F1 completada el 2026-10-26. F1.1-F1.8 cerradas: modelos de catálogo, migracion
 - Ninguno conocido en el código actual.
 - Deuda menor backend: `starlette.testclient` emite un aviso de deprecación sugiriendo `httpx2`; revisar al actualizar FastAPI/Starlette (los tests del cliente usan `respx` sobre `httpx`).
 - Deuda menor frontend: el CLI de shadcn no puede inicializar de forma no interactiva (ver `decisions.md`); los componentes nuevos deben copiarse a mano o desde el registro hasta que el CLI funcione.
+- Alérgenos: 12 productos mapeados sin datos suficientes quedan `unknown`; 29 quedan `partial` por incoherencia entre alérgenos e ingredientes. Con alérgenos declarados se excluyen (fail-closed), lo que reduce el catálogo elegible.
 
 ## Riesgos
 
@@ -83,14 +64,15 @@ F1 completada el 2026-10-26. F1.1-F1.8 cerradas: modelos de catálogo, migracion
 - Los paquetes grandes pueden hacer inviable un presupuesto bajo para 1 persona; la despensa básica ayuda.
 - La etapa 2 del optimizador puede devolver `feasible` si no prueba optimalidad en 3 s; es válido, pero debe informarse.
 - Los tests de rendimiento no deben exigir tickets idénticos entre ejecuciones limitadas por reloj.
-- Los alérgenos requieren datos de producto y política fail-closed.
+- Los alérgenos requieren datos de producto y política fail-closed; `x99` se combina con ingredientes, pero el etiquetado oficial sigue siendo la fuente legal.
 - SQLite debe permanecer fuera de OneDrive; `Settings` ya rechaza esa ruta.
 - El intérprete usado por `uv` es el Python 3.13.5 de Anaconda; si se desinstala, `uv sync` deberá resolver otro 3.13.
 - Dependencias de frontend muy recientes (React Router 8, Vitest 5, MSW 3, TypeScript 6, ESLint 10): revisar notas de migración al añadir features.
+- El seed se carga tras la sync; si el catálogo cambia y un producto mapeado desaparece, `validate_seed.py` lo detecta y el mapeo se queda sin producto.
 
 ## Siguiente acción recomendada
 
-1. F2.1 y F2.2: modelos de dominio y seed de ingredientes.
-2. F2.3: mapeo ingrediente → producto contra el catálogo ya sincronizado.
-3. F2.4: alérgenos fail-closed y detalle de producto para los mapeados.
-4. Al cerrar F2: `.\finish-phase.ps1 -Phase F2 -Summary "ingredientes platos y preferencias"`.
+1. F3.1 y F3.2: conversión de unidades y necesidad neta con despensa.
+2. F3.3 y F3.4: `plan_purchase`, consumo, sobras e identidad contable.
+3. F3.5-F3.7: preview, UI de coste y tests.
+4. Al cerrar F3: `.\finish-phase.ps1 -Phase F3 -Summary "coste puro y preview"`.

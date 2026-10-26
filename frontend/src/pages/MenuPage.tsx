@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CircleCheck, UtensilsCrossed } from 'lucide-react';
-import { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { CircleCheck, LoaderCircle, UtensilsCrossed } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -15,6 +16,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  DomainRequestError,
+  fetchProfile,
+  updateProfile,
+  type Profile,
+  type ProfileUpdate,
+} from '@/lib/domain';
 
 const menuFormSchema = z.object({
   people: z
@@ -43,22 +51,57 @@ const defaultValues: MenuFormValues = {
   budgetEuros: 70,
 };
 
+function profileToValues(profile: Profile): MenuFormValues {
+  return {
+    people: profile.people,
+    days: profile.days,
+    budgetEuros: profile.budget_cents / 100,
+  };
+}
+
 export function MenuPage() {
   const [summary, setSummary] = useState<string | null>(null);
+  const profileQuery = useQuery({ queryKey: ['profile'], queryFn: fetchProfile });
+  const mutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: (profile) => {
+      const values = profileToValues(profile);
+      setSummary(
+        `${values.people} personas · ${values.days} días · ${euro.format(values.budgetEuros)} de presupuesto`,
+      );
+    },
+  });
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    reset,
+    formState: { errors, isDirty },
   } = useForm<MenuFormValues>({
     defaultValues,
     resolver: zodResolver(menuFormSchema),
   });
 
+  useEffect(() => {
+    if (profileQuery.data && !isDirty) {
+      reset(profileToValues(profileQuery.data));
+    }
+  }, [profileQuery.data, reset, isDirty]);
+
   const onSubmit = (values: MenuFormValues) => {
-    setSummary(
-      `${values.people} personas · ${values.days} días · ${euro.format(values.budgetEuros)} de presupuesto`,
-    );
+    const payload: ProfileUpdate = {
+      people: values.people,
+      days: values.days,
+      budget_cents: Math.round(values.budgetEuros * 100),
+    };
+    mutation.mutate(payload);
   };
+
+  const mutationError =
+    mutation.error instanceof DomainRequestError
+      ? mutation.error.message
+      : mutation.error
+        ? 'No se pudieron guardar los datos del menú.'
+        : null;
 
   return (
     <div className="space-y-6">
@@ -74,8 +117,7 @@ export function MenuPage() {
         <CardHeader>
           <CardTitle>Datos del menú</CardTitle>
           <CardDescription>
-            Formulario de ejemplo: guarda los datos, pero la generación real llegará con el
-            optimizador.
+            Se guardan en tu perfil local. La generación del menú llegará en la siguiente fase.
           </CardDescription>
         </CardHeader>
 
@@ -151,13 +193,23 @@ export function MenuPage() {
             <p className="text-xs text-muted-foreground">
               Precios de la tienda online de Mercadona (CP 22002, almacén 4389).
             </p>
-            <Button type="submit">
-              <UtensilsCrossed aria-hidden="true" />
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? (
+                <LoaderCircle aria-hidden="true" className="animate-spin" />
+              ) : (
+                <UtensilsCrossed aria-hidden="true" />
+              )}
               Generar menú
             </Button>
           </CardFooter>
         </form>
       </Card>
+
+      {mutationError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {mutationError}
+        </p>
+      ) : null}
 
       {summary ? (
         <div
@@ -167,9 +219,9 @@ export function MenuPage() {
         >
           <CircleCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
-            <p className="font-medium">Formulario listo</p>
+            <p className="font-medium">Datos guardados</p>
             <p className="text-muted-foreground">
-              {summary}. La generación real se activará cuando exista el optimizador.
+              {summary}. La generación del menú se activará en la siguiente fase.
             </p>
           </div>
         </div>

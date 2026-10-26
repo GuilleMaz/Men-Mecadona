@@ -1,6 +1,6 @@
-# TASKS.md — Cesta
+﻿# TASKS.md — Cesta
 
-> **Estado global:** F1 completada el 2026-10-26 (F1.1-F1.8). Siguiente fase: F2.
+> **Estado global:** F2 completada el 2026-10-26 (F2.1-F2.10). Siguiente fase: F3.
 > **Última actualización:** 2026-10-26
 > **Plan de referencia:** `PLAN.md`
 
@@ -198,25 +198,28 @@
 
 **Estimación:** 3-4 días.
 
-- [ ] **F2.1 — Modelos de dominio**
+- [x] **F2.1 — Modelos de dominio**
   - `Ingredient`, `IngredientProduct` con `UNIQUE(product_id)`.
   - `Dish`, `DishIngredient`.
   - `Profile` (fila única), `Exclusion` con FKs separadas, CHECK SQL explícito y tres índices únicos parciales para evitar duplicados con NULL.
   - `PantryItem` con `quantity_milli`, sin columna `unit` redundante, y `UNIQUE(profile_id, ingredient_id)`.
   - **DoD:** migración aplicada y constraints activos; duplicado de exclusión rechazado.
+  - **Resultado:** migración `20261026_0002` con las siete tablas, CHECKs, FKs e índices únicos parciales; `alembic check` sin deriva. `profiles` impone `id=1`; `ingredient_products` impone un producto por ingrediente y un solo `is_default` por ingrediente.
 
-- [ ] **F2.2 — Seed de ingredientes**
+- [x] **F2.2 — Seed de ingredientes**
   - Crear `ingredients.yaml` con ~120 ingredientes.
   - Campos: slug, nombre, categoría, grupo, unidad base, `grams_per_unit`, `serving_group`, `serving_size_milli`, fuente de proteína, alérgenos y etiquetas.
   - **DoD:** todos los ingredientes tienen unidad base, grupo, ración y alérgenos declarados o `unknown`.
+  - **Resultado:** 110 ingredientes en `backend/app/data/ingredients.yaml`; todos con unidad base, grupo, ración, alérgenos (`unknown` cuando aplica) y 1-3 productos.
 
-- [ ] **F2.3 — Mapeo ingrediente → producto**
+- [x] **F2.3 — Mapeo ingrediente → producto**
   - 1-3 productos por ingrediente, con prioridad y producto por defecto.
   - Un producto pertenece a un solo ingrediente.
   - Validar contra el catálogo sincronizado.
   - **DoD:** cada ingrediente tiene al menos un mapeo; el validador falla si un producto se comparte.
+  - **Resultado:** 212 mapeos únicos contra el catálogo real (productos fijos, con precio y formato compatible); `validate_catalog_mappings` detecta producto ausente, compartido, sin precio/cantidad, unidad incompatible y peso variable.
 
-- [ ] **F2.4 — Alérgenos**
+- [x] **F2.4 — Alérgenos**
   - Lista canónica: gluten, crustaceans, eggs, fish, peanuts, soybeans, milk, nuts, celery, mustard, sesame, sulphites, lupin, molluscs y `unknown`.
   - `product_allergens` con origen y confianza; `products.allergen_status` (`known|partial|unknown`).
   - Descargar detalle de producto solo para productos mapeados.
@@ -224,57 +227,64 @@
   - Unión ingrediente/producto; si `P_i` queda vacío, el ingrediente y sus platos son inelegibles.
   - Producto de respaldo = siguiente elegible por prioridad.
   - **DoD:** los 14 códigos + `unknown` están cubiertos por tests; un producto `unknown` barato no entra con alérgeno declarado; un producto de respaldo con alérgeno tampoco.
+  - **Resultado:** cliente `get_product`, parser HTML (`x99`, ingredientes, `puede contener`) y `AllergenSyncService`. Enriquecidos los 212 productos mapeados: 212 actualizados en la verificación aislada; en la base real, 210 actualizados y 2 fallos transitorios reintentables. Estado real: 11-12 `unknown`, 29 `partial`. Tests de los 14 códigos, `unknown`, unión y respaldo.
 
-- [ ] **F2.5 — Seed de platos y cobertura**
+- [x] **F2.5 — Seed de platos y cobertura**
   - Crear `dishes.yaml` con 50-60 platos, sin pasos.
   - Slugs y enums en inglés; nombres en español.
   - Campos: `meal_types`, `protein_sources`, `has_vegetables`, `light`, `carbs`, etiquetas e ingredientes.
   - Derivar `has_vegetables`, `light`, `carbs` y `protein_sources` de la composición; el YAML se valida contra la derivación. `light` no usa “no frito”.
   - Cubrir los umbrales de `PLAN.md` §13.2.
   - **DoD:** ≥14 platos de comida, ≥14 de cena, ≥28 elegibles, ≥3 fuentes de proteína con ≥4 platos; flags coherentes con la composición.
+  - **Resultado:** 60 platos sin pasos (30 de comida, 45 compatibles con cena, 19 cenas ligeras). Cobertura: 7 fuentes con ≥4 platos; 13 de pescado, 14 de legumbre, 7 de carne roja. Flags y etiquetas derivadas validadas.
 
-- [ ] **F2.6 — Cargador de seed idempotente**
+- [x] **F2.6 — Cargador de seed idempotente**
   - `SeedService.load()` con upsert por `slug` estable.
   - `seed_version` y soft delete de platos con menús históricos.
   - `--dry-run`.
   - **DoD:** dos cargas consecutivas no duplican ni borran datos; los cambios de YAML se reflejan.
+  - **Resultado:** upsert de ingredientes, platos y mapeos; IDs de mapeos y componentes preservados entre cargas; `seed_version` = hash de los dos YAML; soft delete de ingredientes/platos ausentes; `dry_run` revierte la transacción. `scripts/load_seed.py --dry-run` y `--strict`.
 
-- [ ] **F2.7 — Validador de seed y cobertura**
+- [x] **F2.7 — Validador de seed y cobertura**
   - Script `scripts/validate_seed.py`.
   - Comprobar ingredientes, productos, precios, unidades, alérgenos, cobertura y `UNIQUE(product_id)`.
   - Comprobar que con las exclusiones por defecto quedan al menos `días × 2` platos para 14 días.
   - **DoD:** el seed actual pasa; los errores de prueba se detectan; la cobertura es medible.
+  - **Resultado:** `scripts/validate_seed.py` valida estructura, derivación, cobertura y catálogo; el seed actual pasa con 0 avisos. Tests sintéticos detectan producto compartido, unidad incompatible, ingrediente ausente y flags incoherentes.
 
   El dry-run del optimizador para 1, 2, 7 y 14 días y 1, 2, 4 y 10 personas se añade en F4.9, cuando el modelo existe.
 
-- [ ] **F2.8 — API de platos y preferencias**
+- [x] **F2.8 — API de platos y preferencias**
   - `GET /api/dishes`, `GET /api/dishes/{id}`.
   - `GET /api/allergens`.
   - `GET/PUT /api/profile`.
   - `GET/POST/DELETE /api/exclusions` (sin PUT).
   - `GET/PUT /api/pantry` con cantidades en unidad base.
   - **DoD:** se pueden listar platos, excluir ingredientes/platos/etiquetas, declarar alérgenos y guardar despensa.
+  - **Resultado:** endpoints implementados con `only_eligible`, filtros, detalle con productos, perfil con `allergen_codes` opcional (si se omite, se conserva), exclusiones con validación y despensa transaccional. Añadido `GET /api/ingredients` para selectores de la UI.
 
-- [ ] **F2.9 — UI de configuración**
+- [x] **F2.9 — UI de configuración**
   - Formulario inicial: personas, días, presupuesto.
   - Pantalla de ajustes: exclusiones, alérgenos, despensa, sync.
   - Catálogo de platos con búsqueda y filtros.
   - Botón “no me gusta” en plato o ingrediente.
   - **DoD:** las preferencias persisten y filtran el catálogo visible.
+  - **Resultado:** formulario persistente en el perfil; Ajustes con alérgenos, exclusiones y despensa; catálogo con búsqueda, momento, etiqueta, ligero y visibilidad de no elegibles; «No me gusta» en plato y en ingrediente desde el detalle.
 
-- [ ] **F2.10 — Tests de F2**
+- [x] **F2.10 — Tests de F2**
   - Filtrado por exclusión de ingrediente, plato y etiqueta.
   - Persistencia de perfil, alérgenos y despensa.
   - Validador con datos inválidos.
   - Producto compartido entre ingredientes.
   - Alérgeno `unknown` y producto de respaldo.
   - **DoD:** tests verdes y sin red.
+  - **Resultado:** 161 tests backend (41 nuevos) y 26 tests frontend (10 nuevos), sin red. Cubren migraciones, seed, parser, sync, fail-closed, respaldo, API, UI y persistencia.
 
 **DoD de F2:** catálogo de platos validado, alérgenos fail-closed, usuario configurable y exclusiones funcionando.
 
----
+**Estado F2:** cumplido el 2026-10-26. 110 ingredientes, 212 mapeos, 60 platos, 212 productos mapeados con alérgenos (210 enriquecidos en la primera carga real, 2 fallos transitorios reintentables), `validate_seed.py` en verde, `GET /api/dishes` y UI de Ajustes/Platos operativas.
 
-## F3 — Motor de costes puro y preview
+---## F3 — Motor de costes puro y preview
 
 **Objetivo:** calcular el coste real con paquetes, despensa y sobras, sin depender todavía de menús persistidos.
 
@@ -512,3 +522,4 @@
 |---|---|---|---|
 | 2026-10-25 | F4 | OR-Tools no validado todavía | Resuelto en F0.6: OR-Tools 9.15.6755 resuelve el toy en 3,6 s |
 | 2026-10-25 | F2 | Seed y mapeo dependen del catálogo real | F0.5 cerrado; F1 debe cerrarse antes |
+

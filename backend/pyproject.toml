@@ -11,6 +11,7 @@ dependencies = [
     "ortools>=9.11",
     "pydantic>=2.10",
     "pydantic-settings>=2.7",
+    "pyyaml>=6.0",
     "sqlalchemy>=2.0.36",
     "tenacity>=9.0",
     "uvicorn[standard]>=0.34",
@@ -23,6 +24,7 @@ dev = [
     "pytest-asyncio>=0.25",
     "respx>=0.22",
     "ruff>=0.9",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [tool.uv]

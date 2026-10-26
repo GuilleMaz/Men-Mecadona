@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 from types import TracebackType
 from typing import Any, Self, TypeVar
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import httpx
 from pydantic import BaseModel, ValidationError
@@ -24,6 +24,7 @@ from app.config import EXPECTED_WAREHOUSE, POSTAL_CODE
 from app.schemas.mercadona import (
     MercadonaCategoriesPage,
     MercadonaCategoryDetail,
+    MercadonaProductDetail,
     MercadonaSection,
 )
 
@@ -253,3 +254,13 @@ class MercadonaClient:
             params={"wh": self._expected_warehouse},
         )
         return self._parse(MercadonaCategoryDetail, response)
+
+    async def get_product(self, product_id: str) -> MercadonaProductDetail:
+        """Descarga el detalle de un producto (ingredientes y alérgenos)."""
+        await self._ensure_session()
+        response = await self._request(
+            "GET",
+            f"/api/products/{quote(product_id, safe='')}/",
+            params={"wh": self._expected_warehouse},
+        )
+        return self._parse(MercadonaProductDetail, response)

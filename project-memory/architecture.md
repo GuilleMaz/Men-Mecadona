@@ -25,13 +25,14 @@ MERCADONA/
 │   │   ├── config.py        # Settings, ruta de datos, CP 22002 / almacén 4389
 │   │   ├── db.py            # motor SQLite, PRAGMA, Base, sesiones
 │   │   ├── security.py      # allowlist de Host local
-│   │   ├── allergens.py     # lista canónica de alérgenos
-│   │   ├── api/             # health, catalog, errors
-│   │   ├── schemas/         # health.py, mercadona.py, catalog.py
-│   │   ├── models/          # catalog.py, types.py
-│   │   ├── services/        # mercadona_client.py, catalog_normalizer.py, catalog_sync.py
-│   │   └── data/            # pendiente F2 (ingredients.yaml, dishes.yaml)
-│   └── tests/               # API, config, db, seguridad, cliente, catálogo y fixtures
+│   │   ├── allergens.py     # lista canónica y etiquetas de alérgenos
+│   │   ├── api/             # health, catalog, domain, errors
+│   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py
+│   │   ├── models/          # catalog.py, ingredients.py, dishes.py, profile.py, types.py
+│   │   ├── services/        # mercadona_client.py, catalog_normalizer.py, catalog_sync.py,
+│   │   │                    # seed.py, allergen_sync.py, eligibility.py
+│   │   └── data/            # ingredients.yaml, dishes.yaml
+│   └── tests/               # API, config, db, seguridad, cliente, catálogo, dominio y fixtures
 ├── frontend/
 │   ├── package.json
 │   ├── package-lock.json
@@ -47,11 +48,16 @@ MERCADONA/
 │       │   ├── catalog/CatalogStatusCard.tsx
 │       │   ├── layout/AppLayout.tsx
 │       │   ├── layout/BackendStatus.tsx
+│       │   ├── preferences/AllergenPreferencesCard.tsx
+│       │   ├── preferences/ExclusionsCard.tsx
+│       │   ├── preferences/PantryCard.tsx
 │       │   └── ui/          # button, card, input, label
 │       ├── pages/           # MenuPage, DishesPage, SettingsPage, NotFoundPage
-│       ├── lib/             # utils.ts, catalog.ts
+│       ├── lib/             # utils.ts, catalog.ts, domain.ts, labels.ts
 │       └── test/            # setup, servidor MSW, render-app
-├── scripts/                 # check_mercadona.py, spike_catalog.py, spike_ortools.py, init_db.py, sync_catalog.py
+├── scripts/                 # check_mercadona.py, spike_catalog.py, spike_ortools.py,
+│                            # init_db.py, sync_catalog.py, load_seed.py,
+│                            # validate_seed.py, sync_allergens.py
 ├── run.ps1                  # backend + frontend, SQLite fuera de OneDrive
 ├── check.ps1                # lint + tipos + tests + build
 └── finish-phase.ps1         # calidad + commit + push a GitHub
@@ -62,18 +68,20 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario placeholder de personas/días/presupuesto, páginas de Platos y Ajustes, indicador de estado de la API (`BackendStatus`) y tarjeta de catálogo (`CatalogStatusCard`) con última sync, conteos, errores, progreso, polling y botón de actualización. La lógica de menú llega en F4.
-- **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health` y `/api/catalog/*`. La sync de arranque corre en segundo plano desde el lifespan.
+- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario persistente de personas/días/presupuesto, catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de estado del catálogo y tarjetas de alérgenos, exclusiones y despensa. La lógica de menú llega en F4.
+- **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health`, `/api/catalog/*` y `/api/*` de dominio. La sync de arranque y la carga del seed corren en segundo plano desde el lifespan.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Rechaza rutas dentro de OneDrive. Constantes `POSTAL_CODE="22002"`, `EXPECTED_WAREHOUSE="4389"` y `LOCAL_HOSTS`.
 - **Seguridad (`app/security.py`):** `HostValidationMiddleware` acepta solo `127.0.0.1`, `localhost` y `::1`; el resto devuelve `400 INVALID_HOST`.
 - **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición. `create_engine_for_url` permite que Alembic y los tests usen una URL concreta.
-- **MercadonaClient:** cliente asíncrono implementado (F0.4); fija CP 22002, valida almacén 4389, descarga secciones y subcategorías. Ver sección propia y el informe del spike en `decisions.md`.
-- **CatalogSyncService:** sync idempotente implementada (F1.4): árbol de categorías, concurrencia 4, reintentos del cliente, progreso por subcategoría, fallo parcial, lock de proceso y recuperación de syncs interrumpidas. El arranque refresca en segundo plano si faltan productos o la última copia tiene más de 24 h.
+- **MercadonaClient:** cliente asíncrono implementado (F0.4); fija CP 22002, valida almacén 4389, descarga secciones, subcategorías y detalle de producto. Ver sección propia y el informe del spike en `decisions.md`.
+- **CatalogSyncService:** sync idempotente implementada (F1.4): árbol de categorías, concurrencia 4, reintentos del cliente, progreso por subcategoría, fallo parcial, lock de proceso y recuperación de syncs interrumpidas. El arranque refresca en segundo plano si faltan productos o la última copia tiene más de 24 h. Al terminar, recarga el seed y enriquece alérgenos.
 - **CatalogNormalizer:** funciones puras con `Decimal` (F1.3): importes a céntimos, `unit_size`/`size_format` a milésimas de g/ml/unidad, packs, mostrador y `is_food` heurístico.
+- **SeedService:** carga idempotente de `ingredients.yaml` y `dishes.yaml` con upsert por slug, versión por hash, soft delete y `--dry-run` (F2.6). Valida estructura, cobertura y mapeo contra el catálogo (F2.7).
+- **AllergenSyncService:** descarga el detalle de los productos mapeados, interpreta `nutrition_information` (`x99`, ingredientes, «puede contener») y persiste `allergen_status` y `product_allergens` (F2.4). Política fail-closed.
+- **EligibilityService:** productos elegibles por ingrediente, unión de alérgenos ingrediente/producto, exclusiones por ingrediente/plato/etiqueta y disponibilidad; base de F4.2 (F2.4/F2.8).
 - **PricingService:** unidades base, necesidad neta, paquetes, ticket, consumo, despensa y sobras. Pendiente (F3).
 - **OptimizerService:** CP-SAT en dos etapas con presupuesto duro. Pendiente (F4).
 - **MenuService:** persistencia de menús, bloqueos, cambios, regeneración y lista. Pendiente (F4).
-- **SeedService:** carga idempotente y validación de ingredientes, productos y platos. Pendiente (F2).
 - **Operación local:** `run.ps1` resuelve `CESTA_DATA_DIR`, inicializa la base, arranca backend y frontend y limpia procesos; `scripts/init_db.py` crea el SQLite con sus PRAGMA; `check.ps1` agrega toda la calidad; `finish-phase.ps1` cierra la fase con commit y push tras validar `check.ps1` y rechazar archivos prohibidos.
 
 ## Servicios
@@ -88,9 +96,9 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 Rutas:
 
-- `/` — crear menú (formulario placeholder; generación real en F4).
-- `/dishes` — catálogo de platos (F2).
-- `/settings` — exclusiones, alérgenos, despensa y sync (F1/F2).
+- `/` — crear menú: personas, días y presupuesto persistidos en el perfil.
+- `/dishes` — catálogo de platos con búsqueda, filtros, detalle y «no me gusta».
+- `/settings` — alérgenos, exclusiones, despensa y estado del catálogo.
 - `*` — página no encontrada.
 
 Tooling:
@@ -128,15 +136,26 @@ Contrato observado el 2026-10-25: `/api/categories/` devuelve `{count,next,previ
 - Sync real (2026-10-26): 152/152, 4.540 vistos, 4.288 únicos, 178 categorías, 7,74 s.
 - UI: `CatalogStatusCard` consulta `/api/catalog/status` con TanStack Query y hace polling cada 2 s mientras `is_syncing`; el botón lanza `POST /api/catalog/sync` en segundo plano.
 
+## Dominio y preferencias
+
+- `ingredients.yaml`: 110 ingredientes con slug, categoría, grupo, unidad base, `grams_per_unit`, `serving_group`, `serving_size_milli`, alérgenos, etiquetas y 1-3 productos (`external_id`, prioridad y default).
+- `dishes.yaml`: 60 platos con `base_servings`, `meal_types`, composición y flags derivados (`has_vegetables`, `light`, `carbs`, `protein_sources`, etiquetas). Sin pasos de cocina.
+- `SeedService`: upsert por slug, hash de versión, soft delete y `dry-run`; preserva IDs de mapeos y componentes entre cargas. La carga se lanza tras la sync y también al arrancar si no toca sync.
+- `AllergenSyncService`: descarga el detalle solo de los 212 productos mapeados y persiste `allergen_status` y `product_allergens`. En la primera carga real se actualizaron 210 (2 fallos transitorios reintentables), con 11-12 `unknown` y 29 `partial`. `x99` se interpreta con la lista de ingredientes; `partial`/`unknown` son fail-closed.
+- `EligibilityService`: `P_i` exige producto publicado, formato fijo, precio/cantidad y, si hay alérgenos declarados, `allergen_status=known` sin alérgenos coincidentes. Si el ingrediente tiene un alérgeno declarado o `P_i` queda vacío, sus platos no son elegibles.
+- Perfil único (`id=1`) con personas, días, presupuesto y alérgenos; exclusiones por ingrediente/plato/etiqueta; despensa por ingrediente en milésimas.
+- API de dominio: `/api/allergens`, `/api/ingredients`, `/api/dishes`, `/api/dishes/{id}`, `/api/profile`, `/api/exclusions`, `/api/pantry`. `GET /api/dishes` acepta `q`, `meal_type`, `tag`, `light` y `only_eligible`.
+- UI: Menú persiste el perfil; Platos busca, filtra y permite «no me gusta» por plato o ingrediente; Ajustes gestiona alérgenos, exclusiones, despensa y catálogo.
+
 ## APIs
 
 Prefijo `/api`:
 
 - `/health` — implementado (F0.2)
 - `/catalog/status`, `/catalog/sync`, `/catalog/categories`, `/catalog/products`, `/catalog/products/{id}` — implementados (F1.5)
-- `/allergens`
-- `/dishes`
-- `/profile`, `/exclusions`, `/pantry`
+- `/allergens`, `/ingredients` — implementados (F2.8)
+- `/dishes`, `/dishes/{id}` — implementados (F2.8)
+- `/profile`, `/exclusions`, `/pantry` — implementados (F2.8)
 - `/pricing/preview`
 - `/menus/generate`, `/menus`, `/menus/{id}`
 - `/menus/{id}/entries/{entry_id}`, `/swap`, `/exclude`
@@ -148,7 +167,8 @@ Prefijo `/api`:
 Los errores usan el sobre `{"error": {"code", "message", "details"}}`; `INVALID_HOST`
 (400) cubre una cabecera `Host` no local. Los endpoints de catálogo añaden
 `CATALOG_EMPTY` (503), `SYNC_IN_PROGRESS` (409), `NOT_FOUND` (404) y
-`VALIDATION_ERROR` (422).
+`VALIDATION_ERROR` (422). Los de dominio añaden `INVALID_EXCLUSION` (422) y
+`NOT_FOUND` (404).
 
 ## Base de Datos
 
@@ -159,10 +179,10 @@ Implementado (F0.2/F0.7/F1.1/F1.2): motor, PRAGMA por conexión, `Base` declarat
 Tablas principales:
 
 - `categories`, `products` (con `external_id` y `allergen_status`), `sync_runs`, `sync_category_runs`, `product_allergens` — implementadas (F1.1).
-- `ingredients` (con `serving_group` y `serving_size_milli`), `ingredient_products`
-- `dishes`, `dish_ingredients`
-- `profiles`, `exclusions`, `pantry_items`
-- `menus` (con `status`, `price_status`, `timed_out`), `menu_entries`, `menu_entry_ingredients`, `shopping_items`
+- `ingredients` (con `serving_group` y `serving_size_milli`), `ingredient_products` (producto único y un `is_default` por ingrediente) — implementadas (F2.1).
+- `dishes`, `dish_ingredients` (cantidad en la unidad base del ingrediente) — implementadas (F2.1).
+- `profiles` (fila única `id=1`), `exclusions` (tres índices únicos parciales), `pantry_items` (`UNIQUE(profile_id, ingredient_id)`) — implementadas (F2.1).
+- `menus` (con `status`, `price_status`, `timed_out`), `menu_entries`, `menu_entry_ingredients`, `shopping_items` — pendientes (F4).
 
 No hay `price_snapshots` ni `raw_json` persistente en el MVP.
 
@@ -170,6 +190,7 @@ No hay `price_snapshots` ni `raw_json` persistente en el MVP.
 
 - OR-Tools CP-SAT para el optimizador (validado en F0.6: 9.15.6755 resuelve el toy de 28 huecos en 3,46-3,47 s con un worker).
 - httpx + tenacity para la API de Mercadona (cliente implementado en F0.4).
+- PyYAML para el seed de ingredientes y platos (F2).
 - SQLAlchemy + Alembic para persistencia y migraciones.
 - React + TanStack Query para la UI.
 - SQLite como única base de datos local.
@@ -179,15 +200,18 @@ No hay `price_snapshots` ni `raw_json` persistente en el MVP.
 
 ```text
 Mercadona API
-    │ sync por subcategoría
+    │ sync por subcategoría + detalle de productos mapeados
     ▼
-SQLite (catálogo)
+SQLite (catálogo + alérgenos)
     │
     ▼
-Seed de platos e ingredientes
+Seed de ingredientes y platos (idempotente)
     │
     ▼
 Perfil + exclusiones + alérgenos + despensa
+    │
+    ▼
+Elegibilidad fail-closed
     │
     ▼
 Optimizador CP-SAT (2 etapas)

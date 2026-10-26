@@ -14,15 +14,34 @@ from app.models.catalog import (
     SyncCategoryRun,
     SyncRun,
 )
+from app.models.dishes import Dish, DishIngredient
+from app.models.ingredients import (
+    BASE_UNITS,
+    INGREDIENT_GROUPS,
+    SERVING_GROUPS,
+    Ingredient,
+    IngredientProduct,
+)
+from app.models.profile import Exclusion, PantryItem, Profile
 from app.models.types import UtcDateTime, utcnow
 
 __all__ = [
     "ALLERGEN_STATUSES",
+    "BASE_UNITS",
+    "INGREDIENT_GROUPS",
+    "SERVING_GROUPS",
     "SYNC_STATUSES",
     "Base",
     "Category",
+    "Dish",
+    "DishIngredient",
+    "Exclusion",
+    "Ingredient",
+    "IngredientProduct",
+    "PantryItem",
     "Product",
     "ProductAllergen",
+    "Profile",
     "SyncCategoryRun",
     "SyncRun",
     "UtcDateTime",

@@ -54,7 +54,7 @@ def test_initial_migration_creates_catalog_tables(tmp_path: Path) -> None:
     assert "ck_products_package_quantity" in product_checks
     assert "ck_sync_runs_status" in sync_checks
     assert "uq_products_external_id" in product_uniques
-    assert version == "20261026_0001"
+    assert version == "20261026_0002"
 
 
 def test_migration_enforces_constraints_and_can_downgrade(tmp_path: Path) -> None:

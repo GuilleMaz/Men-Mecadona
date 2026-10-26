@@ -18,7 +18,7 @@ import asyncio
 import contextlib
 import logging
 import threading
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import batched
@@ -116,12 +116,14 @@ class CatalogSyncService:
         *,
         client_factory: Callable[[], CatalogClient] | None = None,
         max_concurrency: int = MAX_CONCURRENCY,
+        on_sync_finished: Callable[[SyncResult], Awaitable[None]] | None = None,
     ) -> None:
         if max_concurrency < 1:
             raise ValueError("max_concurrency debe ser mayor que cero")
         self._session_factory = session_factory
         self._client_factory = client_factory or MercadonaClient
         self._max_concurrency = max_concurrency
+        self._on_sync_finished = on_sync_finished
         self._lock = threading.Lock()
         self._task: asyncio.Task[SyncResult] | None = None
         self._current_run_id: int | None = None
@@ -336,7 +338,7 @@ class CatalogSyncService:
                 categories_failed,
                 products_seen,
             )
-        return SyncResult(
+        result = SyncResult(
             run_id=run_id,
             status=status,
             categories_ok=categories_ok,
@@ -344,6 +346,12 @@ class CatalogSyncService:
             products_seen=products_seen,
             error=error,
         )
+        if self._on_sync_finished is not None:
+            try:
+                await self._on_sync_finished(result)
+            except Exception:  # noqa: BLE001 - el resultado de la sync no debe cambiar
+                logger.exception("Error en la tarea posterior a la sincronización")
+        return result
 
     async def _fetch_subcategory(
         self,

@@ -1,7 +1,7 @@
 # PLAN.md — Cesta
 
-> **Estado:** planificación consolidada tras auditoría. No hay código de aplicación.
-> **Última actualización:** 2026-10-25
+> **Estado:** F2 completada el 2026-10-26. Siguiente fase: F3 (coste puro y preview).
+> **Última actualización:** 2026-10-26
 > **Nombre provisional:** Cesta
 > **Ubicación:** `C:\Users\guill\OneDrive\Escritorio\OpenCode\MERCADONA`
 
@@ -484,7 +484,7 @@ dishes
 
 dish_ingredients
   id, dish_id, ingredient_id,
-  quantity_milli, unit
+  quantity_milli           -- en la unidad base del ingrediente
 ```
 
 ### 9.3 Usuario y menús
@@ -577,6 +577,7 @@ Prefijo `/api`. Errores homogéneos:
 | GET | `/api/catalog/products` | Búsqueda y listado paginado |
 | GET | `/api/catalog/products/{id}` | Detalle de producto |
 | GET | `/api/allergens` | Lista canónica de alérgenos |
+| GET | `/api/ingredients` | Ingredientes activos con búsqueda y grupo |
 | GET | `/api/dishes` | Catálogo de platos |
 | GET | `/api/dishes/{id}` | Detalle, composición y alérgenos |
 | GET | `/api/profile` | Perfil y preferencias |

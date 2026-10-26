@@ -4,10 +4,9 @@ Aplicación web local que genera un menú de **comidas y cenas** para N personas
 N días y un presupuesto, con productos y precios de la tienda online de Mercadona.
 Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiquetas.
 
-> Estado: F1 completada (catálogo y sincronización). F0 dejó las fundaciones y
-> los spikes; F2 añadirá ingredientes, platos, alérgenos y preferencias. La
-> documentación de alcance está en `PLAN.md` y el detalle de ejecución en
-> `TASKS.md`.
+> Estado: F2 completada (ingredientes, platos, alérgenos y preferencias). F3
+> añadirá el motor de costes puro y el preview. La documentación de alcance está
+> en `PLAN.md` y el detalle de ejecución en `TASKS.md`.
 
 ## Requisitos
 
@@ -37,15 +36,21 @@ El script:
 6. Arranca el frontend en `http://localhost:5173`.
 
 La primera vez, si el catálogo está vacío, el backend lo descarga en segundo
-plano (CP 22002, almacén 4389). También puedes lanzarlo manualmente:
+plano (CP 22002, almacén 4389). Después carga el seed de ingredientes/platos y
+enriquece los alérgenos de los productos mapeados. También puedes hacerlo manual:
 
 ```powershell
 cd backend
 uv run alembic upgrade head
 uv run python ..\scripts\sync_catalog.py
+uv run python ..\scripts\load_seed.py
+uv run python ..\scripts\sync_allergens.py
+uv run python ..\scripts\validate_seed.py
 ```
 
-El estado y el progreso se ven en `Ajustes` → `Catálogo de Mercadona`.
+El estado y el progreso se ven en `Ajustes` → `Catálogo de Mercadona`; las
+preferencias (alérgenos, exclusiones y despensa) en la misma pantalla, y el
+catálogo de platos en `Platos`.
 
 Para detener ambos servicios, pulsa `Ctrl+C`.
 
@@ -63,13 +68,13 @@ build en frontend; y Ruff sobre los scripts de Python de la raíz.
 Cada fase se cierra con un único comando:
 
 ```powershell
-.\finish-phase.ps1 -Phase F1 -Summary "catalogo y sincronizacion"
+.\finish-phase.ps1 -Phase F2 -Summary "ingredientes platos y preferencias"
 ```
 
 El script ejecuta `check.ps1`, rechaza secretos, bases de datos, `node_modules` y
-`.venv`, crea el commit `F1: catalogo y sincronizacion` y lo sube a GitHub. Si la
-calidad falla, no se hace commit. Si el push falla, el commit queda local y el
-script termina con error para poder reintentarlo.
+`.venv`, crea el commit `F2: ingredientes platos y preferencias` y lo sube a
+GitHub. Si la calidad falla, no se hace commit. Si el push falla, el commit queda
+local y el script termina con error para poder reintentarlo.
 
 ## Estructura
 
@@ -78,6 +83,20 @@ backend/    FastAPI + SQLite + OR-Tools
 frontend/   React + Vite + TypeScript
 scripts/    spikes y utilidades manuales
 ```
+
+Los datos de dominio están en `backend/app/data/ingredients.yaml` y
+`backend/app/data/dishes.yaml`. Cada ingrediente referencia 1-3 productos por
+`external_id`; cada plato declara su composición y los flags derivados. Tras
+editar el seed:
+
+```powershell
+cd backend
+uv run python ..\scripts\validate_seed.py
+uv run python ..\scripts\load_seed.py
+```
+
+`validate_seed.py` comprueba el catálogo real y `load_seed.py` hace upsert
+idempotente.
 
 ## Documentación
 

@@ -32,16 +32,25 @@ def _apply_sqlite_pragmas(dbapi_connection: Any, _connection_record: Any) -> Non
         cursor.close()
 
 
-def create_db_engine(settings: Settings | None = None) -> Engine:
-    """Crea un motor SQLite con los PRAGMA aplicados y el directorio de datos listo."""
-    resolved = settings or get_settings()
-    resolved.data_dir.mkdir(parents=True, exist_ok=True)
+def create_engine_for_url(database_url: str) -> Engine:
+    """Crea un motor SQLite para una URL concreta, con los PRAGMA aplicados.
+
+    Se usa tanto desde la app como desde Alembic, que puede recibir una URL
+    temporal en los tests sin depender de los ajustes globales.
+    """
     engine = create_engine(
-        resolved.database_url,
+        database_url,
         connect_args={"check_same_thread": False},
     )
     event.listen(engine, "connect", _apply_sqlite_pragmas)
     return engine
+
+
+def create_db_engine(settings: Settings | None = None) -> Engine:
+    """Crea un motor SQLite con los PRAGMA aplicados y el directorio de datos listo."""
+    resolved = settings or get_settings()
+    resolved.data_dir.mkdir(parents=True, exist_ok=True)
+    return create_engine_for_url(resolved.database_url)
 
 
 @lru_cache(maxsize=1)

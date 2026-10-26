@@ -2,36 +2,39 @@
 
 ## Estado
 
-F0 completada el 2026-10-26. F0.1-F0.10 cerradas: backend FastAPI, frontend React, cliente Mercadona 22002/4389, spike de catálogo, spike de OR-Tools, arranque local, seguridad de Host, scripts de calidad y smoke test de `/api/health`.
+F1 completada el 2026-10-26. F1.1-F1.8 cerradas: modelos de catálogo, migraciones Alembic, normalizador, sync parcial, API de catálogo, refresh de arranque, UI de ajustes y tests.
 
-- Backend: Ruff, formato, mypy strict y 50 tests en verde.
-- Frontend: ESLint, Prettier, TypeScript estricto, 10 tests y build en verde.
-- OR-Tools 9.15.6755: toy de 28 huecos/60 platos/120 ingredientes resuelto en 3,46-3,47 s; etapa 1 óptima y etapa 2 factible bajo presupuesto.
-- `.\run.ps1` arranca backend y frontend; `.\check.ps1` ejecuta toda la calidad.
-- `.\finish-phase.ps1 -Phase Fx -Summary "..."` cierra la fase: calidad, commit y push a GitHub.
+- Backend: Ruff, formato, mypy strict y 120 tests en verde.
+- Frontend: ESLint, Prettier, TypeScript estricto, 16 tests y build en verde.
+- Catálogo real: 152/152 subcategorías, 4.540 productos vistos, 4.288 únicos, 178 categorías, 7,74 s, `success`, CP 22002 / almacén 4389.
+- `run.ps1` aplica `alembic upgrade head` antes de arrancar; el arranque refresca el catálogo en segundo plano si está vacío o tiene más de 24 h.
+- `POST /api/catalog/sync` responde 202 y ejecuta la sync en segundo plano; `GET /api/catalog/status` expone progreso y errores.
 - F0 publicada en `origin/main` con el commit `be7e149`.
 - Base SQLite en `%LOCALAPPDATA%\Cesta`, fuera de OneDrive.
 
 ## Alta prioridad
 
-- F1.1: modelos de catálogo (`Category`, `Product`, `SyncRun`, `SyncCategoryRun`, `ProductAllergen`).
-- F1.2: migraciones Alembic con `render_as_batch=True` y SQLite WAL.
-- F1.3: normalizador de productos con `Decimal` y cantidades en milésimas.
-- F1.4: sync parcial con concurrencia 4, reintentos y upsert idempotente.
-- F1.5: endpoints de catálogo y búsqueda.
-- F1.6: sync al arrancar sin bloquear la UI.
-- F1.7: UI de estado y actualización del catálogo.
-- F1.8: tests de catálogo con fixtures sintéticas.
+- F2.1: modelos de dominio (`Ingredient`, `IngredientProduct`, `Dish`, `DishIngredient`, `Profile`, `Exclusion`, `PantryItem`).
+- F2.2: seed de ~120 ingredientes con unidad base, grupo, ración y alérgenos.
+- F2.3: mapeo ingrediente → producto validado contra el catálogo real.
+- F2.4: alérgenos fail-closed y detalle de producto para los mapeados.
+- F2.5: seed de 50-60 platos sin pasos y cobertura mínima.
+- F2.6: cargador de seed idempotente.
+- F2.7: validador de seed y cobertura.
+- F2.8: API de platos, alérgenos, perfil, exclusiones y despensa.
+- F2.9: UI de configuración y catálogo de platos.
+- F2.10: tests de F2.
 
-## Notas de la API de Mercadona (2026-10-25)
+## Notas de la API de Mercadona (2026-10-26)
 
 - `/api/categories/` devuelve un sobre `{count,next,previous,results}`; hoy 26 secciones y 152 subcategorías en una sola página.
 - El detalle de una subcategoría trae `products` vacío y los productos dentro de `categories[].products` (los ids hijos no son consultables por separado: devuelven 404).
-- El producto usa `display_name` (no `name`); `unit_price` es el precio del paquete y `bulk_price` el precio por unidad base (pack de agua 6 × 1,5 L: 1,62 € frente a 0,18 €/L).
+- El producto usa `display_name` (no `name`); `unit_price` es el precio del paquete y `bulk_price` el precio por unidad base.
 - `pack_size` puede ser decimal (1.5) y representa el tamaño de cada unidad del pack; `unit_size` es la cantidad total y `total_units` el número de unidades.
-- El id de producto puede ser texto con sufijo de variante (`"81649.1"`): `external_id` debe ser TEXT.
+- El id de producto puede ser texto con sufijo de variante (`"81649.1"`): `external_id` es TEXT.
 - Bajo ráfagas, la API responde 403 de forma transitoria; el cliente reintenta 403/429/5xx con 4 intentos y backoff desde 1 s.
-- Spike: 4.543 entradas, 4.291 productos únicos; 35 sin tamaño/formato, 383 con `approx_size`, 65 ids de variante. La subcategoría 112 tiene 4 grupos y 38 productos.
+- Sync real del 2026-10-26: 4.540 entradas, 4.288 productos únicos, 152/152 subcategorías, 0 fallos, 7,74 s, 178 categorías. Los productos sin formato reconocible quedan con cantidad `NULL`.
+- El catálogo incluye secciones no alimentarias (limpieza, higiene, mascotas); `is_food` las marca de forma heurística y el mapeo de F2.3 seguirá siendo explícito.
 
 ## Notas de OR-Tools (2026-10-26)
 
@@ -42,7 +45,6 @@ F0 completada el 2026-10-26. F0.1-F0.10 cerradas: backend FastAPI, frontend Reac
 
 ## Prioridad media
 
-- F2: ingredientes, platos, alérgenos, despensa y preferencias.
 - F3: coste puro, identidad contable y preview.
 - F4: optimizador, menú, lista y ajustes.
 - F5: resiliencia, seguridad, historial, export y documentación.
@@ -74,7 +76,10 @@ F0 completada el 2026-10-26. F0.1-F0.10 cerradas: backend FastAPI, frontend Reac
 - El almacén 4389 debe confirmarse; si no, no se generan menús (ya se valida en el cliente).
 - La API aplica rate limiting/WAF con 403 transitorios bajo ráfagas; la sync debe mantener concurrencia 4 y reintentos con backoff.
 - El id de producto es textual y puede incluir variantes de peso (`"81649.1"`); no asumir enteros.
-- El mapeo ingrediente → producto es la parte más frágil; excluir `approx_size` y formatos no reconocidos (35 sin tamaño/formato).
+- El mapeo ingrediente → producto es la parte más frágil; excluir `approx_size`, `selling_method != 0` y formatos no reconocidos (35 sin tamaño/formato en F0.5).
+- El catálogo real cambia entre syncs (4.291 en F0.5, 4.288 en F1); los tests no deben fijar conteos de producción.
+- La sync puede tardar más si el WAF de Mercadona responde 403; los reintentos y la concurrencia 4 están calibrados con el spike.
+- Si el proceso se cierra durante una sync, el siguiente arranque la marca como `failed`; el catálogo anterior sigue disponible.
 - Los paquetes grandes pueden hacer inviable un presupuesto bajo para 1 persona; la despensa básica ayuda.
 - La etapa 2 del optimizador puede devolver `feasible` si no prueba optimalidad en 3 s; es válido, pero debe informarse.
 - Los tests de rendimiento no deben exigir tickets idénticos entre ejecuciones limitadas por reloj.
@@ -85,7 +90,7 @@ F0 completada el 2026-10-26. F0.1-F0.10 cerradas: backend FastAPI, frontend Reac
 
 ## Siguiente acción recomendada
 
-1. F1.1 y F1.2: modelos de catálogo y migración inicial con Alembic.
-2. F1.3: normalizador de productos con casos dorados (aceite, huevos, pollo, leche y pack 6 × 125 g).
-3. F1.4: sync parcial e idempotente con fixtures sintéticas.
-4. Al cerrar F1: `.\finish-phase.ps1 -Phase F1 -Summary "catalogo y sincronizacion"`.
+1. F2.1 y F2.2: modelos de dominio y seed de ingredientes.
+2. F2.3: mapeo ingrediente → producto contra el catálogo ya sincronizado.
+3. F2.4: alérgenos fail-closed y detalle de producto para los mapeados.
+4. Al cerrar F2: `.\finish-phase.ps1 -Phase F2 -Summary "ingredientes platos y preferencias"`.

@@ -1,7 +1,7 @@
 # AGENTS.md — Cesta
 
 > Guía operativa para agentes que trabajen en este repositorio.
-> **Estado actual:** F0 completada el 2026-10-26 (F0.1-F0.10). Siguiente fase: F1.
+> **Estado actual:** F1 completada el 2026-10-26 (F1.1-F1.8). Siguiente fase: F2.
 > **Última actualización:** 2026-10-26
 
 ---
@@ -127,6 +127,7 @@ No crear carpetas vacías “por si acaso”. La estructura se materializa en F0
 # Backend
 cd backend
 uv sync
+uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8000
 uv run pytest
 uv run ruff check .

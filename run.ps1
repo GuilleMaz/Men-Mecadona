@@ -121,6 +121,12 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "La inicializacion de la base de datos ha fallado (codigo $LASTEXITCODE)."
         }
+
+        Write-Step "Aplicando migraciones"
+        & $uv run alembic upgrade head
+        if ($LASTEXITCODE -ne 0) {
+            throw "Las migraciones han fallado (codigo $LASTEXITCODE)."
+        }
     } finally {
         Pop-Location
     }

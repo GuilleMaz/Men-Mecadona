@@ -1,6 +1,6 @@
 # TASKS.md — Cesta
 
-> **Estado global:** F0 completada el 2026-10-26 (F0.1-F0.10). Siguiente fase: F1.
+> **Estado global:** F1 completada el 2026-10-26 (F1.1-F1.8). Siguiente fase: F2.
 > **Última actualización:** 2026-10-26
 > **Plan de referencia:** `PLAN.md`
 
@@ -118,7 +118,7 @@
 
 **Estimación:** 2-3 días.
 
-- [ ] **F1.1 — Modelos de catálogo**
+- [x] **F1.1 — Modelos de catálogo**
   - `Category`, `Product`, `SyncRun`, `SyncCategoryRun`, `ProductAllergen`.
   - `Product.external_id` con `UNIQUE` como clave natural de upsert; EAN informativo.
   - `Product.allergen_status` (`known|partial|unknown`).
@@ -126,22 +126,25 @@
   - Índices por `category_id`, `name`, `published`, `last_seen_at`.
   - Sin `raw_json` persistente ni `price_snapshots` en el MVP.
   - **DoD:** migración inicial crea las tablas.
+  - **Resultado:** cinco tablas con CHECKs, FKs, `external_id` único e índices; `UtcDateTime` normaliza fechas a UTC.
 
-- [ ] **F1.2 — Migraciones y SQLite**
+- [x] **F1.2 — Migraciones y SQLite**
   - Configurar Alembic con `render_as_batch=True`.
   - Activar `foreign_keys`, `busy_timeout` y WAL.
   - Documentar comando de migración.
   - **DoD:** base vacía → migración → tablas con constraints.
+  - **Resultado:** `alembic.ini`, `alembic/env.py` y revisión `20261026_0001`; `uv run alembic upgrade head` crea el esquema con WAL y `render_as_batch=True`. `alembic check` no detecta deriva. `run.ps1` migra antes de arrancar.
 
-- [ ] **F1.3 — Normalizador de productos**
+- [x] **F1.3 — Normalizador de productos**
   - Parsear `unit_price`, `reference_price`, `unit_size`, `size_format`.
   - Convertir importes a céntimos y cantidades a milésimas de g/ml/unidad.
   - Detectar packs, peso aproximado y productos de mostrador.
   - Tests con aceite, huevos, pollo, leche y pack 6 × 125 g.
   - **DoD:** función pura testeada; nunca usa `float` para dinero.
   - **Regla:** `unit_price` de la API es precio del **paquete**, no precio por unidad base.
+  - **Resultado:** `catalog_normalizer.py` con `Decimal`, casos dorados y detección de `approx_size`/`selling_method`; formatos desconocidos quedan sin cantidad y no serán mapeables.
 
-- [ ] **F1.4 — Servicio de sincronización**
+- [x] **F1.4 — Servicio de sincronización**
   - Descargar secciones y subcategorías.
   - Concurrencia máxima 4; reintentos con backoff.
   - Upsert idempotente de productos por `external_id`.
@@ -150,33 +153,40 @@
   - `sync_runs.status`: `success`, `partial`, `failed`.
   - Lock para no solapar syncs.
   - **DoD:** dos syncs consecutivos no duplican productos; una subcategoría fallida no marca sus productos como no disponibles.
+  - **Resultado:** `CatalogSyncService` con semáforo 4, `as_completed` para progreso incremental, `SyncInProgressError` con lock de proceso, upsert por lotes y `published=False` solo tras descarga correcta. La sync real tarda 7,74 s y guarda 4.288 productos en 152/152 subcategorías.
 
-- [ ] **F1.5 — Endpoints de catálogo**
+- [x] **F1.5 — Endpoints de catálogo**
   - `GET /api/catalog/status`
   - `POST /api/catalog/sync`
   - `GET /api/catalog/categories`
   - `GET /api/catalog/products?q=&category_id=&limit=&offset=`
   - `GET /api/catalog/products/{id}`
   - **DoD:** búsqueda por nombre y filtro por categoría funcionan; `raw_json` nunca se expone.
+  - **Resultado:** endpoints implementados con paginación explícita, filtro por subárbol de categoría, `only_available`, errores homogéneos (`CATALOG_EMPTY`, `SYNC_IN_PROGRESS`, `NOT_FOUND`, `VALIDATION_ERROR`) y respuestas sin datos internos.
 
-- [ ] **F1.6 — Sync al arrancar**
+- [x] **F1.6 — Sync al arrancar**
   - Si la base está vacía, sincronizar automáticamente.
   - Si la última sync tiene más de 24 h, refrescar en segundo plano.
   - Exponer progreso y estado parcial en `/api/catalog/status`.
   - **DoD:** primer arranque descarga el catálogo sin bloquear la UI.
+  - **Resultado:** lifespan lanza la sync en tarea de fondo si faltan productos o la última copia tiene más de 24 h; recupera syncs interrumpidas y cancela la tarea al apagar. Verificado con base vacía: `/api/catalog/status` responde en 0,46 s con `is_syncing=true` y la sync termina en 8,28 s con 4.288 productos.
 
-- [ ] **F1.7 — UI de estado del catálogo**
+- [x] **F1.7 — UI de estado del catálogo**
   - Pantalla de ajustes con última sync, número de productos, estado y errores.
   - Botón “Actualizar catálogo”.
   - Polling de progreso.
   - **DoD:** el usuario puede ver y lanzar la sincronización.
+  - **Resultado:** `CatalogStatusCard` en Ajustes con estado, conteos, CP/almacén, fecha de precios, errores, barra de progreso y polling cada 2 s mientras sincroniza.
 
-- [ ] **F1.8 — Tests de catálogo**
+- [x] **F1.8 — Tests de catálogo**
   - Fixtures sintéticas de sección, subcategoría y producto.
   - Test de normalización, upsert, sync idempotente y fallo parcial.
   - **DoD:** tests sin red y cobertura de los casos críticos.
+  - **Resultado:** 70 tests nuevos (120 en total) sin red: normalización, migraciones, upsert idempotente, fallo parcial, concurrencia, lock, arranque, API y UI de catálogo.
 
 **DoD de F1:** base con ≥3.000 productos, precios de 22002, sync parcial robusta y búsqueda operativa.
+
+**Estado F1:** cumplido el 2026-10-26. Sync real: 152/152 subcategorías, 4.540 productos vistos, 4.288 productos únicos en base, 178 categorías, 7,74 s, estado `success`, CP 22002 / almacén 4389. `GET /api/catalog/products?q=aceite` devuelve resultados y el árbol tiene 26 secciones y 152 subcategorías.
 
 ---
 

@@ -17,18 +17,21 @@ MERCADONA/
 │   ├── uv.lock
 │   ├── .python-version
 │   ├── README.md
+│   ├── alembic.ini        # migraciones (URL desde Settings)
+│   ├── alembic/           # env.py, script.py.mako, versions/
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── main.py          # create_app(), CORS de desarrollo, Host, prefijo /api
+│   │   ├── main.py          # create_app(), CORS, Host, lifespan y sync de arranque
 │   │   ├── config.py        # Settings, ruta de datos, CP 22002 / almacén 4389
 │   │   ├── db.py            # motor SQLite, PRAGMA, Base, sesiones
 │   │   ├── security.py      # allowlist de Host local
-│   │   ├── api/             # routers (health.py)
-│   │   ├── schemas/         # health.py, mercadona.py (DTOs de la API)
-│   │   ├── models/          # pendiente F1
-│   │   ├── services/        # mercadona_client.py (pricing/optimizer/menu pendientes)
+│   │   ├── allergens.py     # lista canónica de alérgenos
+│   │   ├── api/             # health, catalog, errors
+│   │   ├── schemas/         # health.py, mercadona.py, catalog.py
+│   │   ├── models/          # catalog.py, types.py
+│   │   ├── services/        # mercadona_client.py, catalog_normalizer.py, catalog_sync.py
 │   │   └── data/            # pendiente F2 (ingredients.yaml, dishes.yaml)
-│   └── tests/               # API, config, db, seguridad y cliente Mercadona + fixtures
+│   └── tests/               # API, config, db, seguridad, cliente, catálogo y fixtures
 ├── frontend/
 │   ├── package.json
 │   ├── package-lock.json
@@ -41,13 +44,14 @@ MERCADONA/
 │       ├── App.tsx          # rutas
 │       ├── index.css        # Tailwind 4 + tema shadcn/ui
 │       ├── components/
+│       │   ├── catalog/CatalogStatusCard.tsx
 │       │   ├── layout/AppLayout.tsx
 │       │   ├── layout/BackendStatus.tsx
 │       │   └── ui/          # button, card, input, label
 │       ├── pages/           # MenuPage, DishesPage, SettingsPage, NotFoundPage
-│       ├── lib/utils.ts
-│       └── test/            # setup, servidor MSW con /api/health, render-app
-├── scripts/                 # check_mercadona.py, spike_catalog.py, spike_ortools.py, init_db.py
+│       ├── lib/             # utils.ts, catalog.ts
+│       └── test/            # setup, servidor MSW, render-app
+├── scripts/                 # check_mercadona.py, spike_catalog.py, spike_ortools.py, init_db.py, sync_catalog.py
 ├── run.ps1                  # backend + frontend, SQLite fuera de OneDrive
 ├── check.ps1                # lint + tipos + tests + build
 └── finish-phase.ps1         # calidad + commit + push a GitHub
@@ -58,13 +62,14 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario placeholder de personas/días/presupuesto, páginas de Platos y Ajustes e indicador de estado de la API (`BackendStatus` con TanStack Query). Implementado el esqueleto (F0.3/F0.10); la lógica de menú llega en F4.
-- **FastAPI:** API REST, validación Pydantic, orquestación de servicios. Implementado el esqueleto, `/api/health` y la validación de `Host`.
+- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario placeholder de personas/días/presupuesto, páginas de Platos y Ajustes, indicador de estado de la API (`BackendStatus`) y tarjeta de catálogo (`CatalogStatusCard`) con última sync, conteos, errores, progreso, polling y botón de actualización. La lógica de menú llega en F4.
+- **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health` y `/api/catalog/*`. La sync de arranque corre en segundo plano desde el lifespan.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Rechaza rutas dentro de OneDrive. Constantes `POSTAL_CODE="22002"`, `EXPECTED_WAREHOUSE="4389"` y `LOCAL_HOSTS`.
 - **Seguridad (`app/security.py`):** `HostValidationMiddleware` acepta solo `127.0.0.1`, `localhost` y `::1`; el resto devuelve `400 INVALID_HOST`.
-- **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición.
+- **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición. `create_engine_for_url` permite que Alembic y los tests usen una URL concreta.
 - **MercadonaClient:** cliente asíncrono implementado (F0.4); fija CP 22002, valida almacén 4389, descarga secciones y subcategorías. Ver sección propia y el informe del spike en `decisions.md`.
-- **CatalogSyncService:** sync por subcategoría, estado parcial, disponibilidad y errores. Pendiente (F1).
+- **CatalogSyncService:** sync idempotente implementada (F1.4): árbol de categorías, concurrencia 4, reintentos del cliente, progreso por subcategoría, fallo parcial, lock de proceso y recuperación de syncs interrumpidas. El arranque refresca en segundo plano si faltan productos o la última copia tiene más de 24 h.
+- **CatalogNormalizer:** funciones puras con `Decimal` (F1.3): importes a céntimos, `unit_size`/`size_format` a milésimas de g/ml/unidad, packs, mostrador y `is_food` heurístico.
 - **PricingService:** unidades base, necesidad neta, paquetes, ticket, consumo, despensa y sobras. Pendiente (F3).
 - **OptimizerService:** CP-SAT en dos etapas con presupuesto duro. Pendiente (F4).
 - **MenuService:** persistencia de menús, bloqueos, cambios, regeneración y lista. Pendiente (F4).
@@ -111,12 +116,24 @@ Implementado en `app/services/mercadona_client.py`, con DTOs en `app/schemas/mer
 
 Contrato observado el 2026-10-25: `/api/categories/` devuelve `{count,next,previous,results}` con 26 secciones y 152 subcategorías. El detalle de subcategoría trae `products` vacío y los productos dentro de `categories[].products`; `unit_price` es el precio del paquete (pack de agua 6 × 1,5 L: 1,62 € frente a 0,18 €/L). Spike F0.5: 4.291 productos únicos, 4.543 entradas, 100 % precios parseables, 35 sin tamaño/formato, 383 con `approx_size`, 65 ids de variante, 6,37 s con concurrencia 4 y 0 fallos.
 
+## Catálogo
+
+- Tablas (F1.1): `categories`, `products`, `sync_runs`, `sync_category_runs`, `product_allergens`.
+- `products.external_id` es TEXT único (acepta variantes como `"81649.1"`); no se persiste `raw_json`.
+- Dinero en céntimos enteros; cantidades en milésimas de mg, µl o mili-unidades. `package_unit` es `g`, `ml` o `unit`; `reference_unit` es `kg`, `l`, `g`, `ml` o `unit`.
+- `unit_price` de la API es el precio del paquete. Los formatos desconocidos quedan con cantidad `NULL` y no serán mapeables.
+- La sync descarga 26 secciones y 152 subcategorías con concurrencia 4, reintentos 403/429/5xx y upsert por lotes. Cada subcategoría se registra en `sync_category_runs`; el estado global es `success`, `partial` o `failed`.
+- Solo se marca `published=False` a productos ausentes de subcategorías descargadas correctamente. Los productos de categorías fallidas conservan la disponibilidad anterior. El barrido se hace una vez al final para que un producto duplicado siga disponible si aparece en cualquiera de las subcategorías correctas.
+- El progreso se calcula con `categories_ok + categories_failed` sobre las subcategorías actuales.
+- Sync real (2026-10-26): 152/152, 4.540 vistos, 4.288 únicos, 178 categorías, 7,74 s.
+- UI: `CatalogStatusCard` consulta `/api/catalog/status` con TanStack Query y hace polling cada 2 s mientras `is_syncing`; el botón lanza `POST /api/catalog/sync` en segundo plano.
+
 ## APIs
 
 Prefijo `/api`:
 
 - `/health` — implementado (F0.2)
-- `/catalog/status`, `/catalog/sync`, `/catalog/categories`, `/catalog/products`
+- `/catalog/status`, `/catalog/sync`, `/catalog/categories`, `/catalog/products`, `/catalog/products/{id}` — implementados (F1.5)
 - `/allergens`
 - `/dishes`
 - `/profile`, `/exclusions`, `/pantry`
@@ -129,17 +146,19 @@ Prefijo `/api`:
 - `/menus/{id}/export`
 
 Los errores usan el sobre `{"error": {"code", "message", "details"}}`; `INVALID_HOST`
-(400) cubre una cabecera `Host` no local.
+(400) cubre una cabecera `Host` no local. Los endpoints de catálogo añaden
+`CATALOG_EMPTY` (503), `SYNC_IN_PROGRESS` (409), `NOT_FOUND` (404) y
+`VALIDATION_ERROR` (422).
 
 ## Base de Datos
 
 SQLite en `%LOCALAPPDATA%\Cesta\cesta.db`, modo WAL, `foreign_keys=ON`, `busy_timeout=5000`.
 
-Implementado (F0.2/F0.7): motor, PRAGMA por conexión, `Base` declarativa, sesión por petición, rechazo de rutas en OneDrive y `scripts/init_db.py` para crear el archivo. Las tablas y migraciones llegan en F1.1/F1.2.
+Implementado (F0.2/F0.7/F1.1/F1.2): motor, PRAGMA por conexión, `Base` declarativa, sesión por petición, rechazo de rutas en OneDrive, `scripts/init_db.py` y migraciones Alembic con `render_as_batch=True`. `run.ps1` aplica `alembic upgrade head` antes de arrancar.
 
 Tablas principales:
 
-- `categories`, `products` (con `external_id` y `allergen_status`), `sync_runs`, `sync_category_runs`, `product_allergens`
+- `categories`, `products` (con `external_id` y `allergen_status`), `sync_runs`, `sync_category_runs`, `product_allergens` — implementadas (F1.1).
 - `ingredients` (con `serving_group` y `serving_size_milli`), `ingredient_products`
 - `dishes`, `dish_ingredients`
 - `profiles`, `exclusions`, `pantry_items`

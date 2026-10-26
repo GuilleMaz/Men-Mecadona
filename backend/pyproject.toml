@@ -43,7 +43,7 @@ src = ["app", "tests"]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["app"]
+known-first-party = ["app", "tests"]
 
 [tool.mypy]
 python_version = "3.13"

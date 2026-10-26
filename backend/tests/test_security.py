@@ -25,7 +25,7 @@ REJECTED_HOSTS = (
 
 
 def _client(app_env: str = "local") -> TestClient:
-    return TestClient(create_app(Settings(_env_file=None, app_env=app_env)))
+    return TestClient(create_app(Settings(_env_file=None, app_env=app_env, sync_on_startup=False)))
 
 
 @pytest.mark.parametrize("host", ALLOWED_HOSTS)

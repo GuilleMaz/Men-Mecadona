@@ -4,9 +4,10 @@ Aplicación web local que genera un menú de **comidas y cenas** para N personas
 N días y un presupuesto, con productos y precios de la tienda online de Mercadona.
 Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiquetas.
 
-> Estado: F0 completada (fundaciones y spikes). El catálogo persistente y el
-> optimizador llegan en F1 y F4. La documentación de alcance está en `PLAN.md` y
-> el detalle de ejecución en `TASKS.md`.
+> Estado: F1 completada (catálogo y sincronización). F0 dejó las fundaciones y
+> los spikes; F2 añadirá ingredientes, platos, alérgenos y preferencias. La
+> documentación de alcance está en `PLAN.md` y el detalle de ejecución en
+> `TASKS.md`.
 
 ## Requisitos
 
@@ -31,8 +32,20 @@ El script:
 1. Resuelve `CESTA_DATA_DIR` (por defecto `%LOCALAPPDATA%\Cesta`).
 2. Rechaza rutas dentro de OneDrive.
 3. Crea el archivo SQLite con WAL, `foreign_keys=ON` y `busy_timeout=5000`.
-4. Arranca el backend en `http://127.0.0.1:8000`.
-5. Arranca el frontend en `http://localhost:5173`.
+4. Aplica las migraciones de Alembic.
+5. Arranca el backend en `http://127.0.0.1:8000`.
+6. Arranca el frontend en `http://localhost:5173`.
+
+La primera vez, si el catálogo está vacío, el backend lo descarga en segundo
+plano (CP 22002, almacén 4389). También puedes lanzarlo manualmente:
+
+```powershell
+cd backend
+uv run alembic upgrade head
+uv run python ..\scripts\sync_catalog.py
+```
+
+El estado y el progreso se ven en `Ajustes` → `Catálogo de Mercadona`.
 
 Para detener ambos servicios, pulsa `Ctrl+C`.
 

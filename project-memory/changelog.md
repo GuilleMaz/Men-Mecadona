@@ -1,5 +1,69 @@
 # Changelog
 
+## 2026-10-26 — F1: catálogo y sincronización
+
+### Cambios
+
+- Backend: modelos `Category`, `Product`, `SyncRun`, `SyncCategoryRun` y
+  `ProductAllergen` con CHECKs, FKs, índices y `UtcDateTime`; lista canónica de
+  alérgenos en `app/allergens.py`.
+- Alembic: `alembic.ini`, `env.py`, plantilla y migración inicial
+  `20261026_0001`; URL desde `Settings`, `render_as_batch=True` y WAL.
+- Normalizador puro `catalog_normalizer.py`: precios con `Decimal` a céntimos,
+  cantidades a milésimas (`g`/`ml`/`unit`), packs, precio de referencia,
+  mostrador/peso variable, formatos desconocidos e `is_food` heurístico.
+- Sync `catalog_sync.py`: concurrencia 4, progreso por subcategoría, upsert
+  idempotente por `external_id`, estados `success`/`partial`/`failed`, barrido
+  final de disponibilidad para productos duplicados entre subcategorías, lock de
+  proceso, recuperación de syncs interrumpidas y refresh de arranque a las 24 h.
+- API `/api/catalog/status`, `/api/catalog/sync`, `/api/catalog/categories`,
+  `/api/catalog/products` y `/api/catalog/products/{id}` con paginación,
+  filtro por subárbol, `only_available` y errores homogéneos. Adaptadores de
+  errores de dominio, validación y HTTP.
+- `create_app` admite `session_factory` para tests, monta el lifespan de sync y
+  no bloquea el startup. `run.ps1` aplica `alembic upgrade head`.
+- Script `scripts/sync_catalog.py` para sincronizar el catálogo real y mostrar el
+  resumen.
+- Frontend: `lib/catalog.ts`, `CatalogStatusCard` en Ajustes con estado, conteos,
+  CP/almacén, fecha de precios, errores, barra de progreso, polling cada 2 s y
+  botón «Actualizar catálogo»; handlers MSW por defecto.
+- Documentación: README raíz, backend y frontend; `TASKS.md` y `project-memory/`.
+
+### Verificación
+
+- `uv run ruff check .`, `ruff format --check .` y `mypy app`: OK.
+- `uv run pytest`: 120 tests en verde, sin red.
+- `uv run ruff check` y `ruff format --check` sobre `scripts/`: OK.
+- `npm run lint`, `format:check`, `typecheck`, `test` (16 tests) y `build`: OK.
+- `uv run alembic upgrade head` sobre base vacía: 5 tablas + `alembic_version`;
+  `uv run alembic check`: sin deriva.
+- Sync real: 152/152 subcategorías, 4.540 productos vistos, 4.288 únicos,
+  178 categorías, 7,74 s, `success`, CP 22002 / almacén 4389.
+- Arranque con base vacía: `/api/catalog/status` responde en 0,46 s con
+  `is_syncing=true` (la UI no se bloquea) y la sync termina en 8,28 s con 4.288
+  productos.
+- API real: `product_count=4288`, 26 secciones, 152 subcategorías,
+  `q=aceite` devuelve 69 resultados; precios y cantidades en enteros.
+
+### Archivos
+
+- `backend/app/models/**`, `backend/app/allergens.py`
+- `backend/alembic.ini`, `backend/alembic/**`
+- `backend/app/services/catalog_normalizer.py`, `backend/app/services/catalog_sync.py`
+- `backend/app/schemas/catalog.py`, `backend/app/schemas/mercadona.py`
+- `backend/app/api/catalog.py`, `backend/app/api/errors.py`, `backend/app/main.py`
+- `backend/app/db.py`, `backend/pyproject.toml`
+- `backend/tests/**`
+- `frontend/src/lib/catalog.ts`, `frontend/src/components/catalog/**`
+- `frontend/src/pages/SettingsPage.tsx`, `frontend/src/test/server.ts`
+- `scripts/sync_catalog.py`, `run.ps1`, `README.md`, `backend/README.md`, `frontend/README.md`
+- `TASKS.md`, `project-memory/**`
+
+### Motivo
+
+- Cerrar F1 con el catálogo real persistido, la sync parcial robusta, la búsqueda
+  operativa y la UI de estado antes de construir ingredientes y platos en F2.
+
 ## 2026-10-26 — Pipeline de cierre de fase
 
 ### Cambios

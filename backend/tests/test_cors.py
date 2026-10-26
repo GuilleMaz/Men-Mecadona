@@ -12,7 +12,7 @@ LOCAL_HOST = "127.0.0.1:8000"
 
 
 def _client(app_env: str) -> TestClient:
-    return TestClient(create_app(Settings(_env_file=None, app_env=app_env)))
+    return TestClient(create_app(Settings(_env_file=None, app_env=app_env, sync_on_startup=False)))
 
 
 def test_vite_origin_is_allowed_in_development() -> None:

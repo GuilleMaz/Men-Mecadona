@@ -1,5 +1,6 @@
-import { AlertTriangle, MilkOff, RefreshCw, Settings2, ShoppingBasket } from 'lucide-react';
+import { AlertTriangle, MilkOff, Settings2, ShoppingBasket } from 'lucide-react';
 
+import { CatalogStatusCard } from '@/components/catalog/CatalogStatusCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const sections = [
@@ -18,11 +19,6 @@ const sections = [
     title: 'Despensa',
     description: 'Cantidades que ya tienes en casa para descontarlas antes de comprar.',
   },
-  {
-    icon: RefreshCw,
-    title: 'Sincronización',
-    description: 'Estado del catálogo de Mercadona, última actualización y errores.',
-  },
 ];
 
 export function SettingsPage() {
@@ -31,9 +27,11 @@ export function SettingsPage() {
       <div>
         <h2 className="text-2xl font-semibold">Ajustes</h2>
         <p className="text-sm text-muted-foreground">
-          Preferencias del perfil local: exclusiones, alérgenos y despensa.
+          Estado del catálogo y preferencias del perfil local.
         </p>
       </div>
+
+      <CatalogStatusCard />
 
       <div className="grid gap-4 sm:grid-cols-2">
         {sections.map(({ icon: Icon, title, description }) => (
@@ -60,8 +58,8 @@ export function SettingsPage() {
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Estas opciones se activarán en la fase 2. El estado de sincronización llegará con el
-        catálogo, en la fase 1.
+        Las exclusiones, los alérgenos y la despensa se activarán en la fase 2. El catálogo ya se
+        puede sincronizar desde esta pantalla.
       </p>
     </div>
   );

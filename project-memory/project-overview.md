@@ -8,18 +8,19 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F0 completada el 2026-10-26 (F0.1-F0.10). Siguiente fase: F1 (catálogo y sincronización).
-- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host` y cliente Mercadona (CP 22002 / almacén 4389). Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario placeholder e indicador de estado de la API.
+- **Fase:** F1 completada el 2026-10-26 (F1.1-F1.8). Siguiente fase: F2 (ingredientes, platos, alérgenos y preferencias).
+- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389) y catálogo persistente con sync parcial. Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario placeholder, indicador de estado de la API y tarjeta de estado/sincronización del catálogo.
 - **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
-- **Integración Mercadona:** catálogo validado (26 secciones, 152/152 subcategorías, 4.291 productos únicos, 100 % precios parseables, 6,37 s con concurrencia 4); tests con fixtures sintéticas y respx, sin red.
+- **Integración Mercadona:** sync real validada: 26 secciones, 152/152 subcategorías, 4.540 productos vistos, 4.288 productos únicos persistidos, 178 categorías y 7,74 s con concurrencia 4. Tests con fixtures sintéticas y respx, sin red.
+- **Catálogo:** migraciones Alembic (`render_as_batch`), upsert por `external_id`, normalización a céntimos y milésimas, fallo parcial sin ocultar productos de categorías fallidas, lock de proceso y refresh de arranque a las 24 h.
 - **OR-Tools:** CP-SAT 9.15.6755 validado en Windows/Python 3.13 con un toy de 28 huecos, 60 platos, 120 ingredientes y paquetes: 3,46-3,47 s por ejecución, etapa 1 óptima y etapa 2 factible bajo presupuesto.
-- **Arranque:** `.\run.ps1` arranca backend y frontend, inicializa SQLite fuera de OneDrive y limpia procesos; `.\check.ps1` ejecuta lint, tipos, tests y build.
+- **Arranque:** `.\run.ps1` arranca backend y frontend, inicializa SQLite fuera de OneDrive, aplica migraciones y limpia procesos; `.\check.ps1` ejecuta lint, tipos, tests y build.
 - **Cierre de fase:** `.\finish-phase.ps1 -Phase Fx -Summary "..."` ejecuta la calidad, crea el commit de la fase y lo sube a GitHub; `-NoPush` y `-SkipChecks` son escapes documentados. F0 se publicó en `origin/main` con `be7e149`.
 - **Seguridad local:** bind a `127.0.0.1`, CORS solo en desarrollo, allowlist de `Host` y rechazo de bases de datos dentro de OneDrive. Checklist en `SECURITY.md`.
 - **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`, `README.md` y `SECURITY.md`.
-- **Memoria:** actualizada con informes de los spikes de catálogo y OR-Tools en `decisions.md`.
+- **Memoria:** actualizada con informes de los spikes y las decisiones de F1 en `decisions.md`.
 - **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad.
-- **Calidad:** backend con Ruff, formato, mypy (strict) y 50 tests; frontend con ESLint, Prettier, TypeScript estricto, 10 tests y build de producción.
+- **Calidad:** backend con Ruff, formato, mypy (strict) y 120 tests; frontend con ESLint, Prettier, TypeScript estricto, 16 tests y build de producción.
 - **Última actualización:** 2026-10-26.
 
 ## Tecnologías
@@ -62,11 +63,18 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - F0.8: validación de `Host`, CORS solo en desarrollo y checklist de seguridad local.
 - F0.9: `check.ps1` con lint, formato, tipos, tests y build de backend y frontend.
 - F0.10: indicador de estado del backend en la UI, consumiendo `/api/health`, con MSW en tests.
+- F1.1: modelos `categories`, `products`, `sync_runs`, `sync_category_runs` y `product_allergens` con constraints e índices.
+- F1.2: Alembic con `render_as_batch`, WAL, `foreign_keys` y `busy_timeout`; migración inicial verificada y sin deriva.
+- F1.3: normalizador con `Decimal`, céntimos enteros, milésimas de g/ml/unidad, packs, peso variable y mostrador.
+- F1.4: sync real con concurrencia 4, reintentos, upsert idempotente, fallo parcial y lock.
+- F1.5: API de estado, sync, árbol de categorías, búsqueda, filtro y detalle de producto.
+- F1.6: refresh de arranque en segundo plano si el catálogo está vacío o tiene más de 24 h.
+- F1.7: tarjeta de estado del catálogo en Ajustes con botón de sync y polling de progreso.
+- F1.8: 70 tests backend nuevos y 6 de frontend, sin red.
 - Pipeline de cierre: `finish-phase.ps1` ejecuta la calidad, crea el commit y lo sube a GitHub.
 
 ## Pendientes
 
-- F1: catálogo y sync.
 - F2: ingredientes, platos, alérgenos y preferencias.
 - F3: coste puro y preview.
 - F4: optimizador, menú y lista.

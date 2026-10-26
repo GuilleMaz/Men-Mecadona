@@ -7,7 +7,7 @@ from app.main import create_app
 
 
 def _client() -> TestClient:
-    return TestClient(create_app(Settings(_env_file=None, app_env="local")))
+    return TestClient(create_app(Settings(_env_file=None, app_env="local", sync_on_startup=False)))
 
 
 LOCAL_HOST = "127.0.0.1:8000"

@@ -1,5 +1,116 @@
 # Decisions
 
+## 2026-10-26 — Catálogo: upsert idempotente, fallo parcial y sync en segundo plano
+
+### Problema
+
+La sincronización debía descargar ~4.300 productos con una API no oficial que
+devuelve 403 transitorios y fallos aislados, sin duplicar filas, sin bloquear la UI
+y sin ocultar productos de categorías que no se han podido descargar. Además, la
+base necesitaba un esquema reproducible y migrable.
+
+### Decisión
+
+- Alembic con `render_as_batch=True`; una migración inicial
+  (`20261026_0001`) crea las cinco tablas del catálogo. `run.ps1` ejecuta
+  `alembic upgrade head` antes de arrancar el backend.
+- `products.external_id` es la clave natural de upsert (TEXT, UNIQUE). Se usa el
+  upsert por lotes de SQLite (`ON CONFLICT DO UPDATE`) y se conserva
+  `first_seen_at`; no se persiste `raw_json`.
+- La sync descarga primero el árbol de categorías, hace upsert de secciones y
+  subcategorías y después descarga las subcategorías con concurrencia máxima 4.
+- Cada subcategoría se registra en `sync_category_runs`. El estado global se
+  calcula al final: `success` si no falla ninguna, `partial` si falla alguna y
+  `failed` si fallan todas.
+- Solo se marca `published=False` a productos ausentes de subcategorías
+  descargadas correctamente, en un barrido final. Una subcategoría fallida no toca
+  la disponibilidad de sus productos.
+- Un lock de proceso impide solapar syncs. El POST devuelve `202` y la sync corre
+  en `asyncio.create_task`; el arranque la lanza en segundo plano si el catálogo
+  está vacío o la última copia tiene más de 24 h.
+- `GET /api/catalog/status` expone `is_syncing`, conteos, última sync, error y
+  progreso (`categories_ok + categories_failed` sobre el total actual).
+- Al arrancar se marcan como `failed` las syncs que quedaron `running` por un
+  reinicio.
+
+### Justificación
+
+- El upsert evita duplicados y conserva la identidad de los productos entre syncs.
+- El fallo parcial es el modo normal de una API no oficial; borrar o marcar todo
+  como no disponible por una categoría fallida rompería la promesa de catálogo.
+- El progreso persistido permite polling real desde Ajustes.
+- No bloquear el startup evita que la primera apertura parezca colgada.
+- `alembic check` no detecta deriva entre modelos y migración.
+
+### Alternativas
+
+- Reemplazar el catálogo completo en una transacción: descartado; un fallo parcial
+  dejaría la base vacía o incompleta.
+- Sync secuencial: descartado; el spike mostró ~65 s frente a 7,74 s con
+  concurrencia 4.
+- Bloquear el arranque hasta terminar la sync: descartado; la UI debe abrir aunque
+  no haya red.
+- Celery/Redis para la sync: descartado por stack y por ser una app local de un
+  proceso.
+- Lock en base de datos con índice único parcial: descartado para el MVP; el lock
+  de proceso cubre el único worker de `run.ps1`.
+
+### Resultado
+
+- Sync real del 2026-10-26: 152/152 subcategorías, 4.540 productos vistos, 4.288
+  únicos, 178 categorías, 7,74 s, estado `success`, CP 22002 / almacén 4389.
+- La diferencia con los 4.291 del spike de F0.5 (−3) entra dentro de la variación
+  normal de disponibilidad de la tienda.
+
+---
+
+## 2026-10-26 — Normalización monetaria y de unidades del catálogo
+
+### Problema
+
+La API mezcla precios de paquete, precios de referencia y cantidades con formatos
+como `l`, `ml`, `kg`, `g`, `ud` o `pack_size` decimal. Usar `float` para dinero o
+guardar un «precio por gramo» en céntimos haría imposible garantizar el ticket.
+
+### Decisión
+
+- Importes con `Decimal` y redondeo half-up a céntimos enteros; nunca `float` para
+  dinero. Se aceptan coma y punto decimal y se rechazan importes malformados.
+- `unit_price` se interpreta como precio del **paquete**, no por unidad base.
+- `package_quantity_milli` se guarda en milésimas de la unidad base (`mg`, `µl` o
+  mili-unidades) y `package_unit` es `g`, `ml` o `unit`.
+- `reference_price_cents` y `reference_unit` conservan el precio de referencia
+  (`kg`, `l`, `g`, `ml` o `unit`) para comparar formatos.
+- Si `unit_size` falta y el producto es un pack con `pack_size × total_units`, se
+  deriva la cantidad y se marca `is_estimated=True`.
+- Un formato desconocido deja `package_quantity_milli=NULL`: el producto existe,
+  pero F2.3 no lo mapea.
+- `approx_size=True` o `selling_method != 0` identifican mostrador/peso variable y
+  quedan fuera del mapeo.
+- `is_food` se deriva con una heurística conservadora sobre nombres de sección y
+  subcategoría (limpieza, higiene, mascotas, etc.); el mapeo real de ingredientes
+  seguirá siendo explícito en F2.3.
+
+### Justificación
+
+- Los céntimos y las milésimas son enteros y encajan con CP-SAT y SQLite.
+- Evita arrastrar errores de coma flotante al ticket y a la identidad contable.
+- No inventa cantidades cuando la API no ofrece un formato reconocible.
+
+### Alternativas
+
+- Guardar precios como `float`: descartado por la regla del proyecto.
+- Parsear cantidades del nombre del producto: descartado; frágil y no verificable.
+- Guardar el precio de referencia por gramo en céntimos: descartado; se recalcula
+  desde el paquete.
+
+### Resultado
+
+- Casos dorados de aceite 5 L, huevos, pollo 500 g, leche 1 L y pack 6 × 125 g.
+- Productos de mostrador detectados y excluidos del mapeo futuro.
+
+---
+
 ## 2026-10-26 — Cierre de fase con commit y push obligatorio
 
 ### Problema

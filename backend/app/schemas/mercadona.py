@@ -18,6 +18,7 @@ class MercadonaSubcategory(_MercadonaModel):
 
     id: int
     name: str
+    order: int = 0
 
 
 class MercadonaSection(_MercadonaModel):
@@ -25,6 +26,7 @@ class MercadonaSection(_MercadonaModel):
 
     id: int
     name: str
+    order: int = 0
     categories: list[MercadonaSubcategory] = Field(default_factory=list)
 
 
@@ -78,6 +80,8 @@ class MercadonaProduct(_MercadonaModel):
     #: Identificador externo. Puede ser numérico o con sufijo de variante ("81649.1").
     id: str
     display_name: str
+    ean: str | None = None
+    brand: str | None = None
     slug: str | None = None
     published: bool = True
     status: str | None = None

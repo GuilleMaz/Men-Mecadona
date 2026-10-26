@@ -147,6 +147,23 @@ describe('MenuDetailPage', () => {
     });
   });
 
+  it('revalida los precios una vez al abrir un menú guardado actual', async () => {
+    let revalidations = 0;
+    server.use(
+      http.post('/api/menus/:menuId/revalidate', () => {
+        revalidations += 1;
+        return HttpResponse.json(SAMPLE_MENU);
+      }),
+    );
+    renderApp(['/menus/1']);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Menú de 2 días para 2 personas' }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(revalidations).toBe(1));
+    expect(screen.queryByText(/Precios revalidados/)).not.toBeInTheDocument();
+  });
+
   it('muestra el banner stale y permite revalidar', async () => {
     const user = userEvent.setup();
     server.use(
@@ -154,7 +171,10 @@ describe('MenuDetailPage', () => {
         HttpResponse.json({
           ...SAMPLE_MENU,
           price_status: 'stale',
+          previous_ticket_cents: 545,
           revalidated_ticket_cents: 7200,
+          price_delta_cents: 6655,
+          revalidated_at: '2026-10-26T10:00:00Z',
         }),
       ),
     );
@@ -164,6 +184,7 @@ describe('MenuDetailPage', () => {
       await screen.findByText('Los precios han cambiado desde que se generó el menú'),
     ).toBeInTheDocument();
     expect(screen.getByText(/Ticket revalidado/)).toHaveTextContent('72,00');
+    expect(screen.getByText(/diferencia \+66,55/)).toBeInTheDocument();
     expect(screen.getByText('Precios desactualizados')).toBeInTheDocument();
     expect(
       screen.getByText(/Los precios actuales elevan el ticket por encima del presupuesto/),
@@ -180,10 +201,10 @@ describe('MenuDetailPage', () => {
   });
 
   it('avisa cuando el ticket está cerca del límite del presupuesto', async () => {
+    const nearLimit = { ...SAMPLE_MENU, budget_cents: 560 };
     server.use(
-      http.get('/api/menus/:menuId', () =>
-        HttpResponse.json({ ...SAMPLE_MENU, budget_cents: 560 }),
-      ),
+      http.get('/api/menus/:menuId', () => HttpResponse.json(nearLimit)),
+      http.post('/api/menus/:menuId/revalidate', () => HttpResponse.json(nearLimit)),
     );
     renderApp(['/menus/1']);
 
@@ -191,15 +212,15 @@ describe('MenuDetailPage', () => {
   });
 
   it('muestra los estados relajado y con tiempo agotado', async () => {
+    const relaxed = {
+      ...SAMPLE_MENU,
+      status: 'relaxed' as const,
+      timed_out: true,
+      relaxations: ['protein_sources', 'fish'],
+    };
     server.use(
-      http.get('/api/menus/:menuId', () =>
-        HttpResponse.json({
-          ...SAMPLE_MENU,
-          status: 'relaxed',
-          timed_out: true,
-          relaxations: ['protein_sources', 'fish'],
-        }),
-      ),
+      http.get('/api/menus/:menuId', () => HttpResponse.json(relaxed)),
+      http.post('/api/menus/:menuId/revalidate', () => HttpResponse.json(relaxed)),
     );
     renderApp(['/menus/1']);
 

@@ -1,20 +1,28 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Arranca Cesta en local: backend FastAPI + frontend Vite.
+    Arranca Cesta en local: backend FastAPI + frontend Vite, o un solo proceso en producción.
 
 .DESCRIPTION
     Resuelve CESTA_DATA_DIR (por defecto %LOCALAPPDATA%\Cesta), crea la base
     SQLite fuera de OneDrive y arranca ambos servicios escuchando solo en local.
 
+    Con -Prod compila el frontend, arranca solo FastAPI en 127.0.0.1:8000 y sirve
+    la app compilada desde el mismo proceso, sin CORS.
+
 .EXAMPLE
     .\run.ps1
+
+.EXAMPLE
+    .\run.ps1 -Prod
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\run.ps1
 #>
 [CmdletBinding()]
-param()
+param(
+    [switch]$Prod
+)
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
@@ -83,7 +91,9 @@ $frontend = $null
 try {
     $dataDir = Resolve-CestaDataDir
     $env:CESTA_DATA_DIR = $dataDir
+    $env:APP_ENV = if ($Prod) { "production" } else { "local" }
     Write-Step "Datos en $dataDir (fuera de OneDrive)"
+    Write-Step ("Entorno: {0}" -f $env:APP_ENV)
 
     $uv = (Get-Command uv -CommandType Application -ErrorAction Stop).Source
     $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
@@ -131,16 +141,51 @@ try {
         Pop-Location
     }
 
+    if ($Prod) {
+        Write-Step "Compilando el frontend (npm run build)"
+        Push-Location (Join-Path $root "frontend")
+        try {
+            & $npm run build
+            if ($LASTEXITCODE -ne 0) {
+                throw "npm run build ha fallado (codigo $LASTEXITCODE)."
+            }
+        } finally {
+            Pop-Location
+        }
+    }
+
     Write-Step "Arrancando backend en http://127.0.0.1:8000"
-    $backend = Start-Process -FilePath $uv `
-        -ArgumentList @(
+    $backendArguments = @(
+        "run", "uvicorn", "app.main:app",
+        "--host", "127.0.0.1", "--port", "8000"
+    )
+    if (-not $Prod) {
+        $backendArguments = @(
             "run", "uvicorn", "app.main:app", "--reload",
             "--host", "127.0.0.1", "--port", "8000"
-        ) `
+        )
+    }
+    $backend = Start-Process -FilePath $uv `
+        -ArgumentList $backendArguments `
         -WorkingDirectory (Join-Path $root "backend") -PassThru -NoNewWindow
 
     Wait-Backend -Process $backend
     Write-Step "Backend listo"
+
+    if ($Prod) {
+        Write-Host ""
+        Write-Host "Cesta en marcha (producción local):" -ForegroundColor Green
+        Write-Host "  UI y API: http://127.0.0.1:8000"
+        Write-Host "Pulsa Ctrl+C para detener el servicio."
+        Write-Host ""
+
+        while ($true) {
+            if ($backend.HasExited) {
+                throw "El backend se ha detenido (codigo $($backend.ExitCode))."
+            }
+            Start-Sleep -Seconds 1
+        }
+    }
 
     Write-Step "Arrancando frontend en http://localhost:5173"
     $frontend = Start-Process -FilePath $npm `

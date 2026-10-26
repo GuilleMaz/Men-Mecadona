@@ -104,7 +104,14 @@ describe('ShoppingListPage', () => {
   it('muestra el aviso de precios desactualizados con enlace al menú', async () => {
     server.use(
       http.get('/api/menus/:menuId/shopping-list', () =>
-        HttpResponse.json({ ...SAMPLE_SHOPPING_LIST, price_status: 'stale' }),
+        HttpResponse.json({
+          ...SAMPLE_SHOPPING_LIST,
+          price_status: 'stale',
+          previous_ticket_cents: 545,
+          revalidated_ticket_cents: 7200,
+          price_delta_cents: 6655,
+          revalidated_at: '2026-10-26T10:00:00Z',
+        }),
       ),
     );
     renderApp(['/menus/1/shopping-list']);
@@ -112,6 +119,7 @@ describe('ShoppingListPage', () => {
     expect(
       await screen.findByText(/Los precios han cambiado desde que se generó el menú/),
     ).toBeInTheDocument();
+    expect(screen.getByText(/diferencia \+66,55/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Revalida el menú' })).toHaveAttribute(
       'href',
       '/menus/1',

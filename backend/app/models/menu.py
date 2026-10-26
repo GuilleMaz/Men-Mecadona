@@ -73,9 +73,14 @@ class Menu(Base):
             "revalidated_ticket_cents IS NULL OR revalidated_ticket_cents >= 0",
             name="ck_menus_revalidated_ticket",
         ),
+        CheckConstraint(
+            "previous_ticket_cents IS NULL OR previous_ticket_cents >= 0",
+            name="ck_menus_previous_ticket",
+        ),
         CheckConstraint("timed_out IN (0, 1)", name="ck_menus_timed_out"),
         Index("ix_menus_created_at", "created_at"),
         Index("ix_menus_profile_id", "profile_id"),
+        Index("ix_menus_profile_created_at", "profile_id", "created_at"),
         Index("ix_menus_status", "status"),
     )
 
@@ -112,7 +117,13 @@ class Menu(Base):
     relaxation_codes_json: Mapped[list[str]] = mapped_column(
         JSON, nullable=False, default=list, server_default="[]"
     )
+    #: Ticket vigente antes de la última revalidación. Permite mostrar el delta
+    #: de precios aunque la revalidación actualice el snapshot válido.
+    previous_ticket_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: Ticket recalculado con los precios actuales. Si supera el presupuesto, el
+    #: ticket persistido sigue siendo el del snapshot válido.
     revalidated_ticket_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    revalidated_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
     postal_code: Mapped[str] = mapped_column(
         String(5), nullable=False, default=POSTAL_CODE, server_default=POSTAL_CODE

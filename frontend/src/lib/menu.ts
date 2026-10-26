@@ -21,6 +21,9 @@ export type MenuSummary = {
   pantry_consumption_cents: number;
   leftover_value_cents: number;
   revalidated_ticket_cents: number | null;
+  previous_ticket_cents: number | null;
+  price_delta_cents: number | null;
+  revalidated_at: string | null;
   violations: number;
   relaxations: string[];
   postal_code: string;
@@ -157,6 +160,10 @@ export type ShoppingList = {
   consumption_cents: number;
   pantry_consumption_cents: number;
   leftover_value_cents: number;
+  revalidated_ticket_cents: number | null;
+  previous_ticket_cents: number | null;
+  price_delta_cents: number | null;
+  revalidated_at: string | null;
   checked_total_cents: number;
   item_count: number;
   checked_count: number;

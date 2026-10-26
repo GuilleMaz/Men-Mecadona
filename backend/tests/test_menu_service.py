@@ -32,6 +32,7 @@ from app.services.optimizer import (
     OptimizationStatus,
     OptimizerError,
 )
+from app.services.price_source import get_price_source_status
 from app.services.pricing import price_basket, purchasable_formats
 from tests.domain_fixtures import (
     make_dish,
@@ -558,6 +559,9 @@ def test_recalculate_updates_ticket_and_revalidate_marks_stale(
         assert menu.ticket_cents <= menu.budget_cents
         assert menu.price_status == "stale"
         assert menu.revalidated_ticket_cents == 2750
+        assert menu.previous_ticket_cents == 950
+        assert menu.revalidated_ticket_cents - menu.previous_ticket_cents == 2750 - 950
+        assert menu.revalidated_at is not None
         assert sum(item.subtotal_cents for item in menu.shopping_items) == menu.ticket_cents
         service.verify_identities(menu_id)
 
@@ -568,6 +572,116 @@ def test_recalculate_updates_ticket_and_revalidate_marks_stale(
         assert unchanged is not None
         assert unchanged.ticket_cents == 950
         assert unchanged.revalidated_ticket_cents == 2750
+
+
+def test_revalidate_within_budget_keeps_previous_ticket_and_delta(
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        env = _seed_menu_env(session)
+        service = MenuService(session)
+        menu = _generate(session, env)
+
+        rice_product = session.get(Product, env.rice_product_id)
+        assert rice_product is not None
+        rice_product.package_price_cents = 150
+        session.commit()
+
+        revalidated = service.revalidate(menu.id)
+
+        assert revalidated.ticket_cents > BASE_TICKET_CENTS
+        assert revalidated.ticket_cents <= revalidated.budget_cents
+        assert revalidated.previous_ticket_cents == BASE_TICKET_CENTS
+        assert revalidated.revalidated_ticket_cents == revalidated.ticket_cents
+        assert revalidated.revalidated_at is not None
+        assert revalidated.price_status == "stale"
+        service.verify_identities(menu.id)
+
+        # Una segunda revalidación sin cambios en los precios vuelve a current
+        # y deja un delta de cero, sin perder el snapshot.
+        unchanged = service.revalidate(menu.id)
+        assert unchanged.price_status == "current"
+        assert unchanged.previous_ticket_cents == unchanged.ticket_cents
+        assert unchanged.revalidated_ticket_cents == unchanged.ticket_cents
+        service.verify_identities(menu.id)
+
+
+def test_failed_sync_blocks_generation_but_not_revalidation(
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        env = _seed_menu_env(session)
+        service = MenuService(session)
+        menu = _generate(session, env)
+
+        make_sync_run(session, status="failed")
+        session.commit()
+
+        source = get_price_source_status(session)
+        assert source.price_source == "local_copy"
+        assert source.using_local_copy is True
+        assert source.latest_valid is not None
+        assert source.latest_valid.id < source.latest_attempt.id
+
+        with pytest.raises(MenuServiceError) as error:
+            service.generate(
+                profile_id=1,
+                people=2,
+                days=1,
+                budget_cents=BUDGET_CENTS,
+                settings=MenuSettings(),
+                optimization=_result(env),
+            )
+        assert error.value.code == "WAREHOUSE_UNAVAILABLE"
+
+        revalidated = service.revalidate(menu.id)
+        assert revalidated.price_status == "current"
+        service.verify_identities(menu.id)
+
+
+def test_latest_sync_from_another_warehouse_blocks_revalidation(
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        env = _seed_menu_env(session)
+        service = MenuService(session)
+        menu = _generate(session, env)
+        menu_id = menu.id
+
+        make_sync_run(session, postal_code="28001", warehouse="9999")
+        session.commit()
+
+        with pytest.raises(MenuServiceError) as error:
+            service.revalidate(menu_id)
+
+        assert error.value.code == "WAREHOUSE_UNAVAILABLE"
+        assert error.value.status_code == 503
+        session.expire_all()
+        unchanged = session.get(Menu, menu_id)
+        assert unchanged is not None
+        assert unchanged.ticket_cents == BASE_TICKET_CENTS
+        service.verify_identities(menu_id)
+
+
+def test_product_from_another_warehouse_is_rejected_in_recalculation(
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        env = _seed_menu_env(session)
+        service = MenuService(session)
+        menu = _generate(session, env)
+        bad_run = make_sync_run(session, postal_code="28001", warehouse="9999")
+        make_sync_run(session)  # la última sync completa vuelve a ser válida
+        chicken = session.get(Product, env.chicken_product_id)
+        assert chicken is not None
+        chicken.last_sync_run_id = bad_run.id
+        session.commit()
+
+        with pytest.raises(MenuServiceError) as error:
+            service.revalidate(menu.id)
+
+        assert error.value.code == "WAREHOUSE_UNAVAILABLE"
+        assert error.value.details["products"][0]["sync_run_id"] == bad_run.id
 
 
 def test_recalculate_uses_persisted_composition_of_the_entry(

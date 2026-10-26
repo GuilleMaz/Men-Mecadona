@@ -99,6 +99,12 @@ class CatalogStatusOut(BaseModel):
     prices_captured_at: datetime | None
     postal_code: str
     warehouse: str | None
+    #: F5.1: origen real de los precios y motivo del fallback a la copia local.
+    last_valid_sync: SyncRunOut | None = None
+    price_source: Literal["current", "local_copy", "unavailable"] = "unavailable"
+    using_local_copy: bool = False
+    fallback_reason: str | None = None
+    price_age_hours: int | None = None
 
 
 class SyncStartedOut(BaseModel):

@@ -82,6 +82,9 @@ class MenuSummary(BaseModel):
     pantry_consumption_cents: int
     leftover_value_cents: int
     revalidated_ticket_cents: int | None
+    previous_ticket_cents: int | None = None
+    price_delta_cents: int | None = None
+    revalidated_at: datetime | None = None
     violations: int
     relaxations: list[str] = Field(default_factory=list)
     postal_code: str
@@ -235,6 +238,10 @@ class ShoppingList(BaseModel):
     consumption_cents: int
     pantry_consumption_cents: int
     leftover_value_cents: int
+    revalidated_ticket_cents: int | None = None
+    previous_ticket_cents: int | None = None
+    price_delta_cents: int | None = None
+    revalidated_at: datetime | None = None
     checked_total_cents: int
     item_count: int
     checked_count: int

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowLeft, Download, LoaderCircle, ShoppingBasket } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import { BudgetBar } from '@/components/menu/BudgetBar';
@@ -58,6 +58,7 @@ export function MenuDetailPage() {
   const [excludeTarget, setExcludeTarget] = useState<MenuEntry | null>(null);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const autoRevalidatedFor = useRef<number | null>(null);
 
   const menuQuery = useQuery({
     queryKey: ['menu', menuId],
@@ -89,10 +90,11 @@ export function MenuDetailPage() {
     },
   });
 
-  const revalidateMutation = useMutation({
+  const revalidateMutation = useMutation<MenuDetail, Error, { silent?: boolean }>({
     mutationFn: () => revalidateMenu(menuId),
-    onSuccess: (menu) => {
+    onSuccess: (menu, variables) => {
       applyMenu(menu);
+      if (variables.silent) return;
       setStatusMessage(
         menu.price_status === 'stale'
           ? 'Revalidación completada: los precios actuales elevan el ticket por encima del presupuesto. Se conserva el menú guardado.'
@@ -100,6 +102,18 @@ export function MenuDetailPage() {
       );
     },
   });
+
+  // Al abrir un menú guardado se revalida una vez con los precios actuales.
+  // Si ya estaba marcado como stale, se respeta el aviso persistido y se deja
+  // que el usuario decida revalidar o regenerar.
+  const revalidate = revalidateMutation.mutate;
+  useEffect(() => {
+    const loaded = menuQuery.data;
+    if (!loaded || autoRevalidatedFor.current === loaded.id) return;
+    autoRevalidatedFor.current = loaded.id;
+    if (loaded.price_status !== 'current') return;
+    revalidate({ silent: true });
+  }, [menuQuery.data, revalidate]);
 
   const regenerateMutation = useMutation({
     mutationFn: () => regenerateMenu(menuId),
@@ -188,7 +202,7 @@ export function MenuDetailPage() {
       <MenuHeader
         menu={menu}
         isRevalidating={revalidateMutation.isPending}
-        onRevalidate={() => revalidateMutation.mutate()}
+        onRevalidate={() => revalidateMutation.mutate({})}
         onRegenerate={() => setRegenerateOpen(true)}
       />
 
@@ -218,7 +232,7 @@ export function MenuDetailPage() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => revalidateMutation.mutate()}
+              onClick={() => revalidateMutation.mutate({})}
             >
               Reintentar
             </Button>

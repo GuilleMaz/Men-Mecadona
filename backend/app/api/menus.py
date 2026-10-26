@@ -192,6 +192,11 @@ def _settings(menu: Menu) -> MenuSettings:
 
 
 def _menu_summary(menu: Menu) -> MenuSummary:
+    price_delta = (
+        menu.revalidated_ticket_cents - menu.previous_ticket_cents
+        if menu.revalidated_ticket_cents is not None and menu.previous_ticket_cents is not None
+        else None
+    )
     return MenuSummary(
         id=menu.id,
         people=menu.people,
@@ -205,6 +210,9 @@ def _menu_summary(menu: Menu) -> MenuSummary:
         pantry_consumption_cents=menu.pantry_consumption_cents,
         leftover_value_cents=menu.leftover_value_cents,
         revalidated_ticket_cents=menu.revalidated_ticket_cents,
+        previous_ticket_cents=menu.previous_ticket_cents,
+        price_delta_cents=price_delta,
+        revalidated_at=menu.revalidated_at,
         violations=menu.violations,
         relaxations=list(menu.relaxation_codes_json or []),
         postal_code=menu.postal_code,
@@ -357,6 +365,14 @@ def _shopping_list_out(session: Session, menu: Menu) -> ShoppingList:
         consumption_cents=menu.consumption_cents,
         pantry_consumption_cents=menu.pantry_consumption_cents,
         leftover_value_cents=menu.leftover_value_cents,
+        revalidated_ticket_cents=menu.revalidated_ticket_cents,
+        previous_ticket_cents=menu.previous_ticket_cents,
+        price_delta_cents=(
+            menu.revalidated_ticket_cents - menu.previous_ticket_cents
+            if menu.revalidated_ticket_cents is not None and menu.previous_ticket_cents is not None
+            else None
+        ),
+        revalidated_at=menu.revalidated_at,
         checked_total_cents=sum(item.subtotal_cents for item in entries if item.checked),
         item_count=len(entries),
         checked_count=sum(1 for item in entries if item.checked),

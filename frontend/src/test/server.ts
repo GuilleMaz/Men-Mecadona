@@ -521,6 +521,9 @@ const BASE_MENU: MenuDetail = {
   pantry_consumption_cents: 20,
   leftover_value_cents: 21,
   revalidated_ticket_cents: null,
+  previous_ticket_cents: null,
+  price_delta_cents: null,
+  revalidated_at: null,
   violations: 0,
   relaxations: [],
   postal_code: '22002',
@@ -651,6 +654,9 @@ function summaryOf(detail: MenuDetail): MenuSummary {
     pantry_consumption_cents: detail.pantry_consumption_cents,
     leftover_value_cents: detail.leftover_value_cents,
     revalidated_ticket_cents: detail.revalidated_ticket_cents,
+    previous_ticket_cents: detail.previous_ticket_cents,
+    price_delta_cents: detail.price_delta_cents,
+    revalidated_at: detail.revalidated_at,
     violations: detail.violations,
     relaxations: detail.relaxations,
     postal_code: detail.postal_code,
@@ -744,6 +750,10 @@ function buildShoppingList(): ShoppingList {
     consumption_cents: detail.consumption_cents,
     pantry_consumption_cents: detail.pantry_consumption_cents,
     leftover_value_cents: detail.leftover_value_cents,
+    revalidated_ticket_cents: detail.revalidated_ticket_cents,
+    previous_ticket_cents: detail.previous_ticket_cents,
+    price_delta_cents: detail.price_delta_cents,
+    revalidated_at: detail.revalidated_at,
     checked_total_cents: checkedItems.reduce((sum, item) => sum + item.subtotal_cents, 0),
     item_count: items.length,
     checked_count: checkedItems.length,
@@ -777,6 +787,11 @@ export const server = setupServer(
       prices_captured_at: null,
       postal_code: '22002',
       warehouse: null,
+      last_valid_sync: null,
+      price_source: 'unavailable',
+      using_local_copy: false,
+      fallback_reason: 'El catálogo local está vacío.',
+      price_age_hours: null,
     }),
   ),
   http.post('/api/catalog/sync', () =>
@@ -948,7 +963,10 @@ export const server = setupServer(
   http.post('/api/menus/:menuId/revalidate', ({ params }) => {
     if (Number(params.menuId) !== menuState.detail.id) return menuNotFound();
     menuState.detail.price_status = 'current';
+    menuState.detail.previous_ticket_cents = menuState.detail.ticket_cents;
     menuState.detail.revalidated_ticket_cents = null;
+    menuState.detail.price_delta_cents = null;
+    menuState.detail.revalidated_at = null;
     menuState.detail.updated_at = nowIso();
     return HttpResponse.json(structuredClone(menuState.detail));
   }),

@@ -12,9 +12,12 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Crea tu menú' })).toBeInTheDocument();
   });
 
-  it('navega al catálogo de platos y a ajustes', async () => {
+  it('navega al catálogo de platos, al historial y a ajustes', async () => {
     const user = userEvent.setup();
     renderApp();
+
+    await user.click(screen.getByRole('link', { name: 'Historial' }));
+    expect(await screen.findByRole('heading', { name: 'Historial de menús' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: 'Platos' }));
     expect(screen.getByRole('heading', { name: 'Catálogo de platos' })).toBeInTheDocument();

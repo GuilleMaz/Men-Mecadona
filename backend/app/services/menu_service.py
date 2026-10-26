@@ -32,6 +32,7 @@ from app.models.dishes import Dish, DishIngredient
 from app.models.ingredients import Ingredient, IngredientProduct
 from app.models.menu import MENU_SLOTS, Menu, MenuEntry, MenuEntryIngredient, ShoppingItem
 from app.models.profile import Exclusion, Profile
+from app.models.types import utcnow
 from app.schemas.menu import MenuSettings, PantrySnapshot
 from app.services.eligibility import (
     DishEligibility,
@@ -49,6 +50,7 @@ from app.services.optimizer import (
     optimize_menu,
     time_limits_from_total,
 )
+from app.services.price_source import get_price_source_status
 from app.services.pricing import (
     PricingError,
     ProductFormat,
@@ -250,17 +252,22 @@ class MenuService:
             menu = self._require_menu(menu_id)
             if not enforce_budget:
                 return self._revalidate_prices(menu)
+            previous_ticket = menu.ticket_cents
             previous_signature = self._rebuild_children(menu)
             self._enforce_budget(menu, enforce_budget=True)
             if mark_stale:
+                menu.previous_ticket_cents = previous_ticket
                 menu.revalidated_ticket_cents = menu.ticket_cents
                 current_signature = self._shopping_signature(list(menu.shopping_items))
                 menu.price_status = (
                     "stale" if current_signature != previous_signature else "current"
                 )
+                menu.revalidated_at = utcnow()
             else:
                 menu.price_status = "current"
+                menu.previous_ticket_cents = None
                 menu.revalidated_ticket_cents = None
+                menu.revalidated_at = None
             self.verify_identities(menu.id)
             self.session.commit()
             return self._require_menu(menu.id)
@@ -269,15 +276,27 @@ class MenuService:
             raise
 
     def _revalidate_prices(self, menu: Menu) -> Menu:
-        """Recalcula precios sin romper el invariante de presupuesto."""
+        """Recalcula precios sin romper el invariante de presupuesto.
+
+        ``ticket_cents`` sigue siendo el ticket del snapshot válido. Si los
+        precios actuales caben, el snapshot se actualiza y ``previous_ticket_cents``
+        conserva el importe anterior para mostrar el delta. Si no caben, se
+        conserva el snapshot y ``revalidated_ticket_cents`` expone el recalculado.
+        """
         menu_id = menu.id
+        previous_ticket = menu.ticket_cents
         try:
             with self.session.begin_nested():
                 previous_signature = self._rebuild_children(menu, budget_mode="signal")
                 current_signature = self._shopping_signature(list(menu.shopping_items))
+                menu.previous_ticket_cents = previous_ticket
                 menu.revalidated_ticket_cents = menu.ticket_cents
+                menu.revalidated_at = utcnow()
                 menu.price_status = (
-                    "stale" if current_signature != previous_signature else "current"
+                    "stale"
+                    if current_signature != previous_signature
+                    or menu.ticket_cents != previous_ticket
+                    else "current"
                 )
                 self.verify_identities(menu.id)
         except _OverBudgetRevalidation as exc:
@@ -285,7 +304,9 @@ class MenuService:
             # snapshot válido y se expone el ticket recalculado para el aviso.
             self.session.expire_all()
             menu = self._require_menu(menu_id)
+            menu.previous_ticket_cents = menu.ticket_cents
             menu.revalidated_ticket_cents = exc.ticket_cents
+            menu.revalidated_at = utcnow()
             menu.price_status = "stale"
             self.session.commit()
             return self._require_menu(menu_id)
@@ -577,7 +598,9 @@ class MenuService:
             self._rebuild_children(menu, settings=settings)
             self._enforce_budget(menu, enforce_budget=True)
             menu.price_status = "current"
+            menu.previous_ticket_cents = None
             menu.revalidated_ticket_cents = None
+            menu.revalidated_at = None
 
             self.verify_identities(menu.id)
             self.session.commit()
@@ -749,6 +772,10 @@ class MenuService:
         """
         resolved_settings = settings or self._settings(menu)
         preferences = self._preferences(resolved_settings)
+        # Cualquier recálculo usa precios de la última copia confirmada. Si esa
+        # copia es de otro almacén, no se mezcla con la anterior. Una sync
+        # fallida posterior permite revalidar con la última copia válida.
+        self._ensure_recalculation_source()
         entries = list(menu.entries)
         if len(entries) != menu.days * 2:
             raise self._inconsistent_menu(
@@ -897,6 +924,7 @@ class MenuService:
                 },
             )
         self.session.flush()
+        self._ensure_product_price_source(menu)
         return previous_signature
 
     def _entry_requirements(
@@ -1030,45 +1058,99 @@ class MenuService:
             ) from exc
 
     def _resolve_sync_run(self, sync_run_id: int | None) -> int:
-        """Confirma que los precios proceden de 22002/4389.
+        """Confirma que la última copia de precios procede de 22002/4389.
 
-        Si se indica una sync concreta, debe existir, haber terminado y usar el
-        almacén esperado. Si se omite, se toma la última sync válida; sin ella no
-        se genera menú (invariante 10 de `AGENTS.md`).
+        Generar un menú nuevo exige que la última sincronización completa sea
+        válida y no haya una sync fallida posterior: la copia local solo sirve
+        para consultar menús guardados, nunca para generar. Si se indica una
+        sync concreta, debe existir, haber terminado y usar el almacén esperado.
         """
-        valid_statuses = ("success", "partial")
-        if sync_run_id is not None:
-            run = self.session.get(SyncRun, sync_run_id)
-            if (
-                run is None
-                or run.status not in valid_statuses
-                or run.postal_code != POSTAL_CODE
-                or run.warehouse != EXPECTED_WAREHOUSE
-            ):
-                raise MenuServiceError(
-                    "WAREHOUSE_UNAVAILABLE",
-                    "La sincronización indicada no confirma el almacén 4389 para el CP 22002.",
-                    status_code=503,
-                    details={"sync_run_id": sync_run_id},
-                )
-            return run.id
-
-        run = self.session.scalar(
-            select(SyncRun)
-            .where(
-                SyncRun.status.in_(valid_statuses),
-                SyncRun.postal_code == POSTAL_CODE,
-                SyncRun.warehouse == EXPECTED_WAREHOUSE,
-            )
-            .order_by(SyncRun.id.desc())
-        )
-        if run is None:
+        source = get_price_source_status(self.session)
+        if source.price_source != "current" or source.latest_valid is None:
             raise MenuServiceError(
                 "WAREHOUSE_UNAVAILABLE",
-                "No hay una sincronización confirmada para el CP 22002 y el almacén 4389.",
+                source.fallback_reason
+                or "No hay una copia de precios actual del CP 22002 y almacén 4389.",
                 status_code=503,
+                details={
+                    "price_source": source.price_source,
+                    "postal_code": (
+                        source.latest_completed.postal_code
+                        if source.latest_completed is not None
+                        else None
+                    ),
+                    "warehouse": (
+                        source.latest_completed.warehouse
+                        if source.latest_completed is not None
+                        else None
+                    ),
+                },
+            )
+        if sync_run_id is None:
+            return source.latest_valid.id
+
+        run = self.session.get(SyncRun, sync_run_id)
+        if (
+            run is None
+            or run.status not in ("success", "partial")
+            or run.postal_code != POSTAL_CODE
+            or run.warehouse != EXPECTED_WAREHOUSE
+        ):
+            raise MenuServiceError(
+                "WAREHOUSE_UNAVAILABLE",
+                "La sincronización indicada no confirma el almacén 4389 para el CP 22002.",
+                status_code=503,
+                details={"sync_run_id": sync_run_id},
             )
         return run.id
+
+    def _ensure_recalculation_source(self) -> None:
+        """Permite revalidar con la copia local válida aunque la última sync falle."""
+        source = get_price_source_status(self.session)
+        if source.latest_valid is None:
+            raise MenuServiceError(
+                "WAREHOUSE_UNAVAILABLE",
+                source.fallback_reason
+                or "No hay una copia de precios válida del CP 22002 y almacén 4389.",
+                status_code=503,
+                details={"price_source": source.price_source},
+            )
+
+    def _ensure_product_price_source(self, menu: Menu) -> None:
+        """Rechaza productos actualizados por una sync de otro almacén.
+
+        Los productos sin sync asociada (fixtures antiguas o datos importados)
+        se aceptan; los que tienen `last_sync_run_id` deben apuntar a una copia
+        de 22002/4389. Así una sync de otro almacén no puede colarse en una
+        revalidación o una regeneración.
+        """
+        product_ids = {item.product_id for item in menu.shopping_items}
+        for entry in menu.entries:
+            product_ids.update(row.product_id for row in entry.ingredients)
+        if not product_ids:
+            return
+        rows = self.session.execute(
+            select(Product.id, SyncRun.id, SyncRun.postal_code, SyncRun.warehouse)
+            .join(SyncRun, Product.last_sync_run_id == SyncRun.id)
+            .where(Product.id.in_(product_ids))
+        ).all()
+        invalid = [
+            {
+                "product_id": product_id,
+                "sync_run_id": run_id,
+                "postal_code": postal_code,
+                "warehouse": warehouse,
+            }
+            for product_id, run_id, postal_code, warehouse in rows
+            if postal_code != POSTAL_CODE or warehouse != EXPECTED_WAREHOUSE
+        ]
+        if invalid:
+            raise MenuServiceError(
+                "WAREHOUSE_UNAVAILABLE",
+                "El menú usa precios de una copia que no es del CP 22002 y almacén 4389.",
+                status_code=503,
+                details={"products": invalid},
+            )
 
     @staticmethod
     def _preferences(settings: MenuSettings) -> PreferenceSnapshot:
@@ -1219,7 +1301,9 @@ class MenuService:
         if menu.status != "relaxed":
             menu.status = "feasible"
         menu.price_status = "current"
+        menu.previous_ticket_cents = None
         menu.revalidated_ticket_cents = None
+        menu.revalidated_at = None
 
     @staticmethod
     def _occurrences(menu: Menu, dish_id: int, *, exclude_entry_id: int) -> int:

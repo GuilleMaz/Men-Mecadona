@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DishesPage } from '@/pages/DishesPage';
+import { HistoryPage } from '@/pages/HistoryPage';
 import { MenuDetailPage } from '@/pages/MenuDetailPage';
 import { MenuPage } from '@/pages/MenuPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -15,6 +16,7 @@ export default function App() {
         <Route index element={<MenuPage />} />
         <Route path="menus/:id" element={<MenuDetailPage />} />
         <Route path="menus/:id/shopping-list" element={<ShoppingListPage />} />
+        <Route path="history" element={<HistoryPage />} />
         <Route path="dishes" element={<DishesPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />

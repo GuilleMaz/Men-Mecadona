@@ -1,5 +1,99 @@
 # Decisions
 
+## 2026-10-26 — Resiliencia de precios, entrega y producción local (F5)
+
+### Problema
+
+F5 debía hacer que la app siguiera siendo fiable cuando Mercadona falla o los
+precios cambian, sin mezclar almacenes ni romper el presupuesto de un menú
+guardado. También había que decidir cómo mostrar el delta de precios, cómo
+servir la UI compilada en un solo proceso, cómo organizar backup/restore y qué
+automatizar en la suite frente a scripts manuales.
+
+### Decisión
+
+- La copia local solo se considera fuente de precios actual si la última sync
+  completa es de CP 22002 / almacén 4389. `price_source` distingue `current`,
+  `local_copy` y `unavailable`. Una sync fallida posterior produce `local_copy`:
+  permite consultar y revalidar menús guardados, pero `MenuService.generate`
+  exige `current`. Una última sync de otro almacén bloquea cualquier recálculo.
+- La revalidación actualiza el snapshot si el ticket cabe y guarda
+  `previous_ticket_cents`, `revalidated_ticket_cents`, `price_delta_cents` y
+  `revalidated_at`. Si el ticket no cabe, se conserva el snapshot válido y solo
+  se expone el recalculado. El delta se calcula como
+  `revalidated_ticket_cents - previous_ticket_cents`; así funciona tanto si el
+  snapshot se actualizó como si se conservó.
+- La UI revalida automáticamente una vez al abrir un menú `current` y mantiene
+  el aviso si ya estaba `stale`. Revalidar en cada render o auto-resolver un
+  `stale` ocultaría el cambio de precio que el usuario debe ver.
+- `price_source.py` es la fuente única para catálogo y menús. `MenuService`
+  además comprueba que los productos usados no apuntan a una sync de otro
+  almacén, porque una base podría contener productos de una sync inválida aunque
+  la última copia global sea correcta.
+- El frontend compilado se sirve en producción con un `StaticFiles` propio que
+  devuelve `index.html` para rutas del cliente, pero no para `/api/*`
+  inexistentes, recursos con extensión ni `/docs`/`/redoc`. Se prefiere un solo
+  proceso Uvicorn en local antes que un servidor estático adicional.
+- `run.ps1 -Prod` compila antes de arrancar: FastAPI decide el montaje al crear
+  la app y un build posterior no se montaría en caliente.
+- Backup/restore son scripts manuales: usan la API de backup de SQLite,
+  `PRAGMA integrity_check`, validación de esquema y `os.replace` atómico. La
+  restauración exige `--force` si ya existe una base.
+- La auditoría de dependencias vive en `audit.ps1` y no en `check.ps1`: necesita
+  red y cambia con el tiempo; la suite diaria debe ser determinista.
+- El benchmark de endpoints es un script manual contra la copia local, igual que
+  el del solver; los tests de integración usan SQLite temporal y catálogos
+  sintéticos.
+
+### Justificación
+
+- No generar menús nuevos con una copia potencialmente desactualizada protege la
+  promesa «ticket ≤ presupuesto», pero seguir leyendo y revalidando menús evita
+  que la app quede inservible sin red.
+- Separar `ticket_cents` (snapshot válido) de `revalidated_ticket_cents`
+  (cálculo actual) permite mostrar el delta sin persistir nunca un ticket por
+  encima del presupuesto.
+- Servir la SPA desde FastAPI reduce la operación local a un proceso y elimina
+  CORS en producción; excluir `/api/*` evita que un error de ruta se enmascare
+  como HTML.
+- Los scripts manuales mantienen `check.ps1` rápido y sin red, y documentan los
+  DoD medidos en el equipo de desarrollo.
+
+### Resultado
+
+- 354 tests backend y 54 frontend en verde; auditoría sin hallazgos.
+- Sync 7,72 s; generación 14d/4p p95 3,73 s; `/api/dishes` p95 32,00 ms.
+- `run.ps1 -Prod` verificado con `/` 200, `/history` 200, `/api/health` 200 y
+  `/docs` 404 en un solo proceso.
+- Backup/restore probados sobre SQLite temporal; privacidad y contrato sin pasos
+  cubiertos por tests.
+
+### Alternativas
+
+- Generar menús con la última copia tras una sync fallida: descartado; la copia
+  puede haber cambiado de precio y no se puede confirmar el almacén.
+- Revalidar siempre al abrir un menú `stale`: descartado; oculta el aviso que el
+  usuario necesita para decidir.
+- Montar `frontend/dist` con `StaticFiles(html=True)` sin fallback: descartado;
+  las rutas `/menus/:id` y `/history` darían 404 al recargar.
+- Servir la UI con Vite también en producción: descartado; añade un segundo
+  proceso y CORS innecesario.
+- Integrar `pip-audit`/`npm audit` en `check.ps1`: descartado; la suite quedaría
+  acoplada a la red y a la base de vulnerabilidades del día.
+
+### Limitaciones conocidas
+
+- El bundle principal sigue superando 500 kB (541,60 kB, 162,13 kB gzip); no
+  afecta al DoD, pero un code splitting por rutas sería la siguiente mejora.
+- `price_source` bloquea generar mientras hay una sync en curso; el usuario ve
+  el aviso y la copia local anterior.
+- El backup manual requiere detener la app para restaurar; el script lo
+  documenta y `--force` elimina WAL/SHM antiguos.
+- La automatización de accesibilidad es parcial: se cubren nombres accesibles,
+  foco, teclado, diálogos y contraste base, pero no hay auditoría axe.
+
+---
+
 ## 2026-10-26 — API, UI y benchmark de menús (F4.6-F4.9)
 
 ### Problema

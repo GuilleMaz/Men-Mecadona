@@ -11,7 +11,7 @@ export function ShoppingStickyTotal({ list }: { list: ShoppingList }) {
   return (
     <aside
       aria-label="Resumen fijo de la compra"
-      className="sticky bottom-0 z-10 -mx-4 border-t bg-card/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur"
+      className="sticky bottom-0 z-10 -mx-4 border-t bg-card/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur print:hidden"
     >
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3">
         <div>
@@ -46,7 +46,7 @@ export function ShoppingTotals({ list }: { list: ShoppingList }) {
     list.consumption_cents + list.leftover_value_cents;
 
   return (
-    <Card>
+    <Card className="print:break-inside-avoid">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Scale aria-hidden="true" className="size-5 text-primary" />

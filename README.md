@@ -4,9 +4,8 @@ Aplicación web local que genera un menú de **comidas y cenas** para N personas
 N días y un presupuesto, con productos y precios de la tienda online de Mercadona.
 Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiquetas.
 
-> Estado: F4.1-F4.9 completadas (modelos de menú, elegibilidad, optimizador
-> CP-SAT, inviabilidad, servicio transaccional, API pública, UI de menú/lista y
-> batería completa de pruebas). Siguiente: F5 (calidad, resiliencia y entrega).
+> Estado: **F5 completada** (calidad, resiliencia de precios, accesibilidad,
+> historial, exportación/impresión, seguridad, rendimiento y build local).
 > La documentación de alcance está en `PLAN.md` y el detalle de ejecución en
 > `TASKS.md`.
 
@@ -18,8 +17,17 @@ Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiqu
 
 ## Arranque
 
+Desarrollo (backend con recarga + Vite):
+
 ```powershell
 .\run.ps1
+```
+
+Producción local (un solo proceso): compila el frontend y FastAPI sirve la UI y
+la API en `http://127.0.0.1:8000`, sin CORS y sin documentación interactiva:
+
+```powershell
+.\run.ps1 -Prod
 ```
 
 Si PowerShell bloquea el script:
@@ -35,7 +43,8 @@ El script:
 3. Crea el archivo SQLite con WAL, `foreign_keys=ON` y `busy_timeout=5000`.
 4. Aplica las migraciones de Alembic.
 5. Arranca el backend en `http://127.0.0.1:8000`.
-6. Arranca el frontend en `http://localhost:5173`.
+6. En desarrollo, arranca Vite en `http://localhost:5173`; con `-Prod`, compila
+   el frontend y sirve `frontend/dist` desde FastAPI.
 
 La primera vez, si el catálogo está vacío, el backend lo descarga en segundo
 plano (CP 22002, almacén 4389). Después carga el seed de ingredientes/platos y
@@ -62,9 +71,38 @@ regenerar. Si el mínimo no cabe, se muestra un modal con mínimo, déficit y
 sugerencias, y no se guarda ningún menú. La lista de la compra está en
 `/menus/:id/shopping-list`, agrupada por secciones, con checkboxes, «ya lo
 tengo», total sticky, sobras, coste por comida/día/persona y la identidad
-contable visible.
+contable visible. `Historial` lista los menús guardados; cada menú conserva el
+nombre y el coste congelados de sus platos.
 
-Para detener ambos servicios, pulsa `Ctrl+C`.
+Para detener el servicio, pulsa `Ctrl+C`.
+
+## Pantallas principales
+
+- **Menú:** formulario de personas/días/presupuesto, equivalencias €/día y
+  €/comida, generación con estados de carga, menú inviable, timeout y error.
+- **Menú guardado:** rejilla días × comida/cena, estado (`optimal`, `feasible`,
+  `relaxed`), aviso `stale` con delta de precios, CP/almacén/fecha, bloqueo,
+  cambio, exclusión, regeneración y exportación markdown/CSV.
+- **Lista de la compra:** secciones, checkboxes, «ya lo tengo» sobre el snapshot
+  del menú, total sticky, despensa, sobras, coste por comida/día/persona e
+  identidad contable. Se puede imprimir en A4 desde el navegador.
+- **Historial:** menús guardados paginados, con ticket, presupuesto, estado y
+  enlaces al menú y a la lista.
+- **Platos:** búsqueda, filtros, composición, coste del plato y «no me gusta».
+- **Ajustes:** catálogo, alérgenos, exclusiones, despensa y aviso de copia local.
+
+## Resiliencia de precios
+
+La app siempre lee de su copia SQLite local. Esa copia solo se usa para precios
+actuales si la última sincronización completa corresponde al **CP 22002** y al
+**almacén 4389**. Si la última sync falla, la copia válida anterior permite
+consultar y revalidar menús guardados, pero **no generar menús nuevos**. Una
+copia de otro almacén no se mezcla nunca.
+
+Al abrir un menú guardado se revalida una vez con los precios actuales. Si el
+ticket cambia, la UI muestra el ticket anterior, el revalidado y el delta. Si el
+ticket supera el presupuesto, se conserva el snapshot válido y se marca `stale`
+para que el usuario revalide o regenere.
 
 ## Calidad
 
@@ -74,7 +112,16 @@ Para detener ambos servicios, pulsa `Ctrl+C`.
 
 Ejecuta Ruff, mypy y pytest en backend; ESLint, Prettier, TypeScript, Vitest y
 build en frontend; y Ruff sobre los scripts de Python de la raíz. Estado actual:
-336 tests backend, 49 tests frontend y build de producción en verde.
+354 tests backend, 54 tests frontend y build de producción en verde.
+
+Auditoría de dependencias (requiere red):
+
+```powershell
+.\audit.ps1
+```
+
+`pip-audit` no encontró vulnerabilidades y `npm audit --audit-level=high`
+devolvió 0 hallazgos.
 
 ## Coste y preview
 
@@ -88,7 +135,7 @@ Reglas verificadas:
 - la necesidad neta resta la despensa antes de calcular paquetes;
 - el plan de compra mezcla formatos si sale más barato y minimiza el ticket;
 - `ticket + despensa = consumo + sobras` se cumple por ingrediente y por cesta;
-- el preview y la futura lista de la compra comparten el mismo plan canónico.
+- el preview y la lista de la compra comparten el mismo plan canónico.
 
 ## Optimizador, menús y API
 
@@ -111,30 +158,45 @@ El backend genera y persiste menús bajo presupuesto con el catálogo real:
 - Un swap, una exclusión o «ya lo tengo» que superen el presupuesto devuelven
   `BUDGET_EXCEEDED` y no se aplican. `regenerate` conserva los bloqueos.
 
-Comprobaciones manuales:
+## Backup y restauración
+
+Cierra la app antes de restaurar. La copia se valida con `PRAGMA integrity_check`
+y se escribe de forma atómica.
 
 ```powershell
 cd backend
-uv run python ..\scripts\dry_run_menu.py --days 1,2,7,14 --people 1,2,4,10
-uv run python ..\scripts\benchmark_menu.py --runs 20 --days 14 --people 4
+uv run python ..\scripts\backup_db.py
+uv run python ..\scripts\backup_db.py --output D:\copias\cesta.db
+uv run python ..\scripts\restore_db.py --backup D:\copias\cesta.db --force
 ```
 
-`dry_run_menu.py` no persiste menús y `benchmark_menu.py` mide el p95 del solver
-(sin persistir). En el equipo de desarrollo, 20 ejecuciones de 14 días/4 personas
-dieron un p95 de 4,30 s.
+La copia por defecto se guarda en `<CESTA_DATA_DIR>\backups\cesta-<fecha>.db`
+(fuera de OneDrive).
+
+## Rendimiento
+
+```powershell
+cd backend
+uv run python ..\scripts\benchmark_menu.py --runs 20 --days 14 --people 4
+uv run python ..\scripts\benchmark_endpoints.py --runs 20
+```
+
+- Generación 14 días/4 personas: p95 3,73 s (límite 10 s).
+- `/api/dishes`: p95 32,00 ms (límite 200 ms).
+- Sync completa: 7,72 s (límite 2 min; 152/152 subcategorías, 4.292 productos).
+- `/api/catalog/status`: p95 9,91 ms; `/api/menus`: p95 5,58 ms.
 
 ## Cierre de fase
 
 Cada fase se cierra con un único comando:
 
 ```powershell
-.\finish-phase.ps1 -Phase F4 -Summary "optimizador, menu y lista"
+.\finish-phase.ps1 -Phase F5 -Summary "calidad, seguridad y entrega"
 ```
 
 El script ejecuta `check.ps1`, rechaza secretos, bases de datos, `node_modules` y
-`.venv`, crea el commit `F4: optimizador, menu y lista` y lo sube a
-GitHub. Si la calidad falla, no se hace commit. Si el push falla, el commit queda
-local y el script termina con error para poder reintentarlo.
+`.venv`, crea el commit `F5: calidad, seguridad y entrega` y lo sube a GitHub. Si
+la calidad falla, no se hace commit.
 
 ## Estructura
 
@@ -166,8 +228,21 @@ idempotente.
 - `SECURITY.md`: checklist de seguridad local.
 - `project-memory/`: estado, decisiones y próximos pasos.
 
+## Limitaciones del MVP
+
+- Un solo usuario local, sin login y sin acceso por LAN.
+- CP fijo 22002 y almacén 4389; no se configuran desde la UI.
+- Menú solo de comida y cena, sin recetas ni pasos de cocina.
+- El catálogo depende de la API no oficial de Mercadona; si cambia, la sync
+  puede fallar y se conserva la última copia válida.
+- Los alérgenos se filtran fail-closed: si un producto no tiene datos
+  suficientes, se excluye cuando el usuario declara alérgenos.
+- No se automatiza la compra ni se guardan credenciales.
+
 ## Aviso
 
 Cesta no está afiliada a Mercadona. Los precios y la disponibilidad son los de la
 tienda online para el CP 22002 (almacén 4389) y pueden cambiar. La app no sustituye
-el etiquetado oficial de alérgenos.
+el etiquetado oficial de alérgenos: confirma siempre el envase. Los menús
+guardados conservan su snapshot; revalida antes de comprar si los precios han
+cambiado.

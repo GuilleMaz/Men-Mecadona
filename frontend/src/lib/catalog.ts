@@ -28,6 +28,11 @@ export type CatalogStatus = {
   prices_captured_at: string | null;
   postal_code: string;
   warehouse: string | null;
+  last_valid_sync: SyncRun | null;
+  price_source: 'current' | 'local_copy' | 'unavailable';
+  using_local_copy: boolean;
+  fallback_reason: string | null;
+  price_age_hours: number | null;
 };
 
 export type SyncStarted = {

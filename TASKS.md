@@ -1,6 +1,6 @@
 ﻿# TASKS.md — Cesta
 
-> **Estado global:** F4.1-F4.9 completadas el 2026-10-26. Siguiente: F5.
+> **Estado global:** F0-F5 completadas el 2026-10-26. MVP cerrado.
 > **Última actualización:** 2026-10-26
 > **Plan de referencia:** `PLAN.md`
 
@@ -466,23 +466,25 @@
 
 **Estimación:** 2-3 días.
 
-- [ ] **F5.1 — Resiliencia y deriva de precios**
+- [x] **F5.1 — Resiliencia y deriva de precios**
   - Fallback a última copia solo si su `warehouse=4389` y `postal_code=22002`; sirve para consultar menús guardados, no para generar nuevos.
   - Si la copia es de otro almacén, no se usa para precios actuales.
   - Banner de precios desactualizados con delta.
   - Revalidar ticket y lista al abrir un menú guardado con `POST /api/menus/{id}/revalidate`.
   - Marcar `price_status="stale"` y ofrecer recalcular/regenerar.
   - **DoD:** la app sigue operativa sin red; un precio que sube no rompe la promesa sin aviso; no se mezclan almacenes.
+  - **Resultado:** `price_source.py` centraliza el origen de precios; una sync fallida permite consultar/revalidar pero bloquea generar, y una última sync de otro almacén bloquea cualquier recálculo. Migración `20261026_0005` añade `previous_ticket_cents`, `revalidated_at` e índices. La UI revalida una vez al abrir menús actuales y muestra ticket anterior/revalidado/delta. Tests de sync fallida, almacén mezclado, producto de otra sync y delta.
 
-- [ ] **F5.2 — Responsive, accesibilidad, privacidad e historial**
+- [x] **F5.2 — Responsive, accesibilidad, privacidad e historial**
   - Revisar formularios, menú y lista en 1280 px y 768 px.
   - Lista imprimible en A4.
   - Revisión de teclado, foco, contraste y labels.
   - Test de que no hay telemetría ni envío de datos personales.
   - Historial de menús con nombre y coste congelados.
   - **DoD:** flujo completo usable; checklist de accesibilidad y privacidad sin fallos críticos; historial inmutable.
+  - **Resultado:** `/history` paginado con ticket, presupuesto, estado y enlaces; navegación «Historial»; enlace «Saltar al contenido», foco visible, `min-h-10` en navegación y hoja `@media print` A4 que oculta cabecera, acciones y total sticky. Tests de historial, estado vacío/error, revalidación al abrir y snapshot inmutable tras renombrar un plato. Test estático de privacidad sin telemetría ni hosts externos no declarados.
 
-- [ ] **F5.3 — Exportación y seguridad**
+- [x] **F5.3 — Exportación y seguridad**
   - Export markdown/CSV.
   - Escapar fórmulas CSV (`= + - @`).
   - Test de exportación y de inyección CSV.
@@ -490,33 +492,40 @@
   - `pip-audit` / `npm audit`, lockfiles; cero hallazgos `high`/`critical`.
   - Backup/restore de SQLite.
   - **DoD:** checklist sin hallazgos high/critical; backup restaurado en prueba; test de exportación verde.
+  - **Resultado:** `audit.ps1` (pip-audit + npm audit) sin hallazgos; `backup_db.py`/`restore_db.py` con `integrity_check`, validación de esquema y restauración atómica; tests de copia, restauración, copia inválida y `--force`. Export markdown/CSV y escape de fórmulas ya cubiertos por tests.
 
-- [ ] **F5.4 — Documentación**
+- [x] **F5.4 — Documentación**
   - README con instalación, uso, arquitectura y limitaciones.
   - Aviso legal, alérgenos y precios.
   - Capturas o descripción de pantallas.
   - **DoD:** una persona puede arrancar la app siguiendo el README.
+  - **Resultado:** README raíz con arranque dev/prod, pantallas, resiliencia, backup, rendimiento, calidad, limitaciones y aviso legal; READMEs de backend/frontend y `SECURITY.md` actualizados a F5.
 
-- [ ] **F5.5 — Rendimiento**
+- [x] **F5.5 — Rendimiento**
   - Índices y consultas críticas.
   - Medir sync, generación y endpoints.
   - Benchmark de generación con 14 días/4 personas, 20 ejecuciones, en el equipo de desarrollo.
   - **DoD:** sync < 2 min; generación p95 < 10 s (solver 8 s); `/api/dishes` < 200 ms.
+  - **Resultado:** índices nuevos `ix_menus_profile_created_at`, `ix_sync_runs_status_finished_at` e `ix_products_last_sync_run_id`. Sync real 7,72 s (152/152, 4.292 productos). Generación 14d/4p: p50 3,60 s, p95 3,73 s. Endpoints: `/api/dishes` p95 32,00 ms, `/api/catalog/status` 9,91 ms y `/api/menus` 5,58 ms con `scripts/benchmark_endpoints.py`.
 
-- [ ] **F5.6 — Build local**
+- [x] **F5.6 — Build local**
   - `npm run build`.
   - FastAPI sirve el frontend compilado.
   - `run.ps1 -Prod`.
   - **DoD:** un solo proceso sirve app y API.
+  - **Resultado:** `app/static.py` monta `frontend/dist` en producción con fallback SPA, excluye `/api/*` inexistentes y desactiva `/docs`/`/redoc`; `run.ps1 -Prod` compila y arranca solo Uvicorn en `127.0.0.1:8000`. Smoke real: `/` 200, `/history` 200, `/api/health` 200 y `/docs` 404; puerto 8000 liberado al detener.
 
-- [ ] **F5.7 — Tests de integración y privacidad**
+- [x] **F5.7 — Tests de integración y privacidad**
   - Flujo: crear menú → ver menú → lista.
   - Test de API con base temporal.
   - Test de contrato “sin pasos de cocina”.
   - Test de que no hay telemetría ni llamadas a servicios externos no declarados.
   - **DoD:** flujo principal cubierto; privacidad verificada.
+  - **Resultado:** `test_delivery.py` cubre generar con optimizador real → detalle → lista → historial, identidades, snapshot inmutable, contrato sin pasos y escaneo de telemetría/hosts. `test_production_build.py` y `test_backup_restore.py` cubren entrega y operación. Suite final: 354 tests backend y 54 frontend.
 
 **DoD de F5:** MVP instalable, documentado, seguro y probado.
+
+**Estado F5:** cumplido el 2026-10-26. `check.ps1` en verde con 354 tests backend, 54 frontend y build; auditoría sin hallazgos; benchmark 14d/4p p95 3,73 s; sync 7,72 s; producción local verificada con `run.ps1 -Prod`.
 
 ---
 

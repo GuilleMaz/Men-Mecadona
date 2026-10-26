@@ -20,7 +20,7 @@ export function ShoppingSection({
   onAlreadyHave,
 }: ShoppingSectionProps) {
   return (
-    <Card>
+    <Card className="print:break-inside-avoid">
       <CardHeader>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <CardTitle>
@@ -77,6 +77,7 @@ export function ShoppingSection({
                     disabled={isPending}
                     aria-label={`Ya lo tengo: ${item.product_name}`}
                     onClick={() => onAlreadyHave(item)}
+                    className="print:hidden"
                   >
                     {isPending ? (
                       <LoaderCircle aria-hidden="true" className="animate-spin" />

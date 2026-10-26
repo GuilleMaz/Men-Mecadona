@@ -82,6 +82,7 @@ class SyncRun(Base):
         CheckConstraint("categories_failed >= 0", name="ck_sync_runs_categories_failed"),
         CheckConstraint("products_seen >= 0", name="ck_sync_runs_products_seen"),
         Index("ix_sync_runs_started_at", "started_at"),
+        Index("ix_sync_runs_status_finished_at", "status", "finished_at"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -171,6 +172,7 @@ class Product(Base):
         Index("ix_products_name", "name"),
         Index("ix_products_published", "published"),
         Index("ix_products_last_seen_at", "last_seen_at"),
+        Index("ix_products_last_sync_run_id", "last_sync_run_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

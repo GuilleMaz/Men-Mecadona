@@ -74,6 +74,11 @@ function SyncBadge({ status, isSyncing }: { status: SyncStatus | null; isSyncing
 function StatusDetails({ data }: { data: CatalogStatus }) {
   const lastSync = data.last_sync;
   const completed = lastSync ? lastSync.categories_ok + lastSync.categories_failed : 0;
+  const priceSourceLabels = {
+    current: 'Precios actuales',
+    local_copy: 'Última copia local válida',
+    unavailable: 'Sin copia válida',
+  } as const;
 
   return (
     <div className="grid gap-3 text-sm sm:grid-cols-2">
@@ -108,12 +113,21 @@ function StatusDetails({ data }: { data: CatalogStatus }) {
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Precios capturados</p>
         <p className="font-medium">{formatDate(data.prices_captured_at)}</p>
+        {data.price_age_hours !== null ? (
+          <p className="text-xs text-muted-foreground">
+            Hace {numberFormatter.format(data.price_age_hours)} h
+          </p>
+        ) : null}
       </div>
       <div>
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Tienda</p>
         <p className="font-medium">
           CP {data.postal_code} · Almacén {data.warehouse ?? 'sin confirmar'}
         </p>
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Origen de precios</p>
+        <p className="font-medium">{priceSourceLabels[data.price_source]}</p>
       </div>
     </div>
   );
@@ -215,6 +229,38 @@ export function CatalogStatusCard() {
               <p className="text-sm text-muted-foreground">
                 El catálogo está vacío. Pulsa «Actualizar catálogo» para descargarlo.
               </p>
+            ) : null}
+
+            {data.price_source === 'local_copy' ? (
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
+              >
+                <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-medium">Usando la última copia local válida</p>
+                  <p>
+                    {data.fallback_reason ??
+                      'La última sincronización no terminó; se conservan los precios anteriores.'}{' '}
+                    Puedes consultar y revalidar menús guardados, pero no se generarán menús nuevos
+                    hasta que una sincronización confirme el CP 22002 y el almacén 4389.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {data.price_source === 'unavailable' && data.product_count > 0 ? (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+              >
+                <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <p>
+                  {data.fallback_reason ??
+                    'No hay una copia de precios válida del CP 22002 y el almacén 4389.'}{' '}
+                  No se generarán menús nuevos con esta copia.
+                </p>
+              </div>
             ) : null}
 
             {isSyncing && data.last_sync ? (

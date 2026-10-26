@@ -1,5 +1,95 @@
 # Changelog
 
+## 2026-10-26 — F5: calidad, resiliencia de precios y entrega
+
+### Cambios
+
+- Resiliencia de precios: `app/services/price_source.py` decide si la copia local
+  sirve para precios actuales (CP 22002 / almacén 4389). Una sync fallida
+  posterior permite consultar y revalidar menús guardados, pero bloquea la
+  generación; una copia de otro almacén bloquea cualquier recálculo y nunca se
+  mezcla. `MenuService` revalida contra esa fuente y rechaza productos cuyo
+  `last_sync_run_id` apunta a otro almacén.
+- Migración `20261026_0005`: `menus.previous_ticket_cents`, `menus.revalidated_at`
+  e índices `ix_menus_profile_created_at`, `ix_sync_runs_status_finished_at` e
+  `ix_products_last_sync_run_id`. La API expone `previous_ticket_cents`,
+  `price_delta_cents` y `revalidated_at` en menú y lista.
+- Revalidación al abrir: `MenuDetailPage` revalida una vez los menús `current`;
+  si ya están `stale`, conserva el aviso persistido. El banner muestra ticket
+  anterior, revalidado y delta; si el ticket supera el presupuesto se conserva el
+  snapshot válido.
+- Catálogo: `/api/catalog/status` añade `last_valid_sync`, `price_source`
+  (`current|local_copy|unavailable`), `using_local_copy`, `fallback_reason` y
+  `price_age_hours`. Ajustes muestra el origen de precios y el aviso de copia
+  local.
+- Historial: nueva ruta `/history`, página paginada con ticket, presupuesto,
+  estado, fechas y enlaces al menú y a la lista. La navegación incluye Historial.
+- Accesibilidad e impresión: enlace «Saltar al contenido», foco visible,
+  `min-h-10` en navegación, hoja `@media print` A4 y clases `print:hidden` para
+  cabecera, acciones y total sticky. La lista de la compra se imprime desde el
+  navegador.
+- Producción local: `app/static.py` sirve `frontend/dist` con fallback SPA,
+  excluye `/api/*` inexistentes y desactiva `/docs`/`/redoc`. `run.ps1 -Prod`
+  compila el frontend y arranca solo Uvicorn en `127.0.0.1:8000`; el modo dev
+  sigue usando Vite y `--reload`.
+- Seguridad y operación: `audit.ps1` con `pip-audit` y
+  `npm audit --audit-level=high`; `backup_db.py` y `restore_db.py` con
+  `integrity_check`, validación de esquema y restauración atómica.
+- Rendimiento: `benchmark_endpoints.py` mide `/api/health`, `/api/dishes`,
+  `/api/catalog/status` y `/api/menus`; índices nuevos para historial y origen de
+  precios.
+- Tests: `test_delivery.py` (flujo generar → detalle → lista, historial inmutable,
+  contrato sin pasos y privacidad), `test_production_build.py`,
+  `test_backup_restore.py` y ampliaciones de menús/catálogo/UI.
+- Documentación: README raíz/backend/frontend, `SECURITY.md`, `TASKS.md`,
+  `AGENTS.md` y `project-memory/`.
+
+### Verificación
+
+- `.\check.ps1`: Ruff, formato, mypy strict, **354 tests backend**, ESLint,
+  Prettier, TypeScript, **54 tests frontend** y build, todo en verde.
+- `.\audit.ps1`: `pip-audit` sin vulnerabilidades y `npm audit --audit-level=high`
+  con 0 hallazgos.
+- Sync real F5: 152/152 subcategorías, 4.542 productos vistos, 4.292 únicos,
+  178 categorías, 7,72 s, `success`, CP 22002 / almacén 4389.
+- Benchmark 14 días/4 personas, 20 ejecuciones: p50 3,60 s, **p95 3,73 s**,
+  mínimo 3,54 s y máximo 3,76 s.
+- Endpoints: `/api/health` p95 4,06 ms, `/api/dishes` **32,00 ms**,
+  `/api/catalog/status` 9,91 ms y `/api/menus` 5,58 ms.
+- Producción local real con `run.ps1 -Prod`: `/` 200, `/history` 200,
+  `/api/health` 200 y `/docs` 404; un solo proceso y puerto 8000 liberado al
+  detener.
+- Backup/restore probado sobre SQLite temporal; auditoría y privacidad cubiertas
+  sin red en la suite.
+
+### Archivos
+
+- `backend/app/services/price_source.py`, `backend/app/static.py`,
+  `backend/app/services/menu_service.py`, `backend/app/api/catalog.py`,
+  `backend/app/api/menus.py`, `backend/app/schemas/catalog.py`,
+  `backend/app/schemas/menu_api.py`, `backend/app/models/menu.py`,
+  `backend/app/models/catalog.py`, `backend/app/main.py`, `backend/app/config.py`
+- `backend/alembic/versions/20261026_0005_price_resilience.py`
+- `backend/tests/test_delivery.py`, `test_production_build.py`,
+  `test_backup_restore.py`, `test_menu_service.py`, `test_menus_api.py`,
+  `test_catalog_api.py`, migraciones de catálogo/dominio/menús
+- `frontend/src/pages/HistoryPage.tsx`, `HistoryPage.test.tsx`,
+  `MenuDetailPage.tsx`, `ShoppingListPage.tsx`, `App.tsx`,
+  `components/layout/AppLayout.tsx`, `components/menu/MenuHeader.tsx`,
+  `components/catalog/CatalogStatusCard.tsx`, `components/shopping/*`,
+  `lib/menu.ts`, `lib/catalog.ts`, `index.css`, `src/test/server.ts`
+- `scripts/backup_db.py`, `restore_db.py`, `benchmark_endpoints.py`
+- `run.ps1`, `audit.ps1`, `README.md`, `backend/README.md`,
+  `frontend/README.md`, `SECURITY.md`, `AGENTS.md`, `TASKS.md`,
+  `project-memory/**`
+
+### Motivo
+
+- Cerrar el MVP con la app operativa sin red sobre la última copia válida, sin
+  mezclar almacenes, con delta de precios visible, historial inmutable,
+  accesibilidad e impresión A4, auditoría de dependencias, backup/restore,
+  rendimiento medido y un único proceso de producción local.
+
 ## 2026-10-26 — F4.6-F4.9: API, UI de menú/lista y pruebas de rendimiento
 
 ### Cambios

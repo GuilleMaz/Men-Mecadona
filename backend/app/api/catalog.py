@@ -22,6 +22,7 @@ from app.schemas.catalog import (
     SyncStartedOut,
 )
 from app.services.catalog_sync import CatalogSyncService, SyncInProgressError
+from app.services.price_source import get_price_source_status
 
 router = APIRouter(prefix="/catalog", tags=["catálogo"])
 
@@ -84,6 +85,11 @@ def catalog_status(session: SessionDep, service: SyncServiceDep) -> CatalogStatu
             prices_captured_at=None,
             postal_code=POSTAL_CODE,
             warehouse=None,
+            last_valid_sync=None,
+            price_source="unavailable",
+            using_local_copy=False,
+            fallback_reason="El catálogo no está inicializado.",
+            price_age_hours=None,
         )
 
     product_count = session.scalar(select(func.count()).select_from(Product)) or 0
@@ -95,16 +101,10 @@ def catalog_status(session: SessionDep, service: SyncServiceDep) -> CatalogStatu
     subcategory_count = (
         session.scalar(select(func.count()).select_from(Category).where(Category.level == 1)) or 0
     )
-    last_run = session.scalar(
-        select(SyncRun).order_by(SyncRun.started_at.desc(), SyncRun.id.desc()).limit(1)
-    )
-    last_success = session.scalar(
-        select(SyncRun)
-        .where(SyncRun.status.in_(("success", "partial")))
-        .order_by(SyncRun.started_at.desc(), SyncRun.id.desc())
-        .limit(1)
-    )
-    prices_captured_at = session.scalar(select(func.max(Product.last_seen_at)))
+    last_run = session.scalar(select(SyncRun).order_by(SyncRun.id.desc()).limit(1))
+    price_source = get_price_source_status(session)
+    last_success = price_source.latest_valid
+    prices_captured_at = price_source.prices_captured_at
 
     return CatalogStatusOut(
         schema_ready=True,
@@ -119,6 +119,13 @@ def catalog_status(session: SessionDep, service: SyncServiceDep) -> CatalogStatu
         prices_captured_at=prices_captured_at,
         postal_code=last_run.postal_code if last_run else POSTAL_CODE,
         warehouse=last_run.warehouse if last_run else None,
+        last_valid_sync=(
+            _to_sync_run_out(last_success, subcategory_count) if last_success else None
+        ),
+        price_source=price_source.price_source,
+        using_local_copy=price_source.using_local_copy,
+        fallback_reason=price_source.fallback_reason,
+        price_age_hours=price_source.price_age_hours,
     )
 
 

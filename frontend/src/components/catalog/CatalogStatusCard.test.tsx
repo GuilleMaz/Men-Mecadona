@@ -35,6 +35,11 @@ function catalogStatus(overrides: Partial<CatalogStatus> = {}): CatalogStatus {
     prices_captured_at: '2026-10-26T10:00:08+00:00',
     postal_code: '22002',
     warehouse: '4389',
+    last_valid_sync: LAST_SYNC,
+    price_source: 'current',
+    using_local_copy: false,
+    fallback_reason: null,
+    price_age_hours: 2,
     ...overrides,
   };
 }
@@ -127,6 +132,22 @@ describe('CatalogStatusCard', () => {
     expect(
       await screen.findByText('Ya hay una sincronización de catálogo en curso.'),
     ).toBeInTheDocument();
+  });
+
+  it('avisa cuando se usa la última copia local válida', async () => {
+    mockStatus(
+      catalogStatus({
+        price_source: 'local_copy',
+        using_local_copy: true,
+        fallback_reason: 'Mercadona no está disponible.',
+        last_sync: { ...LAST_SYNC, status: 'failed', error: 'Mercadona no está disponible.' },
+      }),
+    );
+    renderApp(['/settings']);
+
+    expect(await screen.findByText('Usando la última copia local válida')).toBeInTheDocument();
+    expect(screen.getAllByText(/Mercadona no está disponible/).length).toBeGreaterThan(0);
+    expect(screen.getByText('Última copia local válida')).toBeInTheDocument();
   });
 
   it('avisa de que la base no está migrada y bloquea la sync', async () => {

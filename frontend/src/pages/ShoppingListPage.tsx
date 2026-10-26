@@ -9,7 +9,7 @@ import { ShoppingStickyTotal, ShoppingTotals } from '@/components/shopping/Shopp
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DomainRequestError } from '@/lib/domain';
-import { formatDateTime, MENU_STATUS_LABELS, PRICE_STATUS_LABELS } from '@/lib/labels';
+import { formatDateTime, formatEuro, MENU_STATUS_LABELS, PRICE_STATUS_LABELS } from '@/lib/labels';
 import {
   fetchShoppingList,
   patchShoppingItem,
@@ -117,7 +117,7 @@ export function ShoppingListPage() {
 
   return (
     <div className="space-y-6 pb-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Button asChild variant="ghost" size="sm">
           <Link to={`/menus/${menuId}`}>
             <ArrowLeft aria-hidden="true" />
@@ -169,14 +169,27 @@ export function ShoppingListPage() {
           className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
         >
           <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <p>
-            Los precios han cambiado desde que se generó el menú. La lista conserva el ticket
-            guardado.{' '}
-            <Link to={`/menus/${menuId}`} className="underline underline-offset-4">
-              Revalida el menú
-            </Link>{' '}
-            para actualizarlo.
-          </p>
+          <div className="space-y-1">
+            <p>
+              Los precios han cambiado desde que se generó el menú. La lista conserva el ticket
+              guardado.{' '}
+              <Link to={`/menus/${menuId}`} className="underline underline-offset-4">
+                Revalida el menú
+              </Link>{' '}
+              para actualizarlo.
+            </p>
+            {list.revalidated_ticket_cents !== null ? (
+              <p className="text-xs">
+                Ticket revalidado: <strong>{formatEuro(list.revalidated_ticket_cents)}</strong>
+                {list.price_delta_cents !== null
+                  ? ` · diferencia ${list.price_delta_cents >= 0 ? '+' : '−'}${formatEuro(
+                      Math.abs(list.price_delta_cents),
+                    )}`
+                  : ''}
+                {list.revalidated_at ? ` · ${formatDateTime(list.revalidated_at)}` : ''}
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

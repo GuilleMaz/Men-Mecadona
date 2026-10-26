@@ -83,6 +83,11 @@ class Settings(BaseSettings):
         return f"sqlite:///{self.database_path.as_posix()}"
 
     @property
+    def frontend_dist(self) -> Path:
+        """Directorio del frontend compilado servido en producción local."""
+        return PROJECT_ROOT / "frontend" / "dist"
+
+    @property
     def is_development(self) -> bool:
         return self.app_env in DEV_ENVIRONMENTS
 

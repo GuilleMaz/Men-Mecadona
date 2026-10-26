@@ -26,12 +26,13 @@ MERCADONA/
 │   │   ├── db.py            # motor SQLite, PRAGMA, Base, sesiones
 │   │   ├── security.py      # allowlist de Host local
 │   │   ├── allergens.py     # lista canónica y etiquetas de alérgenos
+│   │   ├── static.py        # servido del frontend compilado con fallback SPA
 │   │   ├── api/             # health, catalog, domain, pricing, menus, presenters, errors
 │   │   ├── schemas/         # health.py, mercadona.py, catalog.py, seed.py, domain.py, pricing.py, menu.py, menu_api.py
 │   │   ├── models/          # catalog.py, ingredients.py, dishes.py, profile.py, menu.py, types.py
 │   │   ├── services/        # mercadona_client.py, catalog_normalizer.py, catalog_sync.py,
 │   │   │                    # seed.py, allergen_sync.py, eligibility.py, pricing.py,
-│   │   │                    # optimizer.py, menu_service.py
+│   │   │                    # optimizer.py, menu_service.py, price_source.py
 │   │   └── data/            # ingredients.yaml, dishes.yaml
 │   └── tests/               # API, config, db, seguridad, cliente, catálogo, dominio,
 │                            # coste, optimizador, menús y fixtures
@@ -57,15 +58,17 @@ MERCADONA/
 │       │   ├── preferences/PantryCard.tsx
 │       │   ├── shopping/    # ShoppingSection, ShoppingTotals, ShoppingPantry
 │       │   └── ui/          # button, card, input, label, dialog
-│       ├── pages/           # MenuPage, MenuDetailPage, ShoppingListPage, DishesPage, SettingsPage, NotFoundPage
+│       ├── pages/           # MenuPage, MenuDetailPage, ShoppingListPage, HistoryPage, DishesPage, SettingsPage, NotFoundPage
 │       ├── lib/             # utils.ts, catalog.ts, domain.ts, menu.ts, labels.ts
 │       └── test/            # setup, servidor MSW, render-app
 ├── scripts/                 # check_mercadona.py, spike_catalog.py, spike_ortools.py,
 │                            # init_db.py, sync_catalog.py, load_seed.py,
 │                            # validate_seed.py, sync_allergens.py, dry_run_menu.py,
-│                            # benchmark_menu.py
-├── run.ps1                  # backend + frontend, SQLite fuera de OneDrive
+│                            # benchmark_menu.py, benchmark_endpoints.py,
+│                            # backup_db.py, restore_db.py
+├── run.ps1                  # dev/Vite o -Prod (build + un solo proceso), SQLite fuera de OneDrive
 ├── check.ps1                # lint + tipos + tests + build
+├── audit.ps1                # pip-audit + npm audit (high/critical)
 └── finish-phase.ps1         # calidad + commit + push a GitHub
 ```
 
@@ -74,8 +77,8 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** layout en español con navegación Menú / Platos / Ajustes, formulario persistente de personas/días/presupuesto, generación con modal de menú inviable, rejilla días × comida/cena, barra de presupuesto, acciones de bloqueo/swap/exclusión/regeneración, lista de la compra con secciones, checkboxes y «ya lo tengo», catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de coste de consumo/ticket por plato y ración, tarjeta de estado del catálogo y tarjetas de alérgenos, exclusiones y despensa.
-- **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health`, `/api/catalog/*`, `/api/*` de dominio y `/api/menus/*`. La sync de arranque y la carga del seed corren en segundo plano desde el lifespan.
+- **Frontend React:** layout en español con navegación Menú / Historial / Platos / Ajustes, formulario persistente de personas/días/presupuesto, generación con modal de menú inviable, rejilla días × comida/cena, barra de presupuesto, acciones de bloqueo/swap/exclusión/regeneración, revalidación al abrir con delta de precios, lista de la compra con secciones, checkboxes y «ya lo tengo», historial paginado, catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de coste de consumo/ticket por plato y ración, tarjeta de estado del catálogo, origen de precios y tarjetas de alérgenos, exclusiones y despensa. Incluye enlace «Saltar al contenido», foco visible y hoja de impresión A4.
+- **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health`, `/api/catalog/*`, `/api/*` de dominio y `/api/menus/*`. La sync de arranque y la carga del seed corren en segundo plano desde el lifespan. En `APP_ENV=production` sirve `frontend/dist` con fallback SPA y desactiva `/docs`/`/redoc`.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Rechaza rutas dentro de OneDrive. Constantes `POSTAL_CODE="22002"`, `EXPECTED_WAREHOUSE="4389"` y `LOCAL_HOSTS`.
 - **Seguridad (`app/security.py`):** `HostValidationMiddleware` acepta solo `127.0.0.1`, `localhost` y `::1`; el resto devuelve `400 INVALID_HOST`.
 - **Persistencia (`app/db.py`):** motor SQLite con `foreign_keys=ON`, WAL y `busy_timeout=5000`; `Base` declarativa y sesión por petición. `create_engine_for_url` permite que Alembic y los tests usen una URL concreta.
@@ -87,8 +90,10 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 - **EligibilityService:** productos elegibles por ingrediente, unión de alérgenos ingrediente/producto, exclusiones por ingrediente/plato/etiqueta y disponibilidad; base de F4.2 (F2.4/F2.8).
 - **PricingService:** funciones puras con `Decimal` y céntimos enteros (F3): escalado por personas/raciones, formatos comprables, necesidad neta con despensa, `plan_purchase` canónico, consumo, ticket, sobras e identidad contable. El preview de F3 y la lista de F4 comparten `plan_purchase`.
 - **OptimizerService:** CP-SAT en dos etapas con presupuesto duro, demanda por paquetes `P_i`, mínimos diarios, variedad y diagnósticos de inviabilidad (F4.2-F4.4). No abre sesiones ni persiste.
-- **MenuService:** persistencia transaccional de menús, entradas y lista; recálculo con precios actuales; swap, exclude, regenerate, revalidate y «ya lo tengo»; identidades contables y rechazo por presupuesto (F4.5).
-- **Operación local:** `run.ps1` resuelve `CESTA_DATA_DIR`, inicializa la base, arranca backend y frontend y limpia procesos; `scripts/init_db.py` crea el SQLite con sus PRAGMA; `check.ps1` agrega toda la calidad; `finish-phase.ps1` cierra la fase con commit y push tras validar `check.ps1` y rechazar archivos prohibidos.
+- **MenuService:** persistencia transaccional de menús, entradas y lista; recálculo con precios actuales; swap, exclude, regenerate, revalidate y «ya lo tengo»; identidades contables y rechazo por presupuesto (F4.5). La revalidación guarda ticket anterior/revalidado y delta (F5.1).
+- **PriceSourceService:** `app/services/price_source.py` decide si la copia local sirve para precios actuales (`current`), solo para consultar/revalidar (`local_copy`) o no es válida (`unavailable`). Solo acepta la última sync completa de CP 22002 / almacén 4389; nunca mezcla almacenes.
+- **Static frontend:** `app/static.py` monta `frontend/dist` en producción con fallback a `index.html` para rutas SPA, excluyendo `/api/*` inexistentes, recursos con extensión y documentación.
+- **Operación local:** `run.ps1` resuelve `CESTA_DATA_DIR`, inicializa la base, arranca backend y frontend y limpia procesos; con `-Prod` compila y arranca solo Uvicorn sirviendo la UI. `scripts/init_db.py` crea el SQLite con sus PRAGMA; `check.ps1` agrega toda la calidad; `audit.ps1` audita dependencias; `backup_db.py`/`restore_db.py` copian y restauran con verificación; `finish-phase.ps1` cierra la fase con commit y push tras validar `check.ps1` y rechazar archivos prohibidos.
 
 ## Servicios
 
@@ -103,10 +108,11 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 Rutas:
 
 - `/` — crear menú: personas, días y presupuesto persistidos en el perfil; genera y muestra el modal de inviabilidad.
-- `/menus/:id` — menú guardado: rejilla, barra de presupuesto, estado, `stale`, bloqueo, swap, «no me gusta», regeneración y exportación.
-- `/menus/:id/shopping-list` — lista agrupada, checkboxes, «ya lo tengo», totales e identidad contable.
+- `/menus/:id` — menú guardado: rejilla, barra de presupuesto, estado, `stale` con delta, bloqueo, swap, «no me gusta», regeneración, revalidación al abrir y exportación.
+- `/menus/:id/shopping-list` — lista agrupada, checkboxes, «ya lo tengo», totales, identidad contable e impresión A4.
+- `/history` — menús guardados paginados con ticket, presupuesto, estado y enlaces.
 - `/dishes` — catálogo de platos con búsqueda, filtros, detalle, «no me gusta» y coste del plato.
-- `/settings` — alérgenos, exclusiones, despensa y estado del catálogo.
+- `/settings` — alérgenos, exclusiones, despensa, estado del catálogo y origen de precios.
 - `*` — página no encontrada.
 
 Tooling:
@@ -141,7 +147,7 @@ Contrato observado el 2026-10-25: `/api/categories/` devuelve `{count,next,previ
 - La sync descarga 26 secciones y 152 subcategorías con concurrencia 4, reintentos 403/429/5xx y upsert por lotes. Cada subcategoría se registra en `sync_category_runs`; el estado global es `success`, `partial` o `failed`.
 - Solo se marca `published=False` a productos ausentes de subcategorías descargadas correctamente. Los productos de categorías fallidas conservan la disponibilidad anterior. El barrido se hace una vez al final para que un producto duplicado siga disponible si aparece en cualquiera de las subcategorías correctas.
 - El progreso se calcula con `categories_ok + categories_failed` sobre las subcategorías actuales.
-- Sync real (2026-10-26): 152/152, 4.540 vistos, 4.288 únicos, 178 categorías, 7,74 s.
+- Sync real (2026-10-26): 152/152, 4.542 vistos, 4.292 únicos, 178 categorías, 7,72 s.
 - UI: `CatalogStatusCard` consulta `/api/catalog/status` con TanStack Query y hace polling cada 2 s mientras `is_syncing`; el botón lanza `POST /api/catalog/sync` en segundo plano.
 
 ## Dominio y preferencias
@@ -176,7 +182,8 @@ Implementado en `app/services/optimizer.py` (F4.2-F4.4) y `app/services/menu_ser
 - Inviabilidad: solo `budget` genera preview `infeasible` con mínimo canónico (`plan_purchase`), `minimum_is_estimate`, déficit y sugerencias. `repeats`, `minimums`, `locks` y `no_assignment` lanzan `NO_FEASIBLE_MENU`.
 - `MenuService.generate` persiste el snapshot, entradas y lista; materializa `shopping_items` con `plan_purchase` sobre la necesidad agregada, limita los formatos a `P_i`, valida que la sync sea de 22002/4389 y verifica `ticket_canónico ≤ ticket_solver ≤ budget`.
 - El consumo se reparte por entrada con `allocate_cents`; `used_milli` y `consumption_cents` suman exactamente el consumo del menú. `checked` se conserva por `product_id`. Los recálculos usan `menu_entry_ingredients.used_milli` como snapshot de composición; cambiar el seed de un plato no altera las cantidades del menú guardado.
-- `revalidate` conserva el ticket y la lista válidos; si el recalculado supera el presupuesto, guarda el nuevo ticket en `revalidated_ticket_cents` y marca `stale` sin romper el invariante. Swap, exclude, regenerate y «ya lo tengo» sí rechazan con `BUDGET_EXCEEDED` y revierten la transacción.
+- `revalidate` conserva el ticket y la lista válidos; si el recalculado supera el presupuesto, guarda el nuevo ticket en `revalidated_ticket_cents` y marca `stale` sin romper el invariante. Swap, exclude, regenerate y «ya lo tengo» sí rechazan con `BUDGET_EXCEEDED` y revierten la transacción. Tras revalidar, `previous_ticket_cents`, `revalidated_ticket_cents`, `price_delta_cents` y `revalidated_at` permiten mostrar el delta; una segunda revalidación sin cambios vuelve a `current`.
+- `MenuService` valida la fuente de precios: generar exige `price_source="current"`; revalidar permite `local_copy`; cualquier producto con `last_sync_run_id` de otro almacén bloquea el recálculo con `WAREHOUSE_UNAVAILABLE`.
 
 ## APIs
 
@@ -193,6 +200,8 @@ Prefijo `/api`:
 - `/menus/{id}/regenerate`, `/menus/{id}/revalidate` — implementados (F4.6)
 - `/menus/{id}/shopping-list` y `/menus/{id}/shopping-list/items/{item_id}` — implementados (F4.6)
 - `/menus/{id}/export?format=markdown|csv` — implementado (F4.6)
+- `/catalog/status` añade `last_valid_sync`, `price_source`, `using_local_copy`, `fallback_reason` y `price_age_hours` (F5.1)
+- Menú y lista añaden `previous_ticket_cents`, `price_delta_cents` y `revalidated_at` (F5.1)
 
 Los errores usan el sobre `{"error": {"code", "message", "details"}}`; `INVALID_HOST`
 (400) cubre una cabecera `Host` no local. Los endpoints de catálogo añaden
@@ -214,7 +223,8 @@ Tablas principales:
 - `ingredients` (con `serving_group` y `serving_size_milli`), `ingredient_products` (producto único y un `is_default` por ingrediente) — implementadas (F2.1).
 - `dishes`, `dish_ingredients` (cantidad en la unidad base del ingrediente) — implementadas (F2.1).
 - `profiles` (fila única `id=1`), `exclusions` (tres índices únicos parciales), `pantry_items` (`UNIQUE(profile_id, ingredient_id)`) — implementadas (F2.1).
-- `menus` (con `status`, `price_status`, `timed_out`, `revalidated_ticket_cents`, `violations`, `relaxation_codes_json` y `settings_json`), `menu_entries`, `menu_entry_ingredients`, `shopping_items` — implementadas (F4.1, migraciones `20261026_0003` y `20261026_0004`).
+- `menus` (con `status`, `price_status`, `timed_out`, `revalidated_ticket_cents`, `previous_ticket_cents`, `revalidated_at`, `violations`, `relaxation_codes_json` y `settings_json`), `menu_entries`, `menu_entry_ingredients`, `shopping_items` — implementadas (F4.1 y F5.1, migraciones `20261026_0003`, `20261026_0004` y `20261026_0005`).
+- Índices de entrega: `ix_menus_profile_created_at`, `ix_sync_runs_status_finished_at` e `ix_products_last_sync_run_id`.
 
 No hay `price_snapshots` ni `raw_json` persistente en el MVP.
 
@@ -259,6 +269,12 @@ API /api/menus: generación, ajustes, lista y export (F4.6)
     │
     ▼
 React UI: menú y lista de la compra (F4.7-F4.8)
+    │
+    ▼
+Resiliencia de precios: copia local 22002/4389, stale con delta (F5.1)
+    │
+    ▼
+Historial, impresión A4, producción en un proceso y backup (F5.2-F5.6)
 ```
 
 ## Notas
@@ -268,6 +284,8 @@ React UI: menú y lista de la compra (F4.7-F4.8)
 - El presupuesto es un límite duro sobre el ticket.
 - La identidad `ticket + despensa = consumo + sobras` debe cumplirse.
 - La app debe seguir operativa con la última copia del catálogo si la API falla, pero solo si esa copia es de 22002/4389; no se generan menús nuevos con una copia de otro almacén.
+- `price_status="stale"` indica que los precios cambiaron; `previous_ticket_cents`/`revalidated_ticket_cents`/`price_delta_cents` explican el cambio. Una copia de otro almacén bloquea cualquier recálculo.
+- En producción local, FastAPI sirve `frontend/dist` y las rutas del cliente caen en `index.html`; `/api/*` inexistentes y `/docs` no se enmascaran.
 - `plan_purchase` es la función canónica de compra y se comparte entre preview y lista final.
 - `used`/`leftover` se calculan después de resolver.
 - `price_status` es independiente de `status` de generación.

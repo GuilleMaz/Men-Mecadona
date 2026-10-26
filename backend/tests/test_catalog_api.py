@@ -140,6 +140,70 @@ def test_status_returns_counts_and_last_sync(catalog_client: TestClient) -> None
     assert payload["last_sync"]["categories_total"] == 2
     assert payload["last_sync"]["progress"] == 1.0
     assert payload["last_success_at"] is not None
+    assert payload["price_source"] == "current"
+    assert payload["using_local_copy"] is False
+    assert payload["last_valid_sync"] is not None
+    assert payload["last_valid_sync"]["warehouse"] == "4389"
+
+
+def test_status_marks_local_copy_when_last_sync_failed(
+    catalog_client: TestClient,
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        session.add(
+            SyncRun(
+                started_at=utcnow(),
+                finished_at=utcnow(),
+                status="failed",
+                postal_code="22002",
+                warehouse="4389",
+                categories_ok=0,
+                categories_failed=2,
+                products_seen=0,
+                error="Mercadona no está disponible.",
+            )
+        )
+        session.commit()
+
+    response = _get(catalog_client, "/api/catalog/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["price_source"] == "local_copy"
+    assert payload["using_local_copy"] is True
+    assert payload["fallback_reason"] == "Mercadona no está disponible."
+    assert payload["last_valid_sync"]["status"] == "success"
+    assert payload["last_sync"]["status"] == "failed"
+
+
+def test_status_never_mixes_a_copy_from_another_warehouse(
+    catalog_client: TestClient,
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        session.add(
+            SyncRun(
+                started_at=utcnow(),
+                finished_at=utcnow(),
+                status="success",
+                postal_code="28001",
+                warehouse="9999",
+                categories_ok=2,
+                categories_failed=0,
+                products_seen=1,
+            )
+        )
+        session.commit()
+
+    response = _get(catalog_client, "/api/catalog/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["price_source"] == "unavailable"
+    assert payload["using_local_copy"] is False
+    assert payload["last_valid_sync"] is None
+    assert "no se mezclan almacenes" in payload["fallback_reason"]
 
 
 def test_categories_are_returned_as_a_tree(catalog_client: TestClient) -> None:

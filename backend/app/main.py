@@ -7,6 +7,7 @@ import contextlib
 import logging
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -26,6 +27,7 @@ from app.security import HostValidationMiddleware
 from app.services.allergen_sync import AllergenSyncService
 from app.services.catalog_sync import CatalogSyncService
 from app.services.seed import SeedService
+from app.static import mount_frontend
 
 API_PREFIX = "/api"
 
@@ -35,13 +37,15 @@ logger = logging.getLogger(__name__)
 def create_app(
     settings: Settings | None = None,
     session_factory: sessionmaker[Session] | None = None,
+    frontend_dist: Path | None = None,
 ) -> FastAPI:
     """Construye la aplicación FastAPI.
 
     CORS solo se activa en desarrollo y solo para el origen del servidor de Vite.
     Todas las peticiones pasan por la validación de `Host` local. La sync de
     arranque y la carga del seed se lanzan en segundo plano y nunca bloquean el
-    startup.
+    startup. En producción local se sirve el frontend compilado desde el mismo
+    proceso, si `frontend/dist` existe.
     """
     resolved = settings or get_settings()
     factory = session_factory or get_session_factory()
@@ -115,6 +119,8 @@ def create_app(
             "y un presupuesto, con precios de la tienda online de Mercadona."
         ),
         lifespan=lifespan,
+        docs_url=None if resolved.app_env == "production" else "/docs",
+        redoc_url=None if resolved.app_env == "production" else "/redoc",
     )
     application.state.catalog_sync = sync_service
     application.state.seed_service = seed_service
@@ -154,6 +160,9 @@ def create_app(
     application.include_router(domain.router, prefix=API_PREFIX)
     application.include_router(pricing.router, prefix=API_PREFIX)
     application.include_router(menus.router, prefix=API_PREFIX)
+
+    if resolved.app_env == "production":
+        mount_frontend(application, frontend_dist or resolved.frontend_dist)
     return application
 
 

@@ -122,8 +122,8 @@ uv run pytest tests/test_pricing.py tests/test_pricing_api.py
 
 - `app/models/menu.py`: `menus`, `menu_entries`, `menu_entry_ingredients` y
   `shopping_items`, con snapshot de nombre, coste, proteína y precios de compra.
-  Migraciones `20261026_0003` y `20261026_0004` (relajaciones y CHECK de
-  presupuesto).
+  Migraciones `20261026_0003`, `20261026_0004` (relajaciones) y `20261026_0005`
+  (ticket anterior, fecha de revalidación e índices de entrega).
 - `app/schemas/menu.py`: `MenuSettings` versionado con alérgenos, exclusiones,
   despensa, `max_repeats` y versión del optimizador.
   `app/schemas/menu_api.py`: contrato de entrada/salida de la API.
@@ -157,7 +157,42 @@ uv run python ..\scripts\dry_run_menu.py --days 1,2,7,14 --people 1,2,4,10
 uv run python ..\scripts\benchmark_menu.py --runs 20 --days 14 --people 4
 ```
 
-Estado actual: 336 tests backend en verde; benchmark 14d/4p con p95 4,30 s.
+Estado actual: 354 tests backend en verde; benchmark 14d/4p con p95 3,73 s.
+
+## Calidad, resiliencia y entrega (F5)
+
+- `app/services/price_source.py`: resuelve si la copia local sirve para precios
+  actuales. Solo es válida si la última sync completa es de CP 22002 / almacén
+  4389. Una sync fallida posterior permite consultar y revalidar menús, pero
+  bloquea la generación de menús nuevos. Una copia de otro almacén no se mezcla.
+- `MenuService` guarda `previous_ticket_cents`, `revalidated_ticket_cents`,
+  `price_delta_cents` y `revalidated_at` para que la UI muestre el delta sin
+  romper el snapshot válido. `GET/POST` de menús y la lista exponen esos campos.
+- `app/static.py`: en `APP_ENV=production`, FastAPI sirve `frontend/dist` en el
+  mismo puerto con fallback a `index.html` para las rutas del cliente. `/docs`,
+  `/redoc` y `/api/*` inexistentes no devuelven la SPA.
+- `run.ps1 -Prod` compila el frontend, arranca un único proceso Uvicorn sin
+  recarga y desactiva CORS.
+- `scripts/backup_db.py` y `scripts/restore_db.py`: copia consistente con la API
+  de SQLite, `integrity_check`, validación de esquema y restauración atómica.
+- `scripts/benchmark_endpoints.py`: p50/p95 de `/api/health`, `/api/dishes`,
+  `/api/catalog/status` y `/api/menus` contra la copia local.
+- `audit.ps1`: `pip-audit` + `npm audit --audit-level=high`; última ejecución sin
+  hallazgos.
+- `tests/test_delivery.py`: flujo completo generar → detalle → lista, historial
+  inmutable, contrato sin pasos y privacidad (sin telemetría ni hosts no
+  declarados). `tests/test_production_build.py` cubre el build servido y
+  `tests/test_backup_restore.py` la copia/restauración.
+
+```powershell
+uv run pytest tests/test_delivery.py tests/test_backup_restore.py tests/test_production_build.py
+uv run python ..\scripts\benchmark_endpoints.py --runs 20
+uv run python ..\scripts\backup_db.py
+```
+
+Benchmark de endpoints en el equipo de desarrollo: `/api/dishes` p95 32,00 ms
+(límite 200 ms), `/api/catalog/status` p95 9,91 ms y `/api/menus` p95 5,58 ms.
+Sync real: 152/152 subcategorías, 4.542 productos vistos, 4.292 únicos, 7,72 s.
 
 Seguridad local: el middleware de `Host` solo acepta `127.0.0.1`, `localhost` y
 `::1`; el resto devuelve `400 INVALID_HOST`. Los tests de API envían un `Host`

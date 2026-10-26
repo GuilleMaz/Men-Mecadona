@@ -8,11 +8,12 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F4.1-F4.9 completadas el 2026-10-26. Siguiente: F5 (calidad, resiliencia y entrega).
-- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389), catálogo persistente con sync parcial, ingredientes/platos con seed idempotente, alérgenos fail-closed, perfil, exclusiones, despensa, motor de costes puro con preview, optimizador CP-SAT en dos etapas, servicio transaccional de menús y API `/api/menus` completa (generación, ajustes, lista y export). Frontend con layout en español, navegación Menú/Platos/Ajustes, formulario de perfil persistente, generación de menú con modal de inviabilidad, rejilla días × comida/cena, barra de presupuesto, acciones de menú y lista de la compra con checkboxes, «ya lo tengo», totales e identidad contable.
+- **Fase:** F0-F5 completadas el 2026-10-26. MVP cerrado.
+- **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389), catálogo persistente con sync parcial, ingredientes/platos con seed idempotente, alérgenos fail-closed, perfil, exclusiones, despensa, motor de costes puro con preview, optimizador CP-SAT en dos etapas, servicio transaccional de menús y API `/api/menus` completa. F5 añade resiliencia de precios, historial, impresión A4, producción local en un solo proceso, backup/restore y auditoría. Frontend con layout en español, navegación Menú/Historial/Platos/Ajustes, formulario de perfil persistente, generación de menú con modal de inviabilidad, rejilla días × comida/cena, barra de presupuesto, acciones de menú, revalidación al abrir, lista de la compra con checkboxes, «ya lo tengo», totales e identidad contable.
 - **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
-- **Integración Mercadona:** sync real validada: 26 secciones, 152/152 subcategorías, 4.540 productos vistos, 4.288 productos únicos persistidos, 178 categorías y 7,74 s con concurrencia 4. Tests con fixtures sintéticas y respx, sin red.
+- **Integración Mercadona:** sync real validada: 26 secciones, 152/152 subcategorías, 4.542 productos vistos, 4.292 productos únicos persistidos, 178 categorías y 7,72 s con concurrencia 4. Tests con fixtures sintéticas y respx, sin red.
 - **Catálogo:** migraciones Alembic (`render_as_batch`), upsert por `external_id`, normalización a céntimos y milésimas, fallo parcial sin ocultar productos de categorías fallidas, lock de proceso y refresh de arranque a las 24 h.
+- **Resiliencia (F5):** `price_source` distingue `current`, `local_copy` y `unavailable`; una sync fallida permite consultar/revalidar menús pero no generar, y una copia de otro almacén bloquea cualquier recálculo. El menú guarda ticket anterior, revalidado y delta; la UI revalida al abrir y muestra el aviso.
 - **Dominio F2:** 110 ingredientes, 212 mapeos explícitos a productos, 60 platos sin pasos y 212 productos mapeados con alérgenos reales (210 actualizados en la primera carga real, 2 fallos transitorios; 11-12 `unknown`, 29 `partial`). `seed_version` por hash y soft delete.
 - **OR-Tools:** CP-SAT 9.15.6755 validado en Windows/Python 3.13 con un toy de 28 huecos, 60 platos, 120 ingredientes y paquetes: 3,46-3,47 s por ejecución, etapa 1 óptima y etapa 2 factible bajo presupuesto.
 - **Arranque:** `.\run.ps1` arranca backend y frontend, inicializa SQLite fuera de OneDrive, aplica migraciones, carga el seed y enriquece alérgenos en segundo plano; `.\check.ps1` ejecuta lint, tipos, tests y build.
@@ -26,9 +27,12 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - **Menús (F4.5):** `MenuService` transaccional que materializa la lista con `plan_purchase`, reparte céntimos por entrada, preserva `checked` por producto, valida la sync 22002/4389 y recalcula tras swap, exclude, regenerate, revalidate y «ya lo tengo». La revalidación conserva el snapshot válido y expone el ticket recalculado en `revalidated_ticket_cents` si supera el presupuesto; los recálculos usan la composición persistida.
 - **API de menús (F4.6):** router `/api/menus` con generación, historial paginado, detalle, bloqueo, swap, exclude, regenerate, revalidate, lista agrupada por sección, checkbox/«ya lo tengo» y export markdown/CSV. `generate` hereda del perfil los campos omitidos, devuelve `infeasible`/`timeout` sin persistir y mapea los errores de dominio con `reason`.
 - **UI de menú y compra (F4.7-F4.8):** `/menus/:id` con rejilla, barra de presupuesto, banner `stale`, modal de inviabilidad y acciones; `/menus/:id/shopping-list` con secciones, «ya lo tengo» sobre el snapshot del menú, total sticky, sobras, coste por comida/día/persona e identidad contable.
-- **Pruebas F4.9:** 29 tests nuevos de horizontes/personas, presupuestos, pescado, `unknown`, producto compartido, `base_servings`, bloqueos/regeneración, preview contra lista y workers/semilla. `dry_run_menu.py` validó 16/16 escenarios y el benchmark 14d/4p dio p95 4,30 s.
-- **Calidad:** backend con Ruff, formato, mypy (strict) y 336 tests; frontend con ESLint, Prettier, TypeScript estricto, 49 tests y build de producción. Smoke real por API sobre copia del catálogo: generación 13,50 €, swap 19,30 €, exclude 18,00 €, regenerate 14,65 €, «ya lo tengo» 10,95 € y preview imposible con mínimo 10,55 €.
-- **Última actualización:** 2026-10-26.
+- **Entrega (F5):** `/history` paginado, enlace «Saltar al contenido», foco visible y hoja de impresión A4; `run.ps1 -Prod` compila y sirve `frontend/dist` desde FastAPI; `audit.ps1`, `backup_db.py`, `restore_db.py` y `benchmark_endpoints.py`.
+- **Pruebas F4.9:** 29 tests nuevos de horizontes/personas, presupuestos, pescado, `unknown`, producto compartido, `base_servings`, bloqueos/regeneración, preview contra lista y workers/semilla. `dry_run_menu.py` validó 16/16 escenarios.
+- **Pruebas F5:** flujo generar → detalle → lista, historial inmutable, contrato sin pasos, privacidad sin telemetría, build servido, backup/restore, sync fallida y almacén mezclado.
+- **Calidad:** backend con Ruff, formato, mypy (strict) y 354 tests; frontend con ESLint, Prettier, TypeScript estricto, 54 tests y build de producción. `pip-audit` y `npm audit` sin hallazgos. Smoke real por API sobre copia del catálogo: generación 13,50 €, swap 19,30 €, exclude 18,00 €, regenerate 14,65 €, «ya lo tengo» 10,95 € y preview imposible con mínimo 10,55 €.
+- **Rendimiento:** sync 7,72 s; generación 14d/4p p95 3,73 s; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
+- **Última actualización:** 2026-10-26. F5 verificada con `check.ps1` (354 backend, 54 frontend, build), auditoría sin hallazgos, sync 7,72 s, generación p95 3,73 s y producción local real con `run.ps1 -Prod`.
 
 ## Tecnologías
 
@@ -98,10 +102,10 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - F4.6: API completa de menús con preview de inviabilidad/timeout sin persistir, lista agrupada, «ya lo tengo» y export seguro.
 - F4.7: UI de generación, rejilla de menú, barra de presupuesto, estados, modal de inviabilidad y acciones.
 - F4.8: lista de la compra con secciones, checkboxes, «ya lo tengo», total sticky, despensa, costes e identidad contable.
-- F4.9: 29 tests nuevos, dry-run de 16 escenarios y benchmark p95 4,30 s; suite de 336 backend y 49 frontend.
+- F4.9: 29 tests nuevos, dry-run de 16 escenarios y benchmark 14d/4p.
+- F5: `price_source`, migración `20261026_0005`, delta de precios, revalidación al abrir, historial, impresión A4, producción local en un solo proceso, backup/restore, auditoría, benchmark de endpoints y tests de entrega/privacidad.
 - Pipeline de cierre: `finish-phase.ps1` ejecuta la calidad, crea el commit y lo sube a GitHub.
 
 ## Pendientes
 
-- F5: resiliencia de precios, responsive/accesibilidad, historial, exportación y seguridad, documentación, rendimiento, build local y tests de integración.
-- Backlog posterior: CP configurable, LAN/móvil, historial de precios, PDF, PWA, Docker, macros.
+- Post-MVP: code splitting del bundle, CP/almacén configurable, LAN/móvil con autenticación, historial de precios, PDF, PWA, Docker, macros y comparador de formatos.

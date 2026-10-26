@@ -18,9 +18,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.api import menus as menus_module
 from app.config import Settings
 from app.main import create_app
-from app.models.catalog import Category, Product
+from app.models.catalog import Category, Product, SyncRun
 from app.models.menu import Menu
 from app.models.profile import Exclusion, PantryItem, Profile
+from app.models.types import utcnow
 from app.services import menu_service as menu_service_module
 from app.services.optimizer import (
     EligibilityReport,
@@ -1060,6 +1061,9 @@ def test_revalidate_marks_stale_when_prices_rise(
     assert detail["ticket_cents"] <= detail["budget_cents"]
     assert detail["price_status"] == "stale"
     assert detail["revalidated_ticket_cents"] == 2750
+    assert detail["previous_ticket_cents"] == BASE_TICKET_CENTS
+    assert detail["price_delta_cents"] == 2750 - BASE_TICKET_CENTS
+    assert detail["revalidated_at"] is not None
 
     shopping = _shopping(client, menu_id)
     assert shopping["ticket_cents"] == BASE_TICKET_CENTS
@@ -1067,6 +1071,47 @@ def test_revalidate_marks_stale_when_prices_rise(
         section["subtotal_cents"] for section in shopping["sections"]
     )
     assert shopping["price_status"] == "stale"
+    assert shopping["previous_ticket_cents"] == BASE_TICKET_CENTS
+    assert shopping["price_delta_cents"] == 2750 - BASE_TICKET_CENTS
+
+
+def test_failed_sync_blocks_new_menu_but_revalidates_saved_menu(
+    client: TestClient,
+    scenario: MenuScenario,
+    monkeypatch: pytest.MonkeyPatch,
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    menu_id = _menu_id(_generate(client, scenario, monkeypatch))
+
+    with catalog_session_factory() as session:
+        session.add(
+            SyncRun(
+                started_at=utcnow(),
+                finished_at=utcnow(),
+                status="failed",
+                postal_code="22002",
+                warehouse="4389",
+                categories_ok=0,
+                categories_failed=152,
+                products_seen=0,
+                error="Sin conexión con Mercadona.",
+            )
+        )
+        session.commit()
+
+    _install_optimizer(monkeypatch, _result(scenario))
+    blocked = client.post(
+        "/api/menus/generate",
+        headers=HEADERS,
+        json={"people": 2, "days": 1, "budget_cents": BUDGET_CENTS},
+    )
+    assert blocked.status_code == 503
+    assert blocked.json()["error"]["code"] == "WAREHOUSE_UNAVAILABLE"
+
+    revalidated = client.post(f"/api/menus/{menu_id}/revalidate", headers=HEADERS)
+    assert revalidated.status_code == 200, revalidated.text
+    assert revalidated.json()["price_status"] == "current"
+    assert revalidated.json()["ticket_cents"] == BASE_TICKET_CENTS
 
 
 # ----------------------------------------------------------------------

@@ -202,7 +202,9 @@ def test_menu_migration_creates_tables_constraints_and_version(migrated_engine: 
     assert "ck_menus_amounts" in checks["menus"]
     assert "ck_menus_violations" in checks["menus"]
     assert "ck_menus_ticket_within_budget" in checks["menus"]
-    assert version == "20261026_0004"
+    assert "ck_menus_previous_ticket" in checks["menus"]
+    assert {"previous_ticket_cents", "revalidated_at"} <= menu_columns
+    assert version == "20261026_0005"
 
 
 def test_menu_migration_matches_models(migrated_engine: Engine) -> None:

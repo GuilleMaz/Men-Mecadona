@@ -1,7 +1,7 @@
 # AGENTS.md — Cesta
 
 > Guía operativa para agentes que trabajen en este repositorio.
-> **Estado actual:** F4.1-F4.9 completadas el 2026-10-26. Siguiente: F5.
+> **Estado actual:** F0-F5 completadas el 2026-10-26. MVP cerrado.
 > **Última actualización:** 2026-10-26
 
 ---
@@ -145,9 +145,10 @@ npm run build
 .\run.ps1
 .\run.ps1 -Prod
 
-# Calidad y cierre de fase
+# Calidad, auditoría y cierre de fase
 .\check.ps1
-.\finish-phase.ps1 -Phase F0 -Summary "fundaciones y spikes"
+.\audit.ps1
+.\finish-phase.ps1 -Phase F5 -Summary "calidad, seguridad y entrega"
 ```
 
 `finish-phase.ps1` es el gate de cierre: ejecuta `check.ps1`, rechaza secretos,

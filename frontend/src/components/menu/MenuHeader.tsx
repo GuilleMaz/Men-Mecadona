@@ -51,10 +51,8 @@ type MenuHeaderProps = {
 /** Cabecera del menú: estado, precios, fecha, CP/almacén y relajaciones. */
 export function MenuHeader({ menu, isRevalidating, onRevalidate, onRegenerate }: MenuHeaderProps) {
   const stale = menu.price_status === 'stale';
-  const delta =
-    menu.revalidated_ticket_cents !== null
-      ? menu.revalidated_ticket_cents - menu.ticket_cents
-      : null;
+  const previousTicket = menu.previous_ticket_cents ?? menu.ticket_cents;
+  const delta = menu.price_delta_cents;
 
   return (
     <Card>
@@ -155,7 +153,7 @@ export function MenuHeader({ menu, isRevalidating, onRevalidate, onRegenerate }:
               {menu.revalidated_ticket_cents !== null ? (
                 <p>
                   Ticket revalidado: <strong>{formatEuro(menu.revalidated_ticket_cents)}</strong>{' '}
-                  (antes {formatEuro(menu.ticket_cents)}
+                  (antes {formatEuro(previousTicket)}
                   {delta !== null
                     ? `, diferencia ${delta >= 0 ? '+' : '−'}${formatEuro(Math.abs(delta))}`
                     : ''}
@@ -164,6 +162,11 @@ export function MenuHeader({ menu, isRevalidating, onRevalidate, onRegenerate }:
               ) : (
                 <p>Revisa el ticket antes de comprar.</p>
               )}
+              {menu.revalidated_at ? (
+                <p className="text-xs">
+                  Última revalidación: {formatDateTime(menu.revalidated_at)}.
+                </p>
+              ) : null}
               <p className="text-xs">
                 El menú guardado y su lista siguen siendo válidos. Revalidar actualiza el cálculo;
                 regenerar busca otro menú dentro del presupuesto.

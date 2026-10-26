@@ -128,10 +128,13 @@ try {
             '(^|/)\.env$',
             '(^|/)\.env\.(?!example$).+$',
             '\.(db|sqlite|sqlite3|db-wal|db-shm|db-journal)$',
+            '\.(sqlite-wal|sqlite-shm|sqlite-journal)$',
             '(^|/)node_modules/',
             '(^|/)\.venv/',
             '(^|/)frontend/dist/',
             '(^|/)__pycache__/',
+            '(^|/)\.(pytest_cache|mypy_cache|ruff_cache)/',
+            '(^|/)\.coverage',
             '\.(pem|key|pfx|p12)$'
         )
         $forbidden = @()

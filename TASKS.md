@@ -525,7 +525,7 @@
 
 **DoD de F5:** MVP instalable, documentado, seguro y probado.
 
-**Estado F5:** cumplido el 2026-10-26. `check.ps1` en verde con 354 tests backend, 54 frontend y build; auditoría sin hallazgos; benchmark 14d/4p p95 3,73 s; sync 7,72 s; producción local verificada con `run.ps1 -Prod`.
+**Estado F5:** cumplido el 2026-10-26. `check.ps1` en verde con 354 tests backend, 54 frontend y build; auditoría sin hallazgos; benchmark 14d/4p p95 3,73 s; sync 7,72 s; producción local verificada con `run.ps1 -Prod`. Commit `32b32ac` publicado en `origin/main`.
 
 ---
 

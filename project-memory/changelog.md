@@ -61,6 +61,7 @@
   detener.
 - Backup/restore probado sobre SQLite temporal; auditoría y privacidad cubiertas
   sin red en la suite.
+- Cierre publicado: commit `32b32ac` en `origin/main`.
 
 ### Archivos
 

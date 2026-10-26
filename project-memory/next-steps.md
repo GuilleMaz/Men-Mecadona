@@ -13,7 +13,7 @@ F0-F5 completadas el 2026-10-26. **MVP cerrado.**
 - Resiliencia F5.1: `price_source` (`current|local_copy|unavailable`), generación bloqueada con copia no confirmada, revalidación permitida con copia local válida, delta de precios persistido y visible.
 - Entrega F5.2-F5.7: historial `/history`, impresión A4, accesibilidad base, privacidad, auditoría sin hallazgos, backup/restore, producción en un solo proceso, benchmark de endpoints y tests de integración.
 - Rendimiento: sync 7,72 s; generación 14d/4p p95 3,73 s; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
-- F1 publicada en `origin/main` con `e938016`; F2 con `0c9909c`; F3 con `1dd864e`; checkpoint F4.1-F4.5 con `fd563f5`; F4 con `8bf41fe`; F5 preparada para el commit de cierre.
+- F1 publicada en `origin/main` con `e938016`; F2 con `0c9909c`; F3 con `1dd864e`; checkpoint F4.1-F4.5 con `fd563f5`; F4 con `8bf41fe`; F5 cerrada con `32b32ac`.
 - Base SQLite en `%LOCALAPPDATA%\Cesta`, fuera de OneDrive; migración `20261026_0005` aplicada a la copia local.
 
 ## Alta prioridad (post-MVP)
@@ -77,6 +77,6 @@ F0-F5 completadas el 2026-10-26. **MVP cerrado.**
 
 ## Siguiente acción recomendada
 
-1. Cerrar F5 con `.\finish-phase.ps1 -Phase F5 -Summary "calidad, seguridad y entrega"`.
+1. Mantener el MVP con la sync real y el benchmark como comprobaciones manuales antes de release.
 2. Abordar code splitting y una auditoría de accesibilidad automatizada como primer trabajo post-MVP.
-3. Mantener la sync real y el benchmark como comprobaciones manuales antes de release.
+3. Revisar la semántica de `exclude` con `scope=menu` y añadir el migrador de `MenuSettings.version` antes de cambiar el snapshot.

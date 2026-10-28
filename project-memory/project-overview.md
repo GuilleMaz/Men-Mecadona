@@ -33,7 +33,7 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - **Calidad:** backend con Ruff, formato, mypy (strict) y 365 tests; frontend con ESLint, Prettier, TypeScript estricto, 56 tests y build de producción. `pip-audit` y `npm audit` sin hallazgos. Smoke real por API sobre copia del catálogo: generación 13,50 €, swap 19,30 €, exclude 18,00 €, regenerate 14,65 €, «ya lo tengo» 10,95 € y preview imposible con mínimo 10,55 €.
 - **Rendimiento:** sync 7,72 s; generación 14d/4p p95 5,22 s con F6; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
 - **F6 (2026-10-28):** `dishes.role` (`main|complement`) y `primary_protein` derivados de la composición; `menu_entries.course` con unicidad por curso; optimizador solo de principales con topes blandos por fuente, misma proteína por día y pescado 2/semana; endpoints de acompañamiento; UI de principal + acompañamiento; 3 acompañamientos nuevos. 55 principales y 8 acompañamientos.
-- **Última actualización:** 2026-10-28. F6 verificada con 365 tests backend, 56 frontend, dry-run 16/16 y benchmark 14d/4p p95 5,22 s.
+- **Última actualización:** 2026-10-28. F6 verificada con 365 tests backend, 56 frontend, dry-run 16/16 y benchmark 14d/4p p95 5,22 s. Commit `8c1de22` en `origin/main`.
 
 ## Tecnologías
 

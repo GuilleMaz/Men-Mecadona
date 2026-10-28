@@ -579,7 +579,7 @@
 
 **DoD de F6:** ningún menú nuevo presenta un plato incompleto como comida o cena; los acompañamientos son opcionales y no sustituyen al principal; el reparto de proteínas es razonable o se informa de la relajación; coste, lista e identidades contables incluyen los acompañamientos.
 
-**Estado F6:** completada el 2026-10-28. 55 principales y 8 acompañamientos; migración `20261026_0006`; 365 tests backend y 56 frontend; dry-run 16/16; benchmark p95 5,22 s.
+**Estado F6:** completada el 2026-10-28. 55 principales y 8 acompañamientos; migración `20261026_0006`; 365 tests backend y 56 frontend; dry-run 16/16; benchmark p95 5,22 s. Commit `8c1de22` publicado en `origin/main`.
 
 ---
 

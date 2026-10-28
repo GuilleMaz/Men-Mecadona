@@ -38,6 +38,7 @@
   **p95 5,22 s**, máximo 5,31 s (< 10 s).
 - Migración `20261026_0006` aplicada a la base real: 2 menús y 28 entradas
   históricas conservados, `foreign_key_check` limpio.
+- Cierre publicado: commit `8c1de22` en `origin/main`.
 
 ### Archivos
 

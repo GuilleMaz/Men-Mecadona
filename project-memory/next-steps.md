@@ -13,7 +13,7 @@ F0-F6 completadas el 2026-10-28. **MVP y comidas completas cerrados.**
 - Resiliencia F5.1: `price_source` (`current|local_copy|unavailable`), generación bloqueada con copia no confirmada, revalidación permitida con copia local válida, delta de precios persistido y visible.
 - Entrega F5.2-F5.7: historial `/history`, impresión A4, accesibilidad base, privacidad, auditoría sin hallazgos, backup/restore, producción en un solo proceso, benchmark de endpoints y tests de integración.
 - Rendimiento: sync 7,72 s; generación 14d/4p p95 5,22 s con F6; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
-- F1 publicada en `origin/main` con `e938016`; F2 con `0c9909c`; F3 con `1dd864e`; checkpoint F4.1-F4.5 con `fd563f5`; F4 con `8bf41fe`; F5 cerrada con `32b32ac`.
+- F1 publicada en `origin/main` con `e938016`; F2 con `0c9909c`; F3 con `1dd864e`; checkpoint F4.1-F4.5 con `fd563f5`; F4 con `8bf41fe`; F5 cerrada con `32b32ac`; F6 cerrada con `8c1de22`.
 - Base SQLite en `%LOCALAPPDATA%\Cesta`, fuera de OneDrive; migración `20261026_0005` aplicada a la copia local.
 
 ## Alta prioridad (post-MVP)

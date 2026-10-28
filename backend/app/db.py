@@ -6,7 +6,7 @@ OneDrive, con WAL, integridad referencial y `busy_timeout`. Ver `PLAN.md` §9.4 
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from functools import lru_cache
 from typing import Any
 
@@ -21,28 +21,34 @@ class Base(DeclarativeBase):
     """Base declarativa de todos los modelos."""
 
 
-def _apply_sqlite_pragmas(dbapi_connection: Any, _connection_record: Any) -> None:
-    """Aplica los PRAGMA obligatorios en cada conexión."""
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("PRAGMA foreign_keys = ON")
-        cursor.execute("PRAGMA journal_mode = WAL")
-        cursor.execute("PRAGMA busy_timeout = 5000")
-    finally:
-        cursor.close()
+def _sqlite_pragmas(*, foreign_keys: bool = True) -> Callable[[Any, Any], None]:
+    """Devuelve el listener que aplica los PRAGMA obligatorios en cada conexión."""
+
+    def _apply(dbapi_connection: Any, _connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute(f"PRAGMA foreign_keys = {'ON' if foreign_keys else 'OFF'}")
+            cursor.execute("PRAGMA journal_mode = WAL")
+            cursor.execute("PRAGMA busy_timeout = 5000")
+        finally:
+            cursor.close()
+
+    return _apply
 
 
-def create_engine_for_url(database_url: str) -> Engine:
+def create_engine_for_url(database_url: str, *, foreign_keys: bool = True) -> Engine:
     """Crea un motor SQLite para una URL concreta, con los PRAGMA aplicados.
 
     Se usa tanto desde la app como desde Alembic, que puede recibir una URL
-    temporal en los tests sin depender de los ajustes globales.
+    temporal en los tests sin depender de los ajustes globales. Las migraciones
+    que recrean tablas con ``batch_alter_table`` desactivan las claves foráneas
+    durante la conexión de migración; la app siempre las activa.
     """
     engine = create_engine(
         database_url,
         connect_args={"check_same_thread": False},
     )
-    event.listen(engine, "connect", _apply_sqlite_pragmas)
+    event.listen(engine, "connect", _sqlite_pragmas(foreign_keys=foreign_keys))
     return engine
 
 

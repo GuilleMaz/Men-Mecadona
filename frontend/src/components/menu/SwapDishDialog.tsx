@@ -21,8 +21,14 @@ export function SwapDishDialog({ open, menuId, entry, onClose, onSwapped }: Swap
   const [selectedDishId, setSelectedDishId] = useState<number | null>(null);
 
   const dishesQuery = useQuery({
-    queryKey: ['dishes', 'swap', entry?.id, entry?.slot],
-    queryFn: () => fetchDishes({ mealType: entry!.slot, onlyEligible: true, limit: 100 }),
+    queryKey: ['dishes', 'swap', entry?.id, entry?.slot, entry?.course],
+    queryFn: () =>
+      fetchDishes({
+        mealType: entry!.slot,
+        role: entry!.course,
+        onlyEligible: true,
+        limit: 100,
+      }),
     enabled: open && entry !== null,
   });
 

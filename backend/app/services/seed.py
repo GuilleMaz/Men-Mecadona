@@ -41,6 +41,9 @@ MIN_FISH_DISHES = 2
 MIN_LEGUME_DISHES = 2
 MIN_RED_MEAT_DISHES = 2
 MIN_LIGHT_DINNERS = 4
+MIN_COMPLEMENTS = 3
+MAIN_MIN_PROTEIN_RATIONS = Decimal("0.5")
+MAIN_MIN_VEGETABLE_CARB_RATIONS = Decimal("0.5")
 
 IssueLevel = Literal["error", "warning"]
 
@@ -78,6 +81,8 @@ class DerivedDish:
     protein_sources: list[str]
     tags: frozenset[str]
     servings: dict[str, Decimal]
+    role: str = "main"
+    primary_protein: str | None = None
 
 
 @dataclass(slots=True)
@@ -172,6 +177,7 @@ def derive_dish(dish: SeedDish, ingredients_by_slug: dict[str, SeedIngredient]) 
         "carb": Decimal(0),
     }
     carb_scores: list[tuple[Decimal, str]] = []
+    protein_by_source: dict[str, Decimal] = {}
     has_animal = False
     has_dairy = False
     has_egg = False
@@ -194,6 +200,10 @@ def derive_dish(dish: SeedDish, ingredients_by_slug: dict[str, SeedIngredient]) 
             )
         if ingredient.protein_source:
             sources.add(ingredient.protein_source)
+            if ingredient.serving_group == "protein":
+                protein_by_source[ingredient.protein_source] = protein_by_source.get(
+                    ingredient.protein_source, Decimal(0)
+                ) + quantity_milli / Decimal(ingredient.serving_size_milli)
             if ingredient.protein_source in ANIMAL_SOURCES:
                 has_animal = True
         if ingredient.group == "dairy":
@@ -229,6 +239,21 @@ def derive_dish(dish: SeedDish, ingredients_by_slug: dict[str, SeedIngredient]) 
         if not has_dairy and not has_egg and not has_honey:
             tags.add("vegan")
 
+    base_servings = Decimal(dish.base_servings)
+    protein_per_person = servings["protein"] / base_servings
+    vegetable_carb_per_person = (servings["vegetable"] + servings["carb"]) / base_servings
+    role = (
+        "main"
+        if protein_per_person >= MAIN_MIN_PROTEIN_RATIONS
+        and vegetable_carb_per_person >= MAIN_MIN_VEGETABLE_CARB_RATIONS
+        else "complement"
+    )
+    primary_protein = (
+        max(sorted(protein_by_source), key=lambda source: protein_by_source[source])
+        if protein_by_source
+        else None
+    )
+
     return DerivedDish(
         has_vegetables=has_vegetables,
         light=light,
@@ -236,6 +261,8 @@ def derive_dish(dish: SeedDish, ingredients_by_slug: dict[str, SeedIngredient]) 
         protein_sources=sorted(sources),
         tags=frozenset(tags),
         servings=servings,
+        role=role,
+        primary_protein=primary_protein,
     )
 
 
@@ -355,16 +382,24 @@ def coverage_issues(
     ingredients: list[SeedIngredient],
     derived_by_dish: dict[str, DerivedDish],
 ) -> list[SeedIssue]:
-    """Comprueba los umbrales de cobertura de PLAN §13.2."""
+    """Comprueba los umbrales de cobertura de PLAN §13.2 para principales y acompañamientos."""
     issues: list[SeedIssue] = []
-    lunch = sum(1 for dish in dishes if "lunch" in dish.meal_types)
-    dinner = sum(1 for dish in dishes if "dinner" in dish.meal_types)
+    derived_dishes = [
+        (dish, derived_by_dish[dish.slug]) for dish in dishes if dish.slug in derived_by_dish
+    ]
+    mains = [(dish, derived) for dish, derived in derived_dishes if derived.role == "main"]
+    complements = [
+        (dish, derived) for dish, derived in derived_dishes if derived.role == "complement"
+    ]
+
+    lunch = sum(1 for dish, _ in mains if "lunch" in dish.meal_types)
+    dinner = sum(1 for dish, _ in mains if "dinner" in dish.meal_types)
     if lunch < MIN_LUNCH_DISHES:
         issues.append(
             SeedIssue(
                 "error",
                 "NOT_ENOUGH_LUNCH",
-                f"Solo hay {lunch} platos de comida; mínimo {MIN_LUNCH_DISHES}.",
+                f"Solo hay {lunch} platos principales de comida; mínimo {MIN_LUNCH_DISHES}.",
             )
         )
     if dinner < MIN_DINNER_DISHES:
@@ -372,23 +407,50 @@ def coverage_issues(
             SeedIssue(
                 "error",
                 "NOT_ENOUGH_DINNER",
-                f"Solo hay {dinner} platos de cena; mínimo {MIN_DINNER_DISHES}.",
+                f"Solo hay {dinner} platos principales de cena; mínimo {MIN_DINNER_DISHES}.",
             )
         )
-    if len(dishes) < MIN_TOTAL_DISHES:
+    if len(mains) < MIN_TOTAL_DISHES:
         issues.append(
             SeedIssue(
                 "error",
                 "NOT_ENOUGH_DISHES",
-                f"Solo hay {len(dishes)} platos; mínimo {MIN_TOTAL_DISHES}.",
+                f"Solo hay {len(mains)} platos principales; mínimo {MIN_TOTAL_DISHES}.",
             )
         )
 
+    if len(complements) < MIN_COMPLEMENTS:
+        issues.append(
+            SeedIssue(
+                "error",
+                "NOT_ENOUGH_COMPLEMENTS",
+                f"Solo hay {len(complements)} acompañamientos; mínimo {MIN_COMPLEMENTS}.",
+            )
+        )
+    for slot in ("lunch", "dinner"):
+        count = sum(1 for dish, _ in complements if slot in dish.meal_types)
+        if count < 1:
+            issues.append(
+                SeedIssue(
+                    "error",
+                    "MISSING_COMPLEMENT",
+                    f"No hay ningún acompañamiento compatible con {slot}.",
+                )
+            )
+
+    for dish, derived in mains:
+        if derived.primary_protein is None:
+            issues.append(
+                SeedIssue(
+                    "error",
+                    "MAIN_WITHOUT_PROTEIN_SOURCE",
+                    f"{dish.slug}: un plato principal debe declarar una proteína principal.",
+                )
+            )
+
     sources: dict[str, int] = {}
-    for dish in dishes:
-        for source in derived_by_dish.get(
-            dish.slug, DerivedDish(False, False, None, [], frozenset(), {})
-        ).protein_sources:
+    for _, derived in mains:
+        for source in derived.protein_sources:
             sources[source] = sources.get(source, 0) + 1
     strong_sources = [source for source, count in sources.items() if count >= MIN_PROTEIN_DISHES]
     if len(strong_sources) < MIN_PROTEIN_SOURCES:
@@ -398,18 +460,17 @@ def coverage_issues(
                 "NOT_ENOUGH_PROTEIN_SOURCES",
                 (
                     f"Solo {len(strong_sources)} fuentes de proteína tienen "
-                    f"{MIN_PROTEIN_DISHES}+ platos."
+                    f"{MIN_PROTEIN_DISHES}+ platos principales."
                 ),
             )
         )
 
     def count_tag(tag: str, *, dinner_only: bool = False) -> int:
         total = 0
-        for dish in dishes:
+        for dish, derived in mains:
             if dinner_only and "dinner" not in dish.meal_types:
                 continue
-            derived = derived_by_dish.get(dish.slug)
-            if derived is not None and tag in derived.tags:
+            if tag in derived.tags:
                 total += 1
         return total
 
@@ -421,14 +482,7 @@ def coverage_issues(
             "NOT_ENOUGH_LIGHT_DINNERS",
             "light",
             MIN_LIGHT_DINNERS,
-            sum(
-                1
-                for dish in dishes
-                if "dinner" in dish.meal_types
-                and derived_by_dish.get(
-                    dish.slug, DerivedDish(False, False, None, [], frozenset(), {})
-                ).light
-            ),
+            sum(1 for dish, derived in mains if "dinner" in dish.meal_types and derived.light),
         ),
     ]
     for code, label, minimum, actual in checks:
@@ -594,6 +648,7 @@ class SeedService:
             ingredient.slug: ingredient for ingredient in session.scalars(select(Ingredient)).all()
         }
         dishes = {dish.slug: dish for dish in session.scalars(select(Dish)).all()}
+        ingredients_by_slug = {ingredient.slug: ingredient for ingredient in documents.ingredients}
 
         for seed_ingredient in documents.ingredients:
             ingredient = ingredients.get(seed_ingredient.slug)
@@ -667,9 +722,15 @@ class SeedService:
                 dish = Dish(slug=seed_dish.slug)
                 session.add(dish)
                 dishes[seed_dish.slug] = dish
+            derived = derive_dish(
+                seed_dish,
+                ingredients_by_slug,
+            )
             dish.name = seed_dish.name
             dish.description = seed_dish.description
             dish.base_servings = seed_dish.base_servings
+            dish.role = derived.role
+            dish.primary_protein = derived.primary_protein
             dish.meal_types_json = list(seed_dish.meal_types)
             dish.protein_sources_json = list(seed_dish.protein_sources)
             dish.has_vegetables = seed_dish.has_vegetables

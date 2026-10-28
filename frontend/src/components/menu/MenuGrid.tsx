@@ -14,6 +14,8 @@ type MenuGridProps = {
   onSwap: (entry: MenuEntry) => void;
   onExclude: (entry: MenuEntry) => void;
   onRegenerate: () => void;
+  onAddComplement: (entry: MenuEntry) => void;
+  onRemoveComplement: (entry: MenuEntry) => void;
 };
 
 /** Rejilla de días (0-based en la API) por comida y cena. */
@@ -24,6 +26,8 @@ export function MenuGrid({
   onSwap,
   onExclude,
   onRegenerate,
+  onAddComplement,
+  onRemoveComplement,
 }: MenuGridProps) {
   const days = Array.from({ length: menu.days }, (_, dayIndex) => dayIndex);
 
@@ -43,8 +47,13 @@ export function MenuGrid({
             <h3 className="text-base font-semibold">Día {dayIndex + 1}</h3>
             <div className="grid gap-3 md:grid-cols-2">
               {SLOTS.map((slot) => {
-                const entry = dayEntries.find((candidate) => candidate.slot === slot);
-                if (!entry) {
+                const main = dayEntries.find(
+                  (candidate) => candidate.slot === slot && candidate.course === 'main',
+                );
+                const complement = dayEntries.find(
+                  (candidate) => candidate.slot === slot && candidate.course === 'complement',
+                );
+                if (!main) {
                   return (
                     <Card key={slot} className="h-full py-4">
                       <CardContent className="text-sm text-muted-foreground">
@@ -54,15 +63,28 @@ export function MenuGrid({
                   );
                 }
                 return (
-                  <div key={entry.id}>
+                  <div key={slot} className="space-y-2">
                     <MenuEntryCard
-                      entry={entry}
+                      entry={main}
                       isBusy={isBusy}
-                      onToggleLock={() => onToggleLock(entry)}
-                      onSwap={() => onSwap(entry)}
-                      onExclude={() => onExclude(entry)}
+                      hasComplement={complement !== undefined}
+                      onToggleLock={() => onToggleLock(main)}
+                      onSwap={() => onSwap(main)}
+                      onExclude={() => onExclude(main)}
                       onRegenerate={onRegenerate}
+                      onAddComplement={() => onAddComplement(main)}
                     />
+                    {complement ? (
+                      <MenuEntryCard
+                        entry={complement}
+                        isBusy={isBusy}
+                        onToggleLock={() => onToggleLock(complement)}
+                        onSwap={() => onSwap(complement)}
+                        onExclude={() => onExclude(complement)}
+                        onRegenerate={onRegenerate}
+                        onRemoveComplement={() => onRemoveComplement(main)}
+                      />
+                    ) : null}
                   </div>
                 );
               })}

@@ -52,7 +52,10 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Aplica las migraciones sobre SQLite con los PRAGMA de la app."""
-    connectable = create_engine_for_url(_database_url())
+    # Las tablas se recrean con batch_alter_table; con las claves foráneas
+    # activas, SQLite rechaza el DROP de la tabla antigua si tiene filas
+    # referenciadas. La app vuelve a activarlas en cada conexión.
+    connectable = create_engine_for_url(_database_url(), foreign_keys=False)
     try:
         with connectable.connect() as connection:
             context.configure(

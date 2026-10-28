@@ -77,7 +77,7 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 
 ## Componentes
 
-- **Frontend React:** layout en español con navegación Menú / Historial / Platos / Ajustes, formulario persistente de personas/días/presupuesto, generación con modal de menú inviable, rejilla días × comida/cena, barra de presupuesto, acciones de bloqueo/swap/exclusión/regeneración, revalidación al abrir con delta de precios, lista de la compra con secciones, checkboxes y «ya lo tengo», historial paginado, catálogo de platos con búsqueda y filtros, detalle con ingredientes y «no me gusta», tarjeta de coste de consumo/ticket por plato y ración, tarjeta de estado del catálogo, origen de precios y tarjetas de alérgenos, exclusiones y despensa. Incluye enlace «Saltar al contenido», foco visible y hoja de impresión A4.
+- **Frontend React:** layout en español con navegación Menú / Historial / Platos / Ajustes, formulario persistente de personas/días/presupuesto, generación con modal de menú inviable, rejilla días × comida/cena con principal y acompañamiento, barra de presupuesto, acciones de bloqueo/swap/exclusión/añadir-quitar acompañamiento/regeneración, revalidación al abrir con delta de precios, lista de la compra con secciones, checkboxes y «ya lo tengo», historial paginado, catálogo de platos con búsqueda, filtro por curso y filtros, detalle con ingredientes y «no me gusta», tarjeta de coste de consumo/ticket por plato y ración, tarjeta de estado del catálogo, origen de precios y tarjetas de alérgenos, exclusiones y despensa. Incluye enlace «Saltar al contenido», foco visible y hoja de impresión A4.
 - **FastAPI:** API REST, validación Pydantic, orquestación de servicios, errores homogéneos (`{"error": {...}}`), `/api/health`, `/api/catalog/*`, `/api/*` de dominio y `/api/menus/*`. La sync de arranque y la carga del seed corren en segundo plano desde el lifespan. En `APP_ENV=production` sirve `frontend/dist` con fallback SPA y desactiva `/docs`/`/redoc`.
 - **Configuración (`app/config.py`):** `Settings` con `APP_ENV`, `SYNC_ON_STARTUP`, `OPTIMIZER_TIME_LIMIT_SECONDS` y `CESTA_DATA_DIR` opcional absoluto. Rechaza rutas dentro de OneDrive. Constantes `POSTAL_CODE="22002"`, `EXPECTED_WAREHOUSE="4389"` y `LOCAL_HOSTS`.
 - **Seguridad (`app/security.py`):** `HostValidationMiddleware` acepta solo `127.0.0.1`, `localhost` y `::1`; el resto devuelve `400 INVALID_HOST`.
@@ -89,8 +89,8 @@ pytest resuelve `app` con `pythonpath = ["."]` desde `backend/`.
 - **AllergenSyncService:** descarga el detalle de los productos mapeados, interpreta `nutrition_information` (`x99`, ingredientes, «puede contener») y persiste `allergen_status` y `product_allergens` (F2.4). Política fail-closed.
 - **EligibilityService:** productos elegibles por ingrediente, unión de alérgenos ingrediente/producto, exclusiones por ingrediente/plato/etiqueta y disponibilidad; base de F4.2 (F2.4/F2.8).
 - **PricingService:** funciones puras con `Decimal` y céntimos enteros (F3): escalado por personas/raciones, formatos comprables, necesidad neta con despensa, `plan_purchase` canónico, consumo, ticket, sobras e identidad contable. El preview de F3 y la lista de F4 comparten `plan_purchase`.
-- **OptimizerService:** CP-SAT en dos etapas con presupuesto duro, demanda por paquetes `P_i`, mínimos diarios, variedad y diagnósticos de inviabilidad (F4.2-F4.4). No abre sesiones ni persiste.
-- **MenuService:** persistencia transaccional de menús, entradas y lista; recálculo con precios actuales; swap, exclude, regenerate, revalidate y «ya lo tengo»; identidades contables y rechazo por presupuesto (F4.5). La revalidación guarda ticket anterior/revalidado y delta (F5.1).
+- **OptimizerService:** CP-SAT en dos etapas con presupuesto duro, demanda por paquetes `P_i`, mínimos diarios, variedad y diagnósticos de inviabilidad (F4.2-F4.4). F6 filtra solo platos `main` y añade topes blandos por fuente, misma proteína por día y pescado semanal. No abre sesiones ni persiste.
+- **MenuService:** persistencia transaccional de menús, entradas y lista; recálculo con precios actuales; swap, exclude, regenerate, revalidate y «ya lo tengo»; identidades contables y rechazo por presupuesto (F4.5). F6 añade/quita acompañamientos y conserva los válidos al regenerar. La revalidación guarda ticket anterior/revalidado y delta (F5.1).
 - **PriceSourceService:** `app/services/price_source.py` decide si la copia local sirve para precios actuales (`current`), solo para consultar/revalidar (`local_copy`) o no es válida (`unavailable`). Solo acepta la última sync completa de CP 22002 / almacén 4389; nunca mezcla almacenes.
 - **Static frontend:** `app/static.py` monta `frontend/dist` en producción con fallback a `index.html` para rutas SPA, excluyendo `/api/*` inexistentes, recursos con extensión y documentación.
 - **Operación local:** `run.ps1` resuelve `CESTA_DATA_DIR`, inicializa la base, arranca backend y frontend y limpia procesos; con `-Prod` compila y arranca solo Uvicorn sirviendo la UI. `scripts/init_db.py` crea el SQLite con sus PRAGMA; `check.ps1` agrega toda la calidad; `audit.ps1` audita dependencias; `backup_db.py`/`restore_db.py` copian y restauran con verificación; `finish-phase.ps1` cierra la fase con commit y push tras validar `check.ps1` y rechazar archivos prohibidos.
@@ -185,6 +185,16 @@ Implementado en `app/services/optimizer.py` (F4.2-F4.4) y `app/services/menu_ser
 - `revalidate` conserva el ticket y la lista válidos; si el recalculado supera el presupuesto, guarda el nuevo ticket en `revalidated_ticket_cents` y marca `stale` sin romper el invariante. Swap, exclude, regenerate y «ya lo tengo» sí rechazan con `BUDGET_EXCEEDED` y revierten la transacción. Tras revalidar, `previous_ticket_cents`, `revalidated_ticket_cents`, `price_delta_cents` y `revalidated_at` permiten mostrar el delta; una segunda revalidación sin cambios vuelve a `current`.
 - `MenuService` valida la fuente de precios: generar exige `price_source="current"`; revalidar permite `local_copy`; cualquier producto con `last_sync_run_id` de otro almacén bloquea el recálculo con `WAREHOUSE_UNAVAILABLE`.
 
+## F6 implementada: comidas completas y acompañamientos
+
+- `dishes.role` (`main|complement`) y `dishes.primary_protein`, derivados de la composición al cargar el seed (migración `20261026_0006`).
+- `main`: ≥0,5 raciones de proteína por persona y ≥0,5 entre verdura e hidrato. Los platos que no cumplen son `complement`.
+- `menu_entries.course` (`main|complement`) con unicidad `(menu_id, day_index, slot, course)`; un principal obligatorio y como máximo un acompañamiento por hueco. Los menús históricos quedan como `course='main'`.
+- El optimizador filtra solo `main`; añade topes blandos `legume_dominance`, `protein_balance`, `same_day_protein` y pescado `max(1, ceil(days × 2 / 7))`. `OPTIMIZER_VERSION = "2"`.
+- `MenuService` añade y quita acompañamientos, recalcula ticket/lista/identidades y conserva los válidos en `regenerate`; los que no caben se descartan.
+- API: `POST|DELETE /api/menus/{id}/entries/{main_entry_id}/complement`; `GET /api/dishes?role=main|complement`; `role` y `primary_protein` en platos, `course` en entradas.
+- UI: rejilla principal + acompañamiento, diálogo de añadir/quitar, etiquetas y filtro por rol, exportación markdown con ambos cursos.
+
 ## APIs
 
 Prefijo `/api`:
@@ -198,6 +208,7 @@ Prefijo `/api`:
 - `/menus/generate`, `/menus`, `/menus/{id}` — implementados (F4.6)
 - `/menus/{id}/entries/{entry_id}`, `/swap`, `/exclude` — implementados (F4.6)
 - `/menus/{id}/regenerate`, `/menus/{id}/revalidate` — implementados (F4.6)
+- `/menus/{id}/entries/{main_entry_id}/complement` (`POST`/`DELETE`) — implementado (F6)
 - `/menus/{id}/shopping-list` y `/menus/{id}/shopping-list/items/{item_id}` — implementados (F4.6)
 - `/menus/{id}/export?format=markdown|csv` — implementado (F4.6)
 - `/catalog/status` añade `last_valid_sync`, `price_source`, `using_local_copy`, `fallback_reason` y `price_age_hours` (F5.1)
@@ -221,9 +232,9 @@ Tablas principales:
 
 - `categories`, `products` (con `external_id` y `allergen_status`), `sync_runs`, `sync_category_runs`, `product_allergens` — implementadas (F1.1).
 - `ingredients` (con `serving_group` y `serving_size_milli`), `ingredient_products` (producto único y un `is_default` por ingrediente) — implementadas (F2.1).
-- `dishes`, `dish_ingredients` (cantidad en la unidad base del ingrediente) — implementadas (F2.1).
+- `dishes` (con `role` y `primary_protein`), `dish_ingredients` (cantidad en la unidad base del ingrediente) — implementadas (F2.1 y F6).
 - `profiles` (fila única `id=1`), `exclusions` (tres índices únicos parciales), `pantry_items` (`UNIQUE(profile_id, ingredient_id)`) — implementadas (F2.1).
-- `menus` (con `status`, `price_status`, `timed_out`, `revalidated_ticket_cents`, `previous_ticket_cents`, `revalidated_at`, `violations`, `relaxation_codes_json` y `settings_json`), `menu_entries`, `menu_entry_ingredients`, `shopping_items` — implementadas (F4.1 y F5.1, migraciones `20261026_0003`, `20261026_0004` y `20261026_0005`).
+- `menus` (con `status`, `price_status`, `timed_out`, `revalidated_ticket_cents`, `previous_ticket_cents`, `revalidated_at`, `violations`, `relaxation_codes_json` y `settings_json`), `menu_entries` (con `course`), `menu_entry_ingredients`, `shopping_items` — implementadas (F4.1, F5.1 y F6, migraciones `20261026_0003`, `20261026_0004`, `20261026_0005` y `20261026_0006`).
 - Índices de entrega: `ix_menus_profile_created_at`, `ix_sync_runs_status_finished_at` e `ix_products_last_sync_run_id`.
 
 No hay `price_snapshots` ni `raw_json` persistente en el MVP.
@@ -275,6 +286,9 @@ Resiliencia de precios: copia local 22002/4389, stale con delta (F5.1)
     │
     ▼
 Historial, impresión A4, producción en un proceso y backup (F5.2-F5.6)
+    │
+    ▼
+Principales completos, acompañamientos opcionales y reparto de proteínas (F6)
 ```
 
 ## Notas
@@ -289,5 +303,6 @@ Historial, impresión A4, producción en un proceso y backup (F5.2-F5.6)
 - `plan_purchase` es la función canónica de compra y se comparte entre preview y lista final.
 - `used`/`leftover` se calculan después de resolver.
 - `price_status` es independiente de `status` de generación.
+- F6: todo menú nuevo tiene un `main` por hueco y como máximo un `complement`; el principal es duro y los topes de proteína son blandos. Los menús históricos se leen como `course='main'`.
 - La API valida la cabecera `Host`; un host desconocido devuelve `400 INVALID_HOST`.
 - La base SQLite se rechaza si `CESTA_DATA_DIR` apunta dentro de OneDrive.

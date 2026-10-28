@@ -20,7 +20,7 @@ def test_menu_settings_defaults() -> None:
     assert settings.excluded_tags == []
     assert settings.pantry == []
     assert settings.max_repeats == 1
-    assert settings.optimizer_version == "1"
+    assert settings.optimizer_version == "2"
 
 
 def test_menu_settings_rejects_unknown_allergen() -> None:

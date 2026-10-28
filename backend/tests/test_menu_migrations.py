@@ -107,19 +107,22 @@ def _insert_entry(
     menu_id: int = 1,
     day_index: int = 0,
     slot: str = "lunch",
+    course: str = "main",
     dish_id: int = 1,
     dish_name: str = "Arroz",
 ) -> None:
     connection.execute(
         text(
-            "insert into menu_entries (id, menu_id, day_index, slot, dish_id, dish_name) "
-            "values (:entry_id, :menu_id, :day_index, :slot, :dish_id, :dish_name)"
+            "insert into menu_entries "
+            "(id, menu_id, day_index, slot, course, dish_id, dish_name) "
+            "values (:entry_id, :menu_id, :day_index, :slot, :course, :dish_id, :dish_name)"
         ),
         {
             "entry_id": entry_id,
             "menu_id": menu_id,
             "day_index": day_index,
             "slot": slot,
+            "course": course,
             "dish_id": dish_id,
             "dish_name": dish_name,
         },
@@ -190,7 +193,7 @@ def test_menu_migration_creates_tables_constraints_and_version(migrated_engine: 
 
     assert set(MENU_TABLES) <= tables
     assert {"violations", "relaxation_codes_json"} <= menu_columns
-    assert "uq_menu_entries_menu_slot" in unique_constraints["menu_entries"]
+    assert "uq_menu_entries_menu_slot_course" in unique_constraints["menu_entries"]
     assert (
         "uq_menu_entry_ingredients_entry_ingredient" in unique_constraints["menu_entry_ingredients"]
     )
@@ -198,13 +201,16 @@ def test_menu_migration_creates_tables_constraints_and_version(migrated_engine: 
     assert "ck_menus_status" in checks["menus"]
     assert "ck_menus_price_status" in checks["menus"]
     assert "ck_menu_entries_slot" in checks["menu_entries"]
+    assert "ck_menu_entries_course" in checks["menu_entries"]
     assert "ck_shopping_items_packages" in checks["shopping_items"]
     assert "ck_menus_amounts" in checks["menus"]
     assert "ck_menus_violations" in checks["menus"]
     assert "ck_menus_ticket_within_budget" in checks["menus"]
     assert "ck_menus_previous_ticket" in checks["menus"]
     assert {"previous_ticket_cents", "revalidated_at"} <= menu_columns
-    assert version == "20261026_0005"
+    assert "course" in {item["name"] for item in inspector.get_columns("menu_entries")}
+    assert "role" in {item["name"] for item in inspector.get_columns("dishes")}
+    assert version == "20261026_0006"
 
 
 def test_menu_migration_matches_models(migrated_engine: Engine) -> None:
@@ -231,6 +237,49 @@ def test_unique_constraints_reject_duplicate_rows(migrated_engine: Engine) -> No
         _insert_entry_ingredient(connection)
     with pytest.raises(IntegrityError), migrated_engine.begin() as connection:
         _insert_entry_ingredient(connection)
+
+
+def test_complement_course_allows_one_extra_entry_per_slot(migrated_engine: Engine) -> None:
+    with migrated_engine.begin() as connection:
+        _insert_base_rows(connection)
+        _insert_menu(connection)
+        _insert_entry(connection, course="main")
+        _insert_entry(connection, entry_id=2, course="complement")
+
+    with pytest.raises(IntegrityError), migrated_engine.begin() as connection:
+        _insert_entry(connection, entry_id=3, course="complement")
+
+    with pytest.raises(IntegrityError), migrated_engine.begin() as connection:
+        _insert_entry(connection, entry_id=4, course="snack")
+
+
+def test_legacy_menu_entries_default_to_main_course(migrated_engine: Engine) -> None:
+    with migrated_engine.begin() as connection:
+        _insert_base_rows(connection)
+        _insert_menu(connection)
+        connection.execute(
+            text(
+                "insert into menu_entries (id, menu_id, day_index, slot, dish_id, dish_name) "
+                "values (1, 1, 0, 'lunch', 1, 'Arroz')"
+            )
+        )
+
+    with migrated_engine.connect() as connection:
+        course = connection.execute(
+            text("select course from menu_entries where id = 1")
+        ).scalar_one()
+        dish_role = connection.execute(text("select role from dishes where id = 1")).scalar_one()
+
+    assert course == "main"
+    assert dish_role == "main"
+
+
+def test_dish_roles_reject_invalid_values(migrated_engine: Engine) -> None:
+    with migrated_engine.begin() as connection:
+        _insert_base_rows(connection)
+
+    with pytest.raises(IntegrityError), migrated_engine.begin() as connection:
+        connection.execute(text("update dishes set role = 'snack' where id = 1"))
 
 
 @pytest.mark.parametrize(

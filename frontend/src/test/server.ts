@@ -78,6 +78,8 @@ const DISH: DishSummary = {
   description: 'Pollo, arroz y cebolla.',
   base_servings: 2,
   meal_types: ['lunch', 'dinner'],
+  role: 'main',
+  primary_protein: 'chicken',
   protein_sources: ['chicken'],
   has_vegetables: true,
   light: false,
@@ -146,6 +148,8 @@ const SWAP_DISHES: DishSummary[] = [
     description: 'Huevo y patata.',
     base_servings: 2,
     meal_types: ['dinner'],
+    role: 'main',
+    primary_protein: 'eggs',
     protein_sources: ['eggs'],
     has_vegetables: false,
     light: false,
@@ -162,6 +166,8 @@ const SWAP_DISHES: DishSummary[] = [
     description: 'Lentejas con verduras.',
     base_servings: 2,
     meal_types: ['lunch'],
+    role: 'main',
+    primary_protein: 'legumes',
     protein_sources: ['legumes'],
     has_vegetables: true,
     light: false,
@@ -178,6 +184,8 @@ const SWAP_DISHES: DishSummary[] = [
     description: 'Calabacín y cebolla.',
     base_servings: 2,
     meal_types: ['dinner'],
+    role: 'complement',
+    primary_protein: null,
     protein_sources: [],
     has_vegetables: true,
     light: true,
@@ -194,6 +202,8 @@ const SWAP_DISHES: DishSummary[] = [
     description: 'Solomillo y patatas.',
     base_servings: 2,
     meal_types: ['dinner'],
+    role: 'main',
+    primary_protein: 'beef',
     protein_sources: ['beef'],
     has_vegetables: false,
     light: false,
@@ -210,12 +220,50 @@ const SWAP_DISHES: DishSummary[] = [
     description: 'Pasta, tomate y atún.',
     base_servings: 2,
     meal_types: ['lunch'],
+    role: 'complement',
+    primary_protein: 'fish',
     protein_sources: ['tuna'],
     has_vegetables: true,
     light: true,
     carbs: 'pasta',
     tags: ['salad', 'fish'],
     allergens: ['fish'],
+    eligible: true,
+    exclusion_reasons: [],
+  },
+  {
+    id: 7,
+    slug: 'salmon-potatoes',
+    name: 'Salmón con patatas',
+    description: 'Salmón al horno con patatas.',
+    base_servings: 2,
+    meal_types: ['dinner'],
+    role: 'main',
+    primary_protein: 'fish',
+    protein_sources: ['fish'],
+    has_vegetables: true,
+    light: true,
+    carbs: 'potato',
+    tags: ['fish'],
+    allergens: ['fish'],
+    eligible: true,
+    exclusion_reasons: [],
+  },
+  {
+    id: 8,
+    slug: 'mixed-salad',
+    name: 'Ensalada mixta',
+    description: 'Lechuga, tomate y cebolla.',
+    base_servings: 2,
+    meal_types: ['lunch', 'dinner'],
+    role: 'complement',
+    primary_protein: null,
+    protein_sources: [],
+    has_vegetables: true,
+    light: true,
+    carbs: null,
+    tags: ['salad', 'vegetarian', 'vegan'],
+    allergens: [],
     eligible: true,
     exclusion_reasons: [],
   },
@@ -228,6 +276,8 @@ const DISH_ENTRY_CENTS: Record<number, number> = {
   4: 120,
   5: 12_000,
   6: 110,
+  7: 150,
+  8: 90,
 };
 
 const ALLERGENS = [
@@ -394,6 +444,7 @@ const MENU_ENTRY_TEMPLATES: MenuEntry[] = [
     id: 1,
     day_index: 0,
     slot: 'lunch',
+    course: 'main',
     dish_id: 1,
     dish_name: 'Pollo con arroz',
     locked: false,
@@ -423,6 +474,7 @@ const MENU_ENTRY_TEMPLATES: MenuEntry[] = [
     id: 2,
     day_index: 0,
     slot: 'dinner',
+    course: 'main',
     dish_id: 2,
     dish_name: 'Tortilla de patatas',
     locked: false,
@@ -452,6 +504,7 @@ const MENU_ENTRY_TEMPLATES: MenuEntry[] = [
     id: 3,
     day_index: 1,
     slot: 'lunch',
+    course: 'main',
     dish_id: 3,
     dish_name: 'Lentejas guisadas',
     locked: false,
@@ -481,6 +534,7 @@ const MENU_ENTRY_TEMPLATES: MenuEntry[] = [
     id: 4,
     day_index: 1,
     slot: 'dinner',
+    course: 'main',
     dish_id: 4,
     dish_name: 'Sopa de verduras',
     locked: false,
@@ -717,8 +771,9 @@ function swapDishInEntry(entry: MenuEntry, dish: DishSummary): number {
   const next = DISH_ENTRY_CENTS[dish.id] ?? 136;
   entry.dish_id = dish.id;
   entry.dish_name = dish.name;
+  entry.course = dish.role;
   entry.entry_consumption_cents = next;
-  entry.protein_source = dish.protein_sources[0] ?? null;
+  entry.protein_source = dish.primary_protein;
   entry.tags = [...dish.tags];
   entry.ingredients = [];
   return next - previous;
@@ -802,9 +857,15 @@ export const server = setupServer(
     HttpResponse.json({ items: INGREDIENTS, total: INGREDIENTS.length, limit: 200, offset: 0 }),
   ),
   http.get('/api/dishes', ({ request }) => {
-    const mealType = new URL(request.url).searchParams.get('meal_type');
-    if (mealType === 'lunch' || mealType === 'dinner') {
-      const items = SWAP_DISHES.filter((dish) => dish.meal_types.includes(mealType));
+    const searchParams = new URL(request.url).searchParams;
+    const mealType = searchParams.get('meal_type');
+    const role = searchParams.get('role');
+    if (mealType === 'lunch' || mealType === 'dinner' || role === 'main' || role === 'complement') {
+      const items = SWAP_DISHES.filter(
+        (dish) =>
+          (!mealType || dish.meal_types.includes(mealType as 'lunch' | 'dinner')) &&
+          (!role || dish.role === role),
+      );
       return HttpResponse.json({ items, total: items.length, limit: 100, offset: 0 });
     }
     return HttpResponse.json({ items: [DISH], total: 1, limit: 100, offset: 0 });
@@ -893,6 +954,12 @@ export const server = setupServer(
     if (!entry) return apiError('NOT_FOUND', 'La entrada no existe.', 404);
     const dish = SWAP_DISHES.find((candidate) => candidate.id === body.dish_id);
     if (!dish) return apiError('NOT_FOUND', 'El plato no existe.', 404);
+    if (dish.role !== entry.course) {
+      return apiError('VALIDATION_ERROR', 'El plato no es del mismo curso que la entrada.', 422, {
+        dish_role: dish.role,
+        entry_course: entry.course,
+      });
+    }
 
     const nextCost = DISH_ENTRY_CENTS[dish.id] ?? 136;
     const nextTicket = menuState.detail.ticket_cents - entry.entry_consumption_cents + nextCost;
@@ -911,6 +978,76 @@ export const server = setupServer(
     menuState.detail.updated_at = nowIso();
     return HttpResponse.json(structuredClone(menuState.detail));
   }),
+  http.post('/api/menus/:menuId/entries/:entryId/complement', async ({ params, request }) => {
+    if (Number(params.menuId) !== menuState.detail.id) return menuNotFound();
+    const body = (await request.json()) as { dish_id?: number };
+    const main = menuState.detail.entries.find(
+      (item) => item.id === Number(params.entryId) && item.course === 'main',
+    );
+    if (!main) return apiError('NOT_FOUND', 'La entrada principal no existe.', 404);
+    const existing = menuState.detail.entries.find(
+      (item) =>
+        item.day_index === main.day_index &&
+        item.slot === main.slot &&
+        item.course === 'complement',
+    );
+    if (existing) {
+      return apiError('VALIDATION_ERROR', 'El hueco ya tiene un acompañamiento.', 422);
+    }
+    const dish = SWAP_DISHES.find(
+      (candidate) => candidate.id === body.dish_id && candidate.role === 'complement',
+    );
+    if (!dish) return apiError('NOT_FOUND', 'El acompañamiento no existe.', 404);
+    if (!dish.meal_types.includes(main.slot)) {
+      return apiError('VALIDATION_ERROR', 'El acompañamiento no es compatible con el hueco.', 422);
+    }
+    const cost = DISH_ENTRY_CENTS[dish.id] ?? 136;
+    if (menuState.detail.ticket_cents + cost > menuState.detail.budget_cents) {
+      return apiError(
+        'BUDGET_EXCEEDED',
+        'El acompañamiento supera el presupuesto y no se ha añadido.',
+        422,
+        { reason: 'budget' },
+      );
+    }
+    const nextId = Math.max(...menuState.detail.entries.map((item) => item.id)) + 1;
+    menuState.detail.entries.push({
+      id: nextId,
+      day_index: main.day_index,
+      slot: main.slot,
+      course: 'complement',
+      dish_id: dish.id,
+      dish_name: dish.name,
+      locked: false,
+      entry_consumption_cents: cost,
+      protein_source: dish.primary_protein,
+      tags: [...dish.tags],
+      ingredients: [],
+    });
+    menuState.detail.ticket_cents += cost;
+    menuState.detail.consumption_cents += cost;
+    menuState.detail.updated_at = nowIso();
+    return HttpResponse.json(structuredClone(menuState.detail));
+  }),
+  http.delete('/api/menus/:menuId/entries/:entryId/complement', ({ params }) => {
+    if (Number(params.menuId) !== menuState.detail.id) return menuNotFound();
+    const main = menuState.detail.entries.find(
+      (item) => item.id === Number(params.entryId) && item.course === 'main',
+    );
+    if (!main) return apiError('NOT_FOUND', 'La entrada principal no existe.', 404);
+    const complement = menuState.detail.entries.find(
+      (item) =>
+        item.day_index === main.day_index &&
+        item.slot === main.slot &&
+        item.course === 'complement',
+    );
+    if (!complement) return apiError('NOT_FOUND', 'El hueco no tiene acompañamiento.', 404);
+    menuState.detail.entries = menuState.detail.entries.filter((item) => item.id !== complement.id);
+    menuState.detail.ticket_cents -= complement.entry_consumption_cents;
+    menuState.detail.consumption_cents -= complement.entry_consumption_cents;
+    menuState.detail.updated_at = nowIso();
+    return HttpResponse.json(structuredClone(menuState.detail));
+  }),
   http.post('/api/menus/:menuId/entries/:entryId/exclude', async ({ params, request }) => {
     if (Number(params.menuId) !== menuState.detail.id) return menuNotFound();
     const body = (await request.json()) as { scope?: 'menu' | 'profile' };
@@ -924,6 +1061,7 @@ export const server = setupServer(
       (dish) =>
         dish.id !== entry.dish_id &&
         dish.id !== 5 &&
+        dish.role === entry.course &&
         dish.meal_types.includes(entry.slot) &&
         dish.eligible,
     );
@@ -945,7 +1083,10 @@ export const server = setupServer(
       if (entry.locked) continue;
       const candidates = SWAP_DISHES.filter(
         (dish) =>
-          dish.id !== entry.dish_id && dish.id !== 5 && dish.meal_types.includes(entry.slot),
+          dish.id !== entry.dish_id &&
+          dish.id !== 5 &&
+          dish.role === entry.course &&
+          dish.meal_types.includes(entry.slot),
       );
       const replacement = candidates[entry.day_index % candidates.length];
       if (replacement) delta += swapDishInEntry(entry, replacement);

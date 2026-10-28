@@ -2,22 +2,23 @@
 
 ## Estado
 
-F0-F5 completadas el 2026-10-26. **MVP cerrado.**
+F0-F6 completadas el 2026-10-28. **MVP y comidas completas cerrados.**
 
-- Backend: Ruff, formato, mypy strict y 354 tests en verde.
-- Frontend: ESLint, Prettier, TypeScript estricto, 54 tests y build en verde.
+- Backend: Ruff, formato, mypy strict y 365 tests en verde.
+- Frontend: ESLint, Prettier, TypeScript estricto, 56 tests y build en verde.
 - Catálogo real: 152/152 subcategorías, 4.542 productos vistos, 4.292 únicos, 178 categorías, 7,72 s, `success`, CP 22002 / almacén 4389.
-- Dominio: 110 ingredientes, 212 mapeos únicos, 60 platos sin pasos; `validate_seed.py` en verde.
+- Dominio: 110 ingredientes, 212 mapeos únicos, 63 platos sin pasos (55 principales, 8 acompañamientos); `validate_seed.py` en verde.
 - Alérgenos: 212 productos mapeados; en la última sync real 211 actualizados y 1 fallo transitorio reintentable; 11-12 `unknown`, 29 `partial`.
 - Coste: `plan_purchase` canónico exacto; identidad `ticket + pantry_consumption = consumption + leftover`; preview sin persistencia.
 - Resiliencia F5.1: `price_source` (`current|local_copy|unavailable`), generación bloqueada con copia no confirmada, revalidación permitida con copia local válida, delta de precios persistido y visible.
 - Entrega F5.2-F5.7: historial `/history`, impresión A4, accesibilidad base, privacidad, auditoría sin hallazgos, backup/restore, producción en un solo proceso, benchmark de endpoints y tests de integración.
-- Rendimiento: sync 7,72 s; generación 14d/4p p95 3,73 s; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
+- Rendimiento: sync 7,72 s; generación 14d/4p p95 5,22 s con F6; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
 - F1 publicada en `origin/main` con `e938016`; F2 con `0c9909c`; F3 con `1dd864e`; checkpoint F4.1-F4.5 con `fd563f5`; F4 con `8bf41fe`; F5 cerrada con `32b32ac`.
 - Base SQLite en `%LOCALAPPDATA%\Cesta`, fuera de OneDrive; migración `20261026_0005` aplicada a la copia local.
 
 ## Alta prioridad (post-MVP)
 
+- **F6 completada:** plato principal completo, acompañamientos opcionales, topes blandos de proteínas y pescado 2/semana.
 - Revisar el warning del bundle principal (>500 kB) y valorar code splitting por rutas.
 - Añadir una comprobación de accesibilidad automatizada (axe o equivalente) si se incorpora una dependencia de test.
 - Decidir si la revalidación automática al abrir debe respetar un intervalo mínimo (p. ej. 5 min) para no repetir trabajo en navegaciones rápidas.
@@ -74,9 +75,16 @@ F0-F5 completadas el 2026-10-26. **MVP cerrado.**
 - Dependencias de frontend muy recientes (React Router 8, Vitest 5, MSW 3, TypeScript 6, ESLint 10): revisar notas de migración al añadir features.
 - El bundle principal supera 500 kB (541,60 kB, 162,13 kB gzip); no afecta al DoD, pero conviene code splitting.
 - `price_source` bloquea generar durante una sync en curso; la UI muestra la copia local y el motivo.
+- F6 exige principales completos y limita fuentes baratas: el ticket medio sube; el benchmark 14d/4p dio p95 5,22 s y tickets variables según el límite de reloj.
+- Los topes de proteína son blandos: con presupuesto ajustado el menú puede ser `relaxed`; se informa en la UI.
+- La clasificación `main|complement` es heurística por raciones y puede revisarse (por ejemplo, el umbral 0,5).
+- Los menús históricos anteriores a F6 conservan `course='main'` y pueden mostrar un complemento como plato único hasta regenerarse.
+- El cambio de unicidad de `menu_entries` exige migración batch en SQLite; la conexión de Alembic desactiva `foreign_keys` durante la migración, pero hay que probar cualquier migración futura con datos históricos.
+- `regenerate` descarta acompañamientos que no caben y la UI lo avisa comparando conteos; no se persiste el motivo por acompañamiento.
 
 ## Siguiente acción recomendada
 
-1. Mantener el MVP con la sync real y el benchmark como comprobaciones manuales antes de release.
-2. Abordar code splitting y una auditoría de accesibilidad automatizada como primer trabajo post-MVP.
+1. Cerrar F6 con `.\finish-phase.ps1 -Phase F6 -Summary "comidas completas y acompañamientos"`.
+2. Abordar code splitting y una auditoría de accesibilidad automatizada como trabajo post-MVP.
 3. Revisar la semántica de `exclude` con `scope=menu` y añadir el migrador de `MenuSettings.version` antes de cambiar el snapshot.
+4. Mantener la sync real y el benchmark como comprobaciones manuales antes de release.

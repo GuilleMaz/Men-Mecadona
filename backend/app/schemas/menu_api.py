@@ -22,6 +22,7 @@ GenerateStatus = Literal["optimal", "feasible", "relaxed", "infeasible", "timeou
 GenerateReason = Literal["budget", "timeout"]
 ExclusionScope = Literal["menu", "profile"]
 ExportFormat = Literal["markdown", "csv"]
+MenuCourse = Literal["main", "complement"]
 
 
 class MenuGenerateRequest(BaseModel):
@@ -112,6 +113,7 @@ class MenuEntry(BaseModel):
     id: int
     day_index: int
     slot: MealType
+    course: MenuCourse
     dish_id: int
     dish_name: str
     locked: bool
@@ -174,6 +176,14 @@ class MenuEntryLockUpdate(BaseModel):
 
 class MenuEntrySwap(BaseModel):
     """Plato de reemplazo para una entrada."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    dish_id: int = Field(ge=1)
+
+
+class MenuEntryComplementCreate(BaseModel):
+    """Acompañamiento que se añade a un hueco con principal."""
 
     model_config = ConfigDict(extra="forbid")
 

@@ -18,11 +18,19 @@ uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - Menús: `POST /api/menus/generate`, `GET /api/menus`, `GET /api/menus/{id}`,
   `PATCH /api/menus/{id}/entries/{entry_id}`,
   `POST /api/menus/{id}/entries/{entry_id}/swap|exclude`,
+  `POST|DELETE /api/menus/{id}/entries/{main_entry_id}/complement`,
   `POST /api/menus/{id}/regenerate|revalidate`,
   `GET /api/menus/{id}/shopping-list`,
   `PATCH /api/menus/{id}/shopping-list/items/{item_id}` y
   `GET /api/menus/{id}/export?format=markdown|csv`.
 - Documentación interactiva: `http://127.0.0.1:8000/docs`.
+
+**F6 implementada:** `dishes.role` (`main|complement`) y
+`dishes.primary_protein` se derivan de la composición; `menu_entries.course`
+distingue principal y acompañamiento. El optimizador solo elige platos `main`,
+los acompañamientos se añaden con `POST/DELETE
+/api/menus/{id}/entries/{main_entry_id}/complement` y `GET /api/dishes` admite
+`role=main|complement`.
 
 Para arrancar backend y frontend juntos, usa `.\run.ps1` desde la raíz. Para
 ejecutar toda la calidad del repositorio, usa `.\check.ps1`.
@@ -157,7 +165,8 @@ uv run python ..\scripts\dry_run_menu.py --days 1,2,7,14 --people 1,2,4,10
 uv run python ..\scripts\benchmark_menu.py --runs 20 --days 14 --people 4
 ```
 
-Estado actual: 354 tests backend en verde; benchmark 14d/4p con p95 3,73 s.
+Estado actual: 365 tests backend en verde; benchmark 14d/4p con p95 5,22 s
+(principales completos y topes de proteína).
 
 ## Calidad, resiliencia y entrega (F5)
 

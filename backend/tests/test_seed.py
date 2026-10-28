@@ -17,6 +17,7 @@ from app.services.seed import (
     SeedDocuments,
     SeedIssue,
     SeedService,
+    derive_dish,
     load_seed_documents,
     to_quantity_milli,
     validate_catalog_mappings,
@@ -81,9 +82,46 @@ def test_seed_documents_pass_structure_and_coverage() -> None:
     documents = load_seed_documents()
 
     assert len(documents.ingredients) == 110
-    assert len(documents.dishes) == 60
+    assert len(documents.dishes) == 63
     assert len(documents.version) == 16
     assert not validate_seed(documents.ingredients, documents.dishes)
+
+
+def test_seed_derives_main_role_and_primary_protein() -> None:
+    documents = load_seed_documents()
+    ingredients = {ingredient.slug: ingredient for ingredient in documents.ingredients}
+    dishes = {dish.slug: dish for dish in documents.dishes}
+    derived = {dish.slug: derive_dish(dish, ingredients) for dish in documents.dishes}
+
+    for slug in (
+        "gazpacho",
+        "vegetable-soup",
+        "cauliflower-soup",
+        "pasta-salad",
+        "pasta-vegetables",
+        "mixed-salad",
+        "tomato-onion-salad",
+        "grilled-vegetables",
+    ):
+        assert derived[slug].role == "complement", slug
+
+    assert derived["chicken-rice-vegetables"].role == "main"
+    assert derived["chicken-rice-vegetables"].primary_protein == "chicken"
+    assert derived["lentils-stew"].primary_protein == "legumes"
+    assert all(
+        derived[dish.slug].primary_protein is not None
+        for dish in dishes.values()
+        if derived[dish.slug].role == "main"
+    )
+    assert sum(1 for item in derived.values() if item.role == "complement") >= 3
+    assert any(
+        item.role == "complement" and "lunch" in dishes[slug].meal_types
+        for slug, item in derived.items()
+    )
+    assert any(
+        item.role == "complement" and "dinner" in dishes[slug].meal_types
+        for slug, item in derived.items()
+    )
 
 
 def test_validation_detects_shared_product_bad_flags_and_units() -> None:
@@ -170,7 +208,7 @@ def test_seed_loader_is_idempotent_and_preserves_user_data(
     service = SeedService(catalog_session_factory)
     first = service.load()
     assert first.ingredients == 110
-    assert first.dishes == 60
+    assert first.dishes == 63
     assert first.products == len(
         [product for ingredient in documents.ingredients for product in ingredient.products]
     )

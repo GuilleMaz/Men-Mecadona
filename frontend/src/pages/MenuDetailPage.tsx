@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import { BudgetBar } from '@/components/menu/BudgetBar';
+import { ComplementDishDialog } from '@/components/menu/ComplementDishDialog';
 import { ExcludeEntryDialog } from '@/components/menu/ExcludeEntryDialog';
 import { MenuGrid } from '@/components/menu/MenuGrid';
 import { MenuHeader } from '@/components/menu/MenuHeader';
@@ -16,6 +17,7 @@ import {
   fetchMenu,
   menuExportUrl,
   regenerateMenu,
+  removeComplement,
   revalidateMenu,
   setEntryLocked,
   type MenuDetail,
@@ -55,6 +57,7 @@ export function MenuDetailPage() {
   const isValidId = Number.isInteger(menuId) && menuId > 0;
   const queryClient = useQueryClient();
   const [swapTarget, setSwapTarget] = useState<MenuEntry | null>(null);
+  const [complementTarget, setComplementTarget] = useState<MenuEntry | null>(null);
   const [excludeTarget, setExcludeTarget] = useState<MenuEntry | null>(null);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -116,11 +119,30 @@ export function MenuDetailPage() {
   }, [menuQuery.data, revalidate]);
 
   const regenerateMutation = useMutation({
-    mutationFn: () => regenerateMenu(menuId),
-    onSuccess: (menu) => {
+    mutationFn: async () => {
+      const previousComplements = (menuQuery.data?.entries ?? []).filter(
+        (entry) => entry.course === 'complement',
+      ).length;
+      const menu = await regenerateMenu(menuId);
+      const complements = menu.entries.filter((entry) => entry.course === 'complement').length;
+      return { menu, dropped: Math.max(0, previousComplements - complements) };
+    },
+    onSuccess: ({ menu, dropped }) => {
       applyMenu(menu);
       setRegenerateOpen(false);
-      setStatusMessage('Menú regenerado con tus bloqueos y preferencias.');
+      setStatusMessage(
+        dropped > 0
+          ? `Menú regenerado. Se descartaron ${dropped} ${dropped === 1 ? 'acompañamiento' : 'acompañamientos'} que no cabían en el presupuesto.`
+          : 'Menú regenerado con tus bloqueos y preferencias.',
+      );
+    },
+  });
+
+  const removeComplementMutation = useMutation({
+    mutationFn: (entry: MenuEntry) => removeComplement(menuId, entry.id),
+    onSuccess: (menu) => {
+      applyMenu(menu);
+      setStatusMessage('Acompañamiento quitado. Ticket y lista recalculados.');
     },
   });
 
@@ -130,6 +152,10 @@ export function MenuDetailPage() {
     'No se pudieron revalidar los precios.',
   );
   const regenerateError = toDomainError(regenerateMutation.error, 'No se pudo regenerar el menú.');
+  const removeComplementError = toDomainError(
+    removeComplementMutation.error,
+    'No se pudo quitar el acompañamiento.',
+  );
 
   if (!isValidId) return <MenuNotFound />;
 
@@ -220,6 +246,12 @@ export function MenuDetailPage() {
         </p>
       ) : null}
 
+      {removeComplementError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {removeComplementError.message}
+        </p>
+      ) : null}
+
       {revalidateError ? (
         <div
           role="alert"
@@ -259,13 +291,15 @@ export function MenuDetailPage() {
       ) : (
         <MenuGrid
           menu={menu}
-          isBusy={lockMutation.isPending}
+          isBusy={lockMutation.isPending || removeComplementMutation.isPending}
           onToggleLock={(entry) =>
             lockMutation.mutate({ entryId: entry.id, locked: !entry.locked })
           }
           onSwap={(entry) => setSwapTarget(entry)}
           onExclude={(entry) => setExcludeTarget(entry)}
           onRegenerate={() => setRegenerateOpen(true)}
+          onAddComplement={(entry) => setComplementTarget(entry)}
+          onRemoveComplement={(entry) => removeComplementMutation.mutate(entry)}
         />
       )}
 
@@ -281,6 +315,19 @@ export function MenuDetailPage() {
           entry={swapTarget}
           onClose={() => setSwapTarget(null)}
           onSwapped={applyMenu}
+        />
+      ) : null}
+
+      {complementTarget ? (
+        <ComplementDishDialog
+          open
+          menuId={menu.id}
+          entry={complementTarget}
+          onClose={() => setComplementTarget(null)}
+          onAdded={(updated) => {
+            applyMenu(updated);
+            setStatusMessage('Acompañamiento añadido. Ticket y lista recalculados.');
+          }}
         />
       ) : null}
 

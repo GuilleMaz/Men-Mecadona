@@ -2037,3 +2037,105 @@
   - ingredient: bread
     quantity: 60
     unit: g
+
+- slug: mixed-salad
+  name: Ensalada mixta
+  description: Lechuga, tomate cherry, cebolla y aceitunas con aceite de oliva.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources: []
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - salad
+  - vegetarian
+  - vegan
+  ingredients:
+  - ingredient: lettuce
+    quantity: 200
+    unit: g
+  - ingredient: cherry-tomatoes
+    quantity: 150
+    unit: g
+  - ingredient: onion
+    quantity: 50
+    unit: g
+  - ingredient: olives
+    quantity: 40
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: vinegar
+    quantity: 10
+    unit: ml
+- slug: tomato-onion-salad
+  name: Ensalada de tomate y cebolla
+  description: Tomate cherry, cebolla y aceitunas aliñados con aceite y vinagre.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources: []
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - salad
+  - vegetarian
+  - vegan
+  ingredients:
+  - ingredient: cherry-tomatoes
+    quantity: 200
+    unit: g
+  - ingredient: onion
+    quantity: 100
+    unit: g
+  - ingredient: olives
+    quantity: 30
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: vinegar
+    quantity: 10
+    unit: ml
+  - ingredient: salt
+    quantity: 2
+    unit: g
+- slug: grilled-vegetables
+  name: Verduras a la plancha
+  description: Pimiento, espárragos y champiñones con aceite de oliva y ajo.
+  base_servings: 2
+  meal_types:
+  - lunch
+  - dinner
+  protein_sources: []
+  has_vegetables: true
+  light: true
+  carbs: null
+  tags:
+  - vegetarian
+  - vegan
+  ingredients:
+  - ingredient: pepper
+    quantity: 200
+    unit: g
+  - ingredient: asparagus
+    quantity: 150
+    unit: g
+  - ingredient: mushrooms
+    quantity: 150
+    unit: g
+  - ingredient: garlic
+    quantity: 5
+    unit: g
+  - ingredient: olive-oil
+    quantity: 15
+    unit: ml
+  - ingredient: salt
+    quantity: 2
+    unit: g

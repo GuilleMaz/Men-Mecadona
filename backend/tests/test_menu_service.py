@@ -1133,3 +1133,111 @@ def test_verify_identities_detects_corruption(
         assert error.value.code == "INCONSISTENT_MENU"
         assert error.value.status_code == 500
         assert error.value.details["failures"]
+
+
+def _make_complement(session: Session) -> int:
+    side = make_ingredient(
+        session,
+        "side-vegetables",
+        name="Verdura extra",
+        category="vegetables",
+        group="vegetable",
+        serving_group="vegetable",
+    )
+    product = make_product(
+        session,
+        "SIDE-1KG",
+        name="Verdura extra 1 kg",
+        package_quantity_milli=1_000_000,
+        package_unit="g",
+        package_price_cents=100,
+    )
+    make_mapping(session, side, product)
+    dish = make_dish(
+        session,
+        "side-vegetables-dish",
+        name="Verduras de acompañamiento",
+        meal_types=("lunch", "dinner"),
+        role="complement",
+        has_vegetables=True,
+        light=True,
+        carbs=None,
+        ingredients=[(side, 200_000)],
+    )
+    session.commit()
+    return dish.id
+
+
+def test_add_and_remove_complement_recalculates_identities(
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        env = _seed_menu_env(session)
+        menu = _generate(session, env)
+        complement_id = _make_complement(session)
+        lunch = next(entry for entry in menu.entries if entry.slot == "lunch")
+        base_ticket = menu.ticket_cents
+
+        service = MenuService(session)
+        updated = service.add_complement(menu.id, lunch.id, complement_id)
+
+        complement = next(
+            entry
+            for entry in updated.entries
+            if entry.course == "complement" and entry.slot == "lunch"
+        )
+        assert complement.dish_id == complement_id
+        assert complement.dish_name == "Verduras de acompañamiento"
+        assert updated.ticket_cents >= base_ticket
+        assert updated.ticket_cents == sum(item.subtotal_cents for item in updated.shopping_items)
+        service.verify_identities(updated.id)
+
+        removed = service.remove_complement(updated.id, lunch.id)
+
+        assert len(removed.entries) == 2
+        assert all(entry.course == "main" for entry in removed.entries)
+        service.verify_identities(removed.id)
+
+
+def test_complement_that_exceeds_budget_is_rejected(
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    with catalog_session_factory() as session:
+        env = _seed_menu_env(session)
+        menu = _generate(
+            session,
+            env,
+            budget_cents=BASE_TICKET_CENTS,
+        )
+        complement_id = _make_complement(session)
+        lunch = next(entry for entry in menu.entries if entry.slot == "lunch")
+
+        with pytest.raises(MenuServiceError) as error:
+            MenuService(session).add_complement(menu.id, lunch.id, complement_id)
+
+    assert error.value.code == "BUDGET_EXCEEDED"
+
+
+def test_swap_respects_course_and_regenerate_keeps_valid_complements(
+    catalog_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with catalog_session_factory() as session:
+        env = _seed_menu_env(session)
+        menu = _generate(session, env)
+        complement_id = _make_complement(session)
+        lunch = next(entry for entry in menu.entries if entry.slot == "lunch")
+        service = MenuService(session)
+
+        with pytest.raises(MenuServiceError) as error:
+            service.swap_entry(menu.id, lunch.id, complement_id)
+        assert error.value.code == "VALIDATION_ERROR"
+
+        service.add_complement(menu.id, lunch.id, complement_id)
+        monkeypatch.setattr(menu_service_module, "optimize_menu", lambda *_: _result(env))
+
+        regenerated = service.regenerate(menu.id)
+
+        assert len(regenerated.entries) == 3
+        complement = next(entry for entry in regenerated.entries if entry.course == "complement")
+        assert complement.dish_id == complement_id

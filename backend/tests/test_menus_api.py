@@ -489,7 +489,7 @@ def test_generate_persists_menu_and_returns_entries(
     detail = _detail(client, menu_id)
     assert detail["id"] == menu_id
     assert detail["settings"]["max_repeats"] == 1
-    assert detail["settings"]["optimizer_version"] == "1"
+    assert detail["settings"]["optimizer_version"] == "2"
     assert len(detail["entries"]) == 2
     assert _count(catalog_session_factory, Menu) == 1
 
@@ -1380,3 +1380,122 @@ def test_export_csv_escapes_formulas_quotes_and_commas(
     missing = client.get("/api/menus/9999/export", headers=HEADERS)
     assert missing.status_code == 404
     assert missing.json()["error"]["code"] == "NOT_FOUND"
+
+
+# ----------------------------------------------------------------------
+# Acompañamientos (F6)
+# ----------------------------------------------------------------------
+
+
+def _make_api_complement(
+    catalog_session_factory: sessionmaker[Session],
+) -> int:
+    with catalog_session_factory() as session:
+        side = make_ingredient(
+            session,
+            "side-vegetables",
+            name="Verdura extra",
+            category="vegetables",
+            group="vegetable",
+            serving_group="vegetable",
+        )
+        product = make_product(
+            session,
+            "SIDE-1KG",
+            name="Verdura extra 1 kg",
+            package_quantity_milli=1_000_000,
+            package_unit="g",
+            package_price_cents=100,
+        )
+        make_mapping(session, side, product)
+        dish = make_dish(
+            session,
+            "side-vegetables-dish",
+            name="Verduras de acompañamiento",
+            meal_types=("lunch", "dinner"),
+            role="complement",
+            has_vegetables=True,
+            light=True,
+            carbs=None,
+            ingredients=[(side, 200_000)],
+        )
+        session.commit()
+        return dish.id
+
+
+def test_complement_endpoints_and_role_filter(
+    client: TestClient,
+    scenario: MenuScenario,
+    monkeypatch: pytest.MonkeyPatch,
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    complement_id = _make_api_complement(catalog_session_factory)
+    menu_id = _menu_id(_generate(client, scenario, monkeypatch))
+    lunch = _entry(_detail(client, menu_id), "lunch")
+
+    created = client.post(
+        f"/api/menus/{menu_id}/entries/{lunch['id']}/complement",
+        headers=HEADERS,
+        json={"dish_id": complement_id},
+    )
+    assert created.status_code == 200, created.text
+    detail = created.json()
+    assert len(detail["entries"]) == 3
+    complement = next(entry for entry in detail["entries"] if entry["course"] == "complement")
+    assert complement["dish_id"] == complement_id
+    assert complement["slot"] == "lunch"
+    assert detail["ticket_cents"] > BASE_TICKET_CENTS
+
+    shopping = _shopping(client, menu_id)
+    assert shopping["ticket_cents"] == detail["ticket_cents"]
+    assert shopping["ticket_cents"] == sum(
+        section["subtotal_cents"] for section in shopping["sections"]
+    )
+
+    complements = client.get(
+        "/api/dishes",
+        headers=HEADERS,
+        params={"role": "complement"},
+    )
+    assert complements.status_code == 200
+    assert all(item["role"] == "complement" for item in complements.json()["items"])
+
+    mains = client.get("/api/dishes", headers=HEADERS, params={"role": "main"})
+    assert mains.status_code == 200
+    assert all(item["role"] == "main" for item in mains.json()["items"])
+
+    removed = client.delete(
+        f"/api/menus/{menu_id}/entries/{lunch['id']}/complement",
+        headers=HEADERS,
+    )
+    assert removed.status_code == 200, removed.text
+    assert len(removed.json()["entries"]) == 2
+
+
+def test_complement_that_exceeds_budget_returns_budget_exceeded(
+    client: TestClient,
+    scenario: MenuScenario,
+    monkeypatch: pytest.MonkeyPatch,
+    catalog_session_factory: sessionmaker[Session],
+) -> None:
+    complement_id = _make_api_complement(catalog_session_factory)
+    payload = _generate(
+        client,
+        scenario,
+        monkeypatch,
+        result=_result(scenario, solver_ticket_cents=BASE_TICKET_CENTS),
+        budget_cents=BASE_TICKET_CENTS,
+    )
+    menu_id = _menu_id(payload)
+    lunch = _entry(_detail(client, menu_id), "lunch")
+
+    response = client.post(
+        f"/api/menus/{menu_id}/entries/{lunch['id']}/complement",
+        headers=HEADERS,
+        json={"dish_id": complement_id},
+    )
+
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "BUDGET_EXCEEDED"
+    assert _detail(client, menu_id)["ticket_cents"] == BASE_TICKET_CENTS

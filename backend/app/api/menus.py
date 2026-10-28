@@ -43,6 +43,7 @@ from app.schemas.menu_api import (
     ExportFormat,
     MenuDetail,
     MenuEntry,
+    MenuEntryComplementCreate,
     MenuEntryExclude,
     MenuEntryIngredient,
     MenuEntryLockUpdate,
@@ -229,6 +230,7 @@ def _entry_out(entry: MenuEntryModel) -> MenuEntry:
         id=entry.id,
         day_index=entry.day_index,
         slot=entry.slot,  # type: ignore[arg-type]
+        course=entry.course,  # type: ignore[arg-type]
         dish_id=entry.dish_id,
         dish_name=entry.dish_name,
         locked=entry.locked,
@@ -698,6 +700,31 @@ def swap_entry(
     return _menu_detail(session, menu.id)
 
 
+@router.post("/{menu_id}/entries/{entry_id}/complement", response_model=MenuDetail)
+def add_complement(
+    menu_id: int,
+    entry_id: int,
+    payload: MenuEntryComplementCreate,
+    session: SessionDep,
+) -> MenuDetail:
+    """Añade un acompañamiento al hueco del principal indicado."""
+    try:
+        menu = MenuService(session).add_complement(menu_id, entry_id, payload.dish_id)
+    except MenuServiceError as exc:
+        _raise_menu_error(exc)
+    return _menu_detail(session, menu.id)
+
+
+@router.delete("/{menu_id}/entries/{entry_id}/complement", response_model=MenuDetail)
+def remove_complement(menu_id: int, entry_id: int, session: SessionDep) -> MenuDetail:
+    """Quita el acompañamiento del hueco del principal indicado."""
+    try:
+        menu = MenuService(session).remove_complement(menu_id, entry_id)
+    except MenuServiceError as exc:
+        _raise_menu_error(exc)
+    return _menu_detail(session, menu.id)
+
+
 @router.post("/{menu_id}/entries/{entry_id}/exclude", response_model=MenuDetail)
 def exclude_entry(
     menu_id: int,
@@ -810,6 +837,14 @@ def _entry_cell(entry: MenuEntry | None) -> str:
     return _markdown_cell(f"{entry.dish_name} ({_euros(entry.entry_consumption_cents)})")
 
 
+def _slot_cell(entries: list[MenuEntry]) -> str:
+    """Celda de un hueco: principal y, si existe, acompañamiento."""
+    if not entries:
+        return "—"
+    ordered = sorted(entries, key=lambda entry: 0 if entry.course == "main" else 1)
+    return " + ".join(_entry_cell(entry) for entry in ordered)
+
+
 def _markdown_export(detail: MenuDetail, shopping: ShoppingList) -> str:
     lines = [
         f"# Menú #{detail.id}",
@@ -830,14 +865,14 @@ def _markdown_export(detail: MenuDetail, shopping: ShoppingList) -> str:
         "| Día | Comida | Cena |",
         "| --- | --- | --- |",
     ]
-    by_day: dict[int, dict[str, MenuEntry]] = {}
+    by_day: dict[int, dict[str, list[MenuEntry]]] = {}
     for entry in detail.entries:
-        by_day.setdefault(entry.day_index, {})[entry.slot] = entry
+        by_day.setdefault(entry.day_index, {}).setdefault(entry.slot, []).append(entry)
     for day_index in range(detail.days):
         slots = by_day.get(day_index, {})
         lines.append(
-            f"| {day_index + 1} | {_entry_cell(slots.get('lunch'))} "
-            f"| {_entry_cell(slots.get('dinner'))} |"
+            f"| {day_index + 1} | {_slot_cell(slots.get('lunch', []))} "
+            f"| {_slot_cell(slots.get('dinner', []))} |"
         )
 
     lines.extend(["", "## Lista de la compra", ""])

@@ -4,10 +4,10 @@ Aplicación web local que genera un menú de **comidas y cenas** para N personas
 N días y un presupuesto, con productos y precios de la tienda online de Mercadona.
 Sin recetas ni pasos de cocina: cada plato es una ficha con composición y etiquetas.
 
-> Estado: **F5 completada** (calidad, resiliencia de precios, accesibilidad,
-> historial, exportación/impresión, seguridad, rendimiento y build local).
-> La documentación de alcance está en `PLAN.md` y el detalle de ejecución en
-> `TASKS.md`.
+> Estado: **F6 completada** (comidas completas y acompañamientos).
+> Cada comida y cena tiene un plato principal completo; gazpacho, sopas y
+> ensaladas se pueden añadir como acompañamiento opcional. La documentación de
+> alcance está en `PLAN.md` y el detalle de ejecución en `TASKS.md`.
 
 ## Requisitos
 
@@ -91,6 +91,21 @@ Para detener el servicio, pulsa `Ctrl+C`.
 - **Platos:** búsqueda, filtros, composición, coste del plato y «no me gusta».
 - **Ajustes:** catálogo, alérgenos, exclusiones, despensa y aviso de copia local.
 
+## Comidas completas y acompañamientos
+
+Cada comida y cena tiene un **plato principal completo**: al menos media ración
+de proteína por persona y media ración entre verdura e hidrato. Gazpacho, sopas y
+ensaladas ligeras se pueden añadir como **acompañamiento opcional** desde el
+menú; nunca sustituyen al principal. Al añadirlo o quitarlo se recalculan el
+ticket, la lista de la compra, el consumo y las sobras.
+
+El reparto de proteínas es orientativo: unas 3 raciones por fuente cada 7 días,
+sin repetir la misma proteína en comida y cena del mismo día y con al menos 2
+platos de pescado por semana (4 en 14 días). Si el presupuesto impide cumplirlo,
+el menú se marca como relajado y se explica qué regla se ha relajado. El plato
+principal completo es duro y no se relaja; los acompañamientos tampoco pueden
+sustituirlo.
+
 ## Resiliencia de precios
 
 La app siempre lee de su copia SQLite local. Esa copia solo se usa para precios
@@ -112,7 +127,7 @@ para que el usuario revalide o regenere.
 
 Ejecuta Ruff, mypy y pytest en backend; ESLint, Prettier, TypeScript, Vitest y
 build en frontend; y Ruff sobre los scripts de Python de la raíz. Estado actual:
-354 tests backend, 54 tests frontend y build de producción en verde.
+365 tests backend, 56 tests frontend y build de producción en verde.
 
 Auditoría de dependencias (requiere red):
 
@@ -181,7 +196,7 @@ uv run python ..\scripts\benchmark_menu.py --runs 20 --days 14 --people 4
 uv run python ..\scripts\benchmark_endpoints.py --runs 20
 ```
 
-- Generación 14 días/4 personas: p95 3,73 s (límite 10 s).
+- Generación 14 días/4 personas: p95 3,73 s antes de F6; p95 5,22 s con principales completos y topes de proteína (límite 10 s).
 - `/api/dishes`: p95 32,00 ms (límite 200 ms).
 - Sync completa: 7,72 s (límite 2 min; 152/152 subcategorías, 4.292 productos).
 - `/api/catalog/status`: p95 9,91 ms; `/api/menus`: p95 5,58 ms.

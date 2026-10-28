@@ -64,14 +64,14 @@ describe('MenuDetailPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Cambiar Tortilla de patatas' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Cambiar cena' });
-    const option = await within(dialog).findByRole('radio', { name: /Sopa de verduras/ });
+    const option = await within(dialog).findByRole('radio', { name: /Salmón con patatas/ });
     await user.click(option);
     await user.click(within(dialog).getByRole('button', { name: 'Cambiar plato' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Tortilla de patatas')).not.toBeInTheDocument();
     });
-    expect(screen.getAllByText('Sopa de verduras')).toHaveLength(2);
+    expect(screen.getAllByText('Salmón con patatas')).toHaveLength(1);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -97,6 +97,7 @@ describe('MenuDetailPage', () => {
         urls.some(
           (url) =>
             url.includes('meal_type=dinner') &&
+            url.includes('role=main') &&
             url.includes('only_eligible=true') &&
             url.includes('limit=100'),
         ),
@@ -228,6 +229,33 @@ describe('MenuDetailPage', () => {
     expect(screen.getAllByText('Tiempo de cálculo agotado').length).toBeGreaterThan(0);
     expect(screen.getByText('Falta variedad de proteínas')).toBeInTheDocument();
     expect(screen.getByText('Menos pescado del recomendado')).toBeInTheDocument();
+  });
+
+  it('añade y quita un acompañamiento opcional', async () => {
+    const user = userEvent.setup();
+    renderApp(['/menus/1']);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Añadir acompañamiento a Pollo con arroz' }),
+    );
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Añadir acompañamiento a comida',
+    });
+    await user.click(await within(dialog).findByRole('radio', { name: /Ensalada mixta/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Añadir acompañamiento' }));
+
+    expect(await screen.findByText('Ensalada mixta')).toBeInTheDocument();
+    expect(screen.getByText(/Acompañamiento añadido/)).toBeInTheDocument();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Quitar acompañamiento Ensalada mixta' }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Ensalada mixta')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/Acompañamiento quitado/)).toBeInTheDocument();
   });
 
   it('regenera el menú tras confirmar', async () => {

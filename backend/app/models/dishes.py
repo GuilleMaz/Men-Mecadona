@@ -31,6 +31,9 @@ if TYPE_CHECKING:
     from app.models.ingredients import Ingredient
 
 MEAL_TYPES: tuple[str, ...] = ("lunch", "dinner")
+#: Rol del plato dentro de un menú. `complement` nunca sustituye a un principal.
+DISH_ROLES: tuple[str, ...] = ("main", "complement")
+_DISH_ROLE_SQL = ", ".join(f"'{role}'" for role in DISH_ROLES)
 
 
 class Dish(Base):
@@ -40,9 +43,12 @@ class Dish(Base):
     __table_args__ = (
         CheckConstraint("length(slug) > 0", name="ck_dishes_slug"),
         CheckConstraint("base_servings > 0", name="ck_dishes_base_servings"),
+        CheckConstraint(f"role IN ({_DISH_ROLE_SQL})", name="ck_dishes_role"),
         CheckConstraint("active IN (0, 1)", name="ck_dishes_active"),
         Index("ix_dishes_active", "active"),
+        Index("ix_dishes_role", "role"),
         Index("ix_dishes_name", "name"),
+        Index("ix_dishes_primary_protein", "primary_protein"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -50,6 +56,13 @@ class Dish(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     base_servings: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+
+    #: `main` si aporta un plato completo; `complement` si es un acompañamiento.
+    role: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="main", server_default="main"
+    )
+    #: Fuente de proteína con más raciones; en empate, orden alfabético estable.
+    primary_protein: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     #: Huecos compatibles: `lunch`, `dinner` o ambos.
     meal_types_json: Mapped[list[str]] = mapped_column(

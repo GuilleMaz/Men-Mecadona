@@ -21,6 +21,8 @@ export type Ingredient = {
   active: boolean;
 };
 
+export type DishRole = 'main' | 'complement';
+
 export type ProductOption = {
   id: number;
   external_id: string;
@@ -48,6 +50,8 @@ export type DishSummary = {
   description: string | null;
   base_servings: number;
   meal_types: Array<'lunch' | 'dinner'>;
+  role: DishRole;
+  primary_protein: string | null;
   protein_sources: string[];
   has_vegetables: boolean;
   light: boolean;
@@ -253,6 +257,7 @@ export function fetchDishes(
   params: {
     q?: string;
     mealType?: 'lunch' | 'dinner';
+    role?: DishRole;
     tag?: string;
     light?: boolean;
     onlyEligible?: boolean;
@@ -263,6 +268,7 @@ export function fetchDishes(
   const search = new URLSearchParams();
   if (params.q) search.set('q', params.q);
   if (params.mealType) search.set('meal_type', params.mealType);
+  if (params.role) search.set('role', params.role);
   if (params.tag) search.set('tag', params.tag);
   if (params.light !== undefined) search.set('light', String(params.light));
   if (params.onlyEligible !== undefined) search.set('only_eligible', String(params.onlyEligible));

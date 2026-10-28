@@ -42,6 +42,7 @@ from app.services.eligibility import (
     ingredient_eligibility,
 )
 from app.services.optimizer import (
+    OPTIMIZER_VERSION,
     OptimizationAssignment,
     OptimizationLock,
     OptimizationRequest,
@@ -207,6 +208,7 @@ class MenuService:
                         locked=assignment.locked,
                         dish_name=assignment.dish_name or dish.name,
                         protein_source=assignment.protein_source,
+                        course="main",
                     )
                 )
             self.session.flush()
@@ -324,6 +326,16 @@ class MenuService:
                     "El plato solicitado no existe o está inactivo.",
                     dish_id=dish_id,
                 )
+            if dish.role != entry.course:
+                raise MenuServiceError(
+                    "VALIDATION_ERROR",
+                    "El plato no es del mismo curso que la entrada.",
+                    details={
+                        "dish_id": dish.id,
+                        "dish_role": dish.role,
+                        "entry_course": entry.course,
+                    },
+                )
             if not self._compatible_with_slot(dish, entry.slot):
                 raise MenuServiceError(
                     "VALIDATION_ERROR",
@@ -401,6 +413,166 @@ class MenuService:
             self.session.rollback()
             raise
 
+    def add_complement(self, menu_id: int, main_entry_id: int, dish_id: int) -> Menu:
+        """Añade un acompañamiento al hueco de un principal y recalcula el menú."""
+        try:
+            menu = self._require_menu(menu_id)
+            main_entry = self._require_entry(menu, main_entry_id)
+            if main_entry.course != "main":
+                raise MenuServiceError(
+                    "VALIDATION_ERROR",
+                    "Solo se puede añadir un acompañamiento a un plato principal.",
+                    details={"entry_id": main_entry.id, "course": main_entry.course},
+                )
+            existing = next(
+                (
+                    entry
+                    for entry in menu.entries
+                    if entry.day_index == main_entry.day_index
+                    and entry.slot == main_entry.slot
+                    and entry.course == "complement"
+                ),
+                None,
+            )
+            if existing is not None:
+                raise MenuServiceError(
+                    "VALIDATION_ERROR",
+                    "El hueco ya tiene un acompañamiento.",
+                    details={
+                        "entry_id": existing.id,
+                        "dish_id": existing.dish_id,
+                        "day_index": existing.day_index,
+                        "slot": existing.slot,
+                    },
+                )
+
+            dish = self._load_dishes({dish_id}).get(dish_id)
+            if dish is None or not dish.active:
+                raise self._not_found(
+                    "El plato solicitado no existe o está inactivo.",
+                    dish_id=dish_id,
+                )
+            if dish.role != "complement":
+                raise MenuServiceError(
+                    "VALIDATION_ERROR",
+                    "El plato no es un acompañamiento.",
+                    details={"dish_id": dish.id, "role": dish.role},
+                )
+            if not self._compatible_with_slot(dish, main_entry.slot):
+                raise MenuServiceError(
+                    "VALIDATION_ERROR",
+                    "El acompañamiento no es compatible con el hueco del menú.",
+                    details={
+                        "dish_id": dish.id,
+                        "slot": main_entry.slot,
+                        "meal_types": list(dish.meal_types_json or []),
+                    },
+                )
+
+            settings = self._settings(menu)
+            preferences = self._preferences(settings)
+            eligibility = evaluate_dish(dish, preferences)
+            if not eligibility.eligible:
+                raise MenuServiceError(
+                    "NO_FEASIBLE_MENU",
+                    "El acompañamiento no es elegible con las preferencias del menú.",
+                    reason="no_assignment",
+                    details={
+                        "dish_id": dish.id,
+                        "reasons": list(eligibility.reasons),
+                    },
+                )
+            same_day = next(
+                (
+                    entry
+                    for entry in menu.entries
+                    if entry.day_index == main_entry.day_index and entry.dish_id == dish.id
+                ),
+                None,
+            )
+            if same_day is not None:
+                raise MenuServiceError(
+                    "NO_FEASIBLE_MENU",
+                    "El plato ya está en el menú de ese día.",
+                    reason="repeats",
+                    details={"dish_id": dish.id, "day_index": main_entry.day_index},
+                )
+            occurrences = self._occurrences(menu, dish.id, exclude_entry_id=main_entry.id)
+            if occurrences >= settings.max_repeats:
+                raise MenuServiceError(
+                    "NO_FEASIBLE_MENU",
+                    "El plato alcanzó el máximo de repeticiones del menú.",
+                    reason="repeats",
+                    details={
+                        "dish_id": dish.id,
+                        "max_repeats": settings.max_repeats,
+                        "occurrences": occurrences,
+                    },
+                )
+
+            menu.entries.append(
+                self._entry_from_dish(
+                    dish,
+                    main_entry.day_index,
+                    main_entry.slot,
+                    locked=False,
+                    course="complement",
+                )
+            )
+            self.session.flush()
+            self._rebuild_children(menu, settings=settings)
+            self._enforce_budget(menu, enforce_budget=True)
+            self._mark_manual_change(menu)
+
+            self.verify_identities(menu.id)
+            self.session.commit()
+            return self._require_menu(menu.id)
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def remove_complement(self, menu_id: int, main_entry_id: int) -> Menu:
+        """Quita el acompañamiento de un hueco y recalcula ticket y lista."""
+        try:
+            menu = self._require_menu(menu_id)
+            main_entry = self._require_entry(menu, main_entry_id)
+            if main_entry.course != "main":
+                raise MenuServiceError(
+                    "VALIDATION_ERROR",
+                    "Solo se puede quitar el acompañamiento desde un plato principal.",
+                    details={"entry_id": main_entry.id, "course": main_entry.course},
+                )
+            complement = next(
+                (
+                    entry
+                    for entry in menu.entries
+                    if entry.day_index == main_entry.day_index
+                    and entry.slot == main_entry.slot
+                    and entry.course == "complement"
+                ),
+                None,
+            )
+            if complement is None:
+                raise self._not_found(
+                    "El hueco no tiene acompañamiento.",
+                    entry_id=main_entry.id,
+                    day_index=main_entry.day_index,
+                    slot=main_entry.slot,
+                )
+            settings = self._settings(menu)
+            menu.entries.remove(complement)
+            self.session.flush()
+            self._rebuild_children(menu, settings=settings)
+            self._enforce_budget(menu, enforce_budget=True)
+            self._mark_manual_change(menu)
+
+            self.verify_identities(menu.id)
+            self.session.commit()
+            return self._require_menu(menu.id)
+        except Exception:
+            self.session.rollback()
+            raise
+
     def exclude_entry(self, menu_id: int, entry_id: int, scope: ExclusionScope) -> Menu:
         """Excluye el plato del menú o del perfil y busca un reemplazo elegible."""
         try:
@@ -464,7 +636,8 @@ class MenuService:
                     (
                         dish
                         for dish in available
-                        if dish.id not in used_today
+                        if dish.role == target.course
+                        and dish.id not in used_today
                         and self._compatible_with_slot(dish, target.slot)
                         and self._occurrences(
                             menu,
@@ -557,7 +730,16 @@ class MenuService:
 
             dishes_by_id = {item.dish.id: item.dish for item in eligibility if item.eligible}
             eligibility_by_dish = {item.dish.id: item for item in eligibility if item.eligible}
-            locked_by_slot = {(entry.day_index, entry.slot): entry.locked for entry in menu.entries}
+            previous_complements = [
+                (entry.day_index, entry.slot, entry.dish_id, entry.locked)
+                for entry in menu.entries
+                if entry.course == "complement"
+            ]
+            locked_by_slot = {
+                (entry.day_index, entry.slot): entry.locked
+                for entry in menu.entries
+                if entry.course == "main"
+            }
             for assignment in result.assignments:
                 if assignment.dish_id not in dishes_by_id:
                     raise self._inconsistent_menu(
@@ -587,6 +769,7 @@ class MenuService:
                         ),
                         dish_name=assignment.dish_name or dish.name,
                         protein_source=assignment.protein_source,
+                        course="main",
                     )
                 )
             self.session.flush()
@@ -595,7 +778,11 @@ class MenuService:
             menu.timed_out = result.timed_out
             menu.violations = result.violations
             menu.relaxation_codes_json = list(result.relaxation_codes)
+            settings = settings.model_copy(update={"optimizer_version": OPTIMIZER_VERSION})
+            menu.settings_json = settings.model_dump(mode="json")
+            menu.optimizer_version = OPTIMIZER_VERSION
             self._rebuild_children(menu, settings=settings)
+            self._restore_complements(menu, settings, previous_complements)
             self._enforce_budget(menu, enforce_budget=True)
             menu.price_status = "current"
             menu.previous_ticket_cents = None
@@ -608,6 +795,62 @@ class MenuService:
         except Exception:
             self.session.rollback()
             raise
+
+    def _restore_complements(
+        self,
+        menu: Menu,
+        settings: MenuSettings,
+        candidates: Sequence[tuple[int, str, int, bool]],
+    ) -> None:
+        """Conserva los acompañamientos válidos que caben tras regenerar.
+
+        Cada acompañamiento se prueba de forma aislada: si su compra supera el
+        presupuesto o deja de tener producto elegible, se descarta y se
+        reconstruye la lista sin él. Así los principales siempre quedan
+        cubiertos y el ticket nunca supera el presupuesto.
+        """
+        if not candidates:
+            return
+        preferences = self._preferences(settings)
+        dishes = self._load_dishes({dish_id for _, _, dish_id, _ in candidates})
+        for day_index, slot, dish_id, locked in sorted(candidates):
+            dish = dishes.get(dish_id)
+            if dish is None or not dish.active or dish.role != "complement":
+                continue
+            if not self._compatible_with_slot(dish, slot):
+                continue
+            if any(
+                entry.day_index == day_index and entry.slot == slot and entry.course == "complement"
+                for entry in menu.entries
+            ):
+                continue
+            if any(
+                entry.day_index == day_index and entry.dish_id == dish_id for entry in menu.entries
+            ):
+                continue
+            if self._occurrences(menu, dish_id, exclude_entry_id=0) >= settings.max_repeats:
+                continue
+            eligibility = evaluate_dish(dish, preferences)
+            if not eligibility.eligible:
+                continue
+
+            entry = self._entry_from_dish(
+                dish,
+                day_index,
+                slot,
+                locked=locked,
+                course="complement",
+            )
+            menu.entries.append(entry)
+            self.session.flush()
+            try:
+                self._rebuild_children(menu, settings=settings)
+            except MenuServiceError as exc:
+                if exc.code not in {"BUDGET_EXCEEDED", "PRODUCT_UNAVAILABLE"}:
+                    raise
+                menu.entries.remove(entry)
+                self.session.flush()
+                self._rebuild_children(menu, settings=settings)
 
     def revalidate(self, menu_id: int) -> Menu:
         """Recalcula con los precios actuales y marca ``stale`` si el ticket cambia."""
@@ -777,12 +1020,7 @@ class MenuService:
         # fallida posterior permite revalidar con la última copia válida.
         self._ensure_recalculation_source()
         entries = list(menu.entries)
-        if len(entries) != menu.days * 2:
-            raise self._inconsistent_menu(
-                "El menú no tiene exactamente dos entradas por día.",
-                expected=menu.days * 2,
-                actual=len(entries),
-            )
+        self._validate_entry_structure(menu, entries)
 
         dishes = self._load_dishes({entry.dish_id for entry in entries})
         missing = sorted({entry.dish_id for entry in entries} - set(dishes))
@@ -967,6 +1205,39 @@ class MenuService:
         if missing_ingredients:
             ingredients.update(self._load_ingredients(missing_ingredients))
         return entry_needs, totals, ingredients
+
+    @staticmethod
+    def _validate_entry_structure(menu: Menu, entries: Sequence[MenuEntry]) -> None:
+        """Exige un principal por hueco y como máximo un acompañamiento."""
+        expected = {(day, slot) for day in range(menu.days) for slot in MENU_SLOTS}
+        mains: dict[tuple[int, str], int] = {}
+        complements: dict[tuple[int, str], int] = {}
+        for entry in entries:
+            key = (entry.day_index, entry.slot)
+            if entry.course == "main":
+                mains[key] = mains.get(key, 0) + 1
+            elif entry.course == "complement":
+                complements[key] = complements.get(key, 0) + 1
+            else:
+                raise MenuService._inconsistent_menu(
+                    "Una entrada tiene un curso no válido.",
+                    entry_id=entry.id,
+                    course=entry.course,
+                )
+        if set(mains) != expected or any(count != 1 for count in mains.values()):
+            raise MenuService._inconsistent_menu(
+                "El menú no tiene exactamente un principal por hueco.",
+                expected=sorted(expected),
+                mains={f"{day}-{slot}": count for (day, slot), count in sorted(mains.items())},
+            )
+        duplicated = {
+            f"{day}-{slot}": count for (day, slot), count in complements.items() if count > 1
+        }
+        if duplicated:
+            raise MenuService._inconsistent_menu(
+                "Un hueco del menú tiene más de un acompañamiento.",
+                complements=duplicated,
+            )
 
     def _formats_by_ingredient(
         self,
@@ -1203,7 +1474,7 @@ class MenuService:
                 dish_id=entry.dish_id,
             )
             for entry in menu.entries
-            if entry.locked
+            if entry.locked and entry.course == "main"
         )
         pantry = {item.ingredient_id: item.quantity_milli for item in settings.pantry}
         stage1, stage2, fallback = time_limits_from_total(
@@ -1231,10 +1502,12 @@ class MenuService:
         locked: bool,
         dish_name: str | None = None,
         protein_source: str | None = None,
+        course: str = "main",
     ) -> MenuEntry:
         return MenuEntry(
             day_index=day_index,
             slot=slot,
+            course=course,
             dish=dish,
             dish_id=dish.id,
             dish_name=dish_name or dish.name,
@@ -1244,6 +1517,8 @@ class MenuService:
 
     @staticmethod
     def _protein_source(dish: Dish) -> str | None:
+        if dish.primary_protein:
+            return dish.primary_protein
         sources = dish.protein_sources_json or []
         return str(sources[0]) if sources else None
 
@@ -1375,6 +1650,13 @@ class MenuService:
         seen_day_dish: set[tuple[int, int]] = set()
         for assignment in assignments:
             dish = eligibility_by_dish[assignment.dish_id].dish
+            if dish.role != "main":
+                raise MenuServiceError(
+                    code,
+                    "El plato asignado no es un principal completo.",
+                    status_code=status_code,
+                    details={"dish_id": assignment.dish_id, "role": dish.role},
+                )
             if not cls._compatible_with_slot(dish, assignment.slot):
                 raise MenuServiceError(
                     code,

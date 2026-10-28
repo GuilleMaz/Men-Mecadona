@@ -8,7 +8,7 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 
 ## Estado Actual
 
-- **Fase:** F0-F5 completadas el 2026-10-26. MVP cerrado.
+- **Fase:** F0-F6 completadas el 2026-10-28. MVP y comidas completas cerrados.
 - **Código de aplicación:** backend con FastAPI, `/api/health`, configuración, motor SQLite, validación de `Host`, cliente Mercadona (CP 22002 / almacén 4389), catálogo persistente con sync parcial, ingredientes/platos con seed idempotente, alérgenos fail-closed, perfil, exclusiones, despensa, motor de costes puro con preview, optimizador CP-SAT en dos etapas, servicio transaccional de menús y API `/api/menus` completa. F5 añade resiliencia de precios, historial, impresión A4, producción local en un solo proceso, backup/restore y auditoría. Frontend con layout en español, navegación Menú/Historial/Platos/Ajustes, formulario de perfil persistente, generación de menú con modal de inviabilidad, rejilla días × comida/cena, barra de presupuesto, acciones de menú, revalidación al abrir, lista de la compra con checkboxes, «ya lo tengo», totales e identidad contable.
 - **Frontend:** React 19 + Vite 8 + TypeScript 6, Tailwind 4, shadcn/ui por copia, TanStack Query, React Router y React Hook Form + Zod.
 - **Integración Mercadona:** sync real validada: 26 secciones, 152/152 subcategorías, 4.542 productos vistos, 4.292 productos únicos persistidos, 178 categorías y 7,72 s con concurrencia 4. Tests con fixtures sintéticas y respx, sin red.
@@ -21,7 +21,7 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - **Seguridad local:** bind a `127.0.0.1`, CORS solo en desarrollo, allowlist de `Host` y rechazo de bases de datos dentro de OneDrive. Checklist en `SECURITY.md`.
 - **Documentación:** `PLAN.md`, `TASKS.md`, `AGENTS.md`, `README.md` y `SECURITY.md`.
 - **Memoria:** actualizada con informes de los spikes y las decisiones de F0-F4 en `decisions.md`.
-- **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad.
+- **Contratos cerrados:** presupuesto, coste, alérgenos, unidades, plan de compra, estados y variedad. F6 deja planificado el contrato de plato principal completo y acompañamientos opcionales.
 - **Coste (F3):** `plan_purchase` canónico exacto, necesidad neta con despensa, ticket, consumo, sobras e identidad `ticket + pantry_consumption = consumption + leftover`; preview sin persistencia y sin filtros de alérgenos.
 - **Optimizador (F4.1-F4.4):** migraciones `20261026_0003` y `20261026_0004` con menús, snapshots y relajaciones; elegibilidad fail-closed reutilizada; CP-SAT con `x`, `q` y violaciones de variedad; pista greedy determinista y fallback sin presupuesto para presupuestos ajustados; dos etapas lexicográficas; estados `optimal`/`feasible`/`relaxed`/`infeasible`/`timeout`; preview de presupuesto con mínimo canónico, déficit y sugerencias; diagnóstico de bloqueos, repeticiones, mínimos y asignación.
 - **Menús (F4.5):** `MenuService` transaccional que materializa la lista con `plan_purchase`, reparte céntimos por entrada, preserva `checked` por producto, valida la sync 22002/4389 y recalcula tras swap, exclude, regenerate, revalidate y «ya lo tengo». La revalidación conserva el snapshot válido y expone el ticket recalculado en `revalidated_ticket_cents` si supera el presupuesto; los recálculos usan la composición persistida.
@@ -30,9 +30,10 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - **Entrega (F5):** `/history` paginado, enlace «Saltar al contenido», foco visible y hoja de impresión A4; `run.ps1 -Prod` compila y sirve `frontend/dist` desde FastAPI; `audit.ps1`, `backup_db.py`, `restore_db.py` y `benchmark_endpoints.py`.
 - **Pruebas F4.9:** 29 tests nuevos de horizontes/personas, presupuestos, pescado, `unknown`, producto compartido, `base_servings`, bloqueos/regeneración, preview contra lista y workers/semilla. `dry_run_menu.py` validó 16/16 escenarios.
 - **Pruebas F5:** flujo generar → detalle → lista, historial inmutable, contrato sin pasos, privacidad sin telemetría, build servido, backup/restore, sync fallida y almacén mezclado.
-- **Calidad:** backend con Ruff, formato, mypy (strict) y 354 tests; frontend con ESLint, Prettier, TypeScript estricto, 54 tests y build de producción. `pip-audit` y `npm audit` sin hallazgos. Smoke real por API sobre copia del catálogo: generación 13,50 €, swap 19,30 €, exclude 18,00 €, regenerate 14,65 €, «ya lo tengo» 10,95 € y preview imposible con mínimo 10,55 €.
-- **Rendimiento:** sync 7,72 s; generación 14d/4p p95 3,73 s; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
-- **Última actualización:** 2026-10-26. F5 verificada con `check.ps1` (354 backend, 54 frontend, build), auditoría sin hallazgos, sync 7,72 s, generación p95 3,73 s y producción local real con `run.ps1 -Prod`.
+- **Calidad:** backend con Ruff, formato, mypy (strict) y 365 tests; frontend con ESLint, Prettier, TypeScript estricto, 56 tests y build de producción. `pip-audit` y `npm audit` sin hallazgos. Smoke real por API sobre copia del catálogo: generación 13,50 €, swap 19,30 €, exclude 18,00 €, regenerate 14,65 €, «ya lo tengo» 10,95 € y preview imposible con mínimo 10,55 €.
+- **Rendimiento:** sync 7,72 s; generación 14d/4p p95 5,22 s con F6; `/api/dishes` p95 32,00 ms; `/api/catalog/status` 9,91 ms; `/api/menus` 5,58 ms.
+- **F6 (2026-10-28):** `dishes.role` (`main|complement`) y `primary_protein` derivados de la composición; `menu_entries.course` con unicidad por curso; optimizador solo de principales con topes blandos por fuente, misma proteína por día y pescado 2/semana; endpoints de acompañamiento; UI de principal + acompañamiento; 3 acompañamientos nuevos. 55 principales y 8 acompañamientos.
+- **Última actualización:** 2026-10-28. F6 verificada con 365 tests backend, 56 frontend, dry-run 16/16 y benchmark 14d/4p p95 5,22 s.
 
 ## Tecnologías
 
@@ -104,6 +105,7 @@ El usuario indica personas, días y presupuesto. La app devuelve un menú de `d�
 - F4.8: lista de la compra con secciones, checkboxes, «ya lo tengo», total sticky, despensa, costes e identidad contable.
 - F4.9: 29 tests nuevos, dry-run de 16 escenarios y benchmark 14d/4p.
 - F5: `price_source`, migración `20261026_0005`, delta de precios, revalidación al abrir, historial, impresión A4, producción local en un solo proceso, backup/restore, auditoría, benchmark de endpoints y tests de entrega/privacidad.
+- F6: `dishes.role`/`primary_protein`, `menu_entries.course`, endpoints de acompañamiento, optimizador de principales con topes blandos, UI de ambos cursos, 3 acompañamientos nuevos y migración `20261026_0006`.
 - Pipeline de cierre: `finish-phase.ps1` ejecuta la calidad, crea el commit y lo sube a GitHub.
 
 ## Pendientes

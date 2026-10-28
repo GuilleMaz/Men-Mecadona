@@ -1,8 +1,8 @@
 # AGENTS.md — Cesta
 
 > Guía operativa para agentes que trabajen en este repositorio.
-> **Estado actual:** F0-F5 completadas el 2026-10-26. MVP cerrado.
-> **Última actualización:** 2026-10-26
+> **Estado actual:** F0-F6 completadas el 2026-10-28. MVP y comidas completas cerrados.
+> **Última actualización:** 2026-10-28
 
 ---
 
@@ -27,8 +27,9 @@ Antes de tocar nada:
 **Cesta** es una app web local que genera un menú de **comidas y cenas** para N personas, N días (1-14) y un presupuesto total, usando productos y precios de la tienda online de Mercadona.
 
 - Entrada: personas, días, presupuesto.
-- Salida: menú de `días × 2` comidas, coste y lista de la compra.
+- Salida: menú de `días × 2` **platos principales**, con acompañamientos opcionales, coste y lista de la compra.
 - **Sin recetas ni pasos de cocina.** El dominio usa **platos** (`dishes`).
+- **F6 implementada:** gazpacho, sopas y ensaladas pueden añadirse como acompañamiento, nunca como plato único.
 - Precios: CP **22002**, almacén **4389**.
 - Presupuesto: **límite máximo duro sobre el ticket**.
 - Nutrición: equilibrio por grupos, no calorías.
@@ -52,6 +53,8 @@ Antes de tocar nada:
 11. **La lista de la compra suma exactamente el ticket.**
 12. **Un producto pertenece a un único ingrediente canónico.**
 13. **Nada de Streamlit.**
+14. **A partir de F6, toda comida o cena de un menú nuevo tiene un plato principal completo.** Un acompañamiento nunca sustituye al principal.
+15. **A partir de F6, el reparto de proteínas es blando; el plato completo es duro.** No se relajan alérgenos, dieta, exclusiones ni presupuesto.
 
 ---
 
@@ -273,13 +276,25 @@ Si un comando no existe, créalo en la tarea correspondiente; no afirmes que fun
 - La despensa no se descuenta del consumo; se contabiliza aparte.
 - “Tengo suficiente” modifica el snapshot del menú, no la despensa global.
 
+### Comida completa y acompañamientos (F6 implementada)
+
+- `dishes.role ∈ {main, complement}` y `dishes.primary_protein` se derivan de la composición.
+- `main` exige ≥0,5 raciones de proteína y ≥0,5 de verdura/hidrato por persona.
+- `menu_entries.course ∈ {main, complement}`; un `main` obligatorio y como máximo un `complement` por hueco.
+- El optimizador solo selecciona `main`; los acompañamientos se añaden con `MenuService`.
+- Añadir un acompañamiento recalcula ticket, lista, consumo, sobras e identidades.
+- `regenerate` conserva acompañamientos válidos si caben en presupuesto; si no, los descarta con aviso.
+- Los menús históricos se interpretan como `course="main"` y no se invalidan.
+- Los topes de reparto (`legume_dominance`, `protein_balance`, `same_day_protein`) son blandos; el plato completo es duro.
+
 ### Optimizador
 
 - Unidades enteras, costes en céntimos.
 - `coef[r,i] = round(quantity_milli[r,i] × people / base_servings[r])`.
 - Demanda: `Σ q[p] × package_quantity_milli[p] + pantry ≥ Σ coef[r,i] × x[r,d,s]`.
 - Etapa 1: minimizar `Σ violation[k]`; etapa 2: fijar la suma y minimizar ticket.
-- Presupuesto, repeticiones y bloqueos duros.
+- Presupuesto, repeticiones, bloqueos y plato `main` duros.
+- El reparto de fuentes (`legume_dominance`, `protein_balance`, `same_day_protein`) y el pescado son violaciones blandas.
 - `used`/`leftover` son post-cálculo, no variables.
 - Si la etapa 1 no prueba optimalidad, devolver `feasible`, nunca `optimal`.
 - `num_search_workers=1` y semilla fija para tests.
@@ -309,6 +324,9 @@ Si un comando no existe, créalo en la tarea correspondiente; no afirmes que fun
 - Test `preview.ticket == shopping_list.ticket`.
 - Tests de alérgenos, despensa parcial, sync parcial y swap caro.
 - Tests de mínimos y variedad en 1/2/7/14 días.
+- Tests de plato principal completo: gazpacho/sopa/ensalada nunca como plato único.
+- Tests de acompañamiento añadido, cambiado, quitado y rechazado por presupuesto.
+- Tests de topes de proteína y pescado en 7/14 días.
 - Tests de exportación y escape de fórmulas CSV.
 - Test de privacidad: sin telemetría ni llamadas externas no declaradas.
 - Tests de API con base SQLite temporal.
@@ -393,6 +411,8 @@ Una tarea está terminada cuando:
 - No añadir login en el MVP.
 - No inventar disponibilidad.
 - No relajar alérgenos.
+- No usar un acompañamiento como plato único.
+- No relajar el plato completo para cuadrar presupuesto.
 - No devolver un menú que supere el presupuesto sin marcarlo como preview inválido.
 - No mezclar precios de almacenes.
 - No exponer `raw_json`.

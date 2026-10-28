@@ -28,10 +28,12 @@ import {
   EXCLUSION_REASON_LABELS,
   formatQuantity,
   mealLabel,
+  ROLE_LABELS,
   tagLabel,
 } from '@/lib/labels';
 
 type MealFilter = 'all' | 'lunch' | 'dinner';
+type RoleFilter = 'all' | 'main' | 'complement';
 
 const selectClassName =
   'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50';
@@ -73,6 +75,9 @@ function DishCard({
               {mealLabel(meal)}
             </span>
           ))}
+          <span className="rounded bg-muted px-1.5 py-0.5 text-xs">
+            {ROLE_LABELS[dish.role] ?? dish.role}
+          </span>
           {dish.light ? (
             <span className="rounded bg-muted px-1.5 py-0.5 text-xs">Ligero</span>
           ) : null}
@@ -224,17 +229,19 @@ export function DishesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [mealFilter, setMealFilter] = useState<MealFilter>('all');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [tagFilter, setTagFilter] = useState('');
   const [lightOnly, setLightOnly] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [selectedDishId, setSelectedDishId] = useState<number | null>(null);
 
   const dishesQuery = useQuery({
-    queryKey: ['dishes', search, mealFilter, tagFilter, lightOnly, showAll],
+    queryKey: ['dishes', search, mealFilter, roleFilter, tagFilter, lightOnly, showAll],
     queryFn: () =>
       fetchDishes({
         q: search.trim() || undefined,
         mealType: mealFilter === 'all' ? undefined : mealFilter,
+        role: roleFilter === 'all' ? undefined : roleFilter,
         tag: tagFilter || undefined,
         light: lightOnly ? true : undefined,
         onlyEligible: !showAll,
@@ -305,7 +312,7 @@ export function DishesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="dish-search">Buscar plato</Label>
               <div className="relative">
@@ -333,6 +340,19 @@ export function DishesPage() {
                 <option value="all">Comida y cena</option>
                 <option value="lunch">Comida</option>
                 <option value="dinner">Cena</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role-filter">Curso</Label>
+              <select
+                id="role-filter"
+                className={selectClassName}
+                value={roleFilter}
+                onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
+              >
+                <option value="all">Principales y acompañamientos</option>
+                <option value="main">Solo principales</option>
+                <option value="complement">Solo acompañamientos</option>
               </select>
             </div>
             <div className="space-y-2">

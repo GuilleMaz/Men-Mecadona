@@ -22,6 +22,7 @@ from app.services.eligibility import (
     evaluate_dishes,
 )
 from app.services.optimizer import (
+    OPTIMIZER_VERSION,
     EligibilityReport,
     OptimizationLock,
     OptimizationRequest,
@@ -225,14 +226,27 @@ def _variety_violations(menu: Sequence[tuple[Dish, str]], days: int) -> int:
     )
     light_dinners = sum(1 for dish, slot in menu if slot == "dinner" and dish.light)
     carb_sources = {dish.carbs for dish in dishes if dish.carbs is not None}
+    primary_sources = [
+        dish.primary_protein
+        or (min(dish.protein_sources_json) if dish.protein_sources_json else None)
+        for dish in dishes
+    ]
+    primary_sources = [source for source in primary_sources if source is not None]
+    n_sources = len(set(primary_sources))
+    cap = max(2, -(-(days * 2) // min(n_sources, 5))) if n_sources else 0
+    counts = Counter(primary_sources)
+    dominance = sum(max(0, count - cap) for count in counts.values())
+    same_day = sum(max(0, count - 1) for count in counts.values())
 
     return (
         max(0, min(3, days) - len(protein_sources))
-        + max(0, -(-days // 7) - fish)
+        + max(0, max(1, -(-(days * 2) // 7)) - fish)
         + max(0, -(-days // 7) - legumes)
         + max(0, red_meat - -(-(days * 3) // 7))
         + max(0, -(-days // 2) - light_dinners)
         + max(0, min(2, days) - len(carb_sources))
+        + dominance
+        + same_day
     )
 
 
@@ -936,8 +950,8 @@ def test_variety_impossible_is_reported_as_relaxed(session: Session) -> None:
     )
 
     assert result.status == "relaxed"
-    assert result.violations == 2
-    assert result.relaxation_codes == ("fish", "legumes")
+    assert result.violations == 3
+    assert result.relaxation_codes == ("fish", "legumes", "same_day_protein")
 
 
 def test_no_eligible_dishes_raises(session: Session) -> None:
@@ -988,3 +1002,88 @@ def test_empty_slot_raises_no_assignment(session: Session) -> None:
 
     assert error.value.code == "NO_FEASIBLE_MENU"
     assert error.value.reason == "no_assignment"
+
+
+def test_optimizer_ignores_complement_dishes(session: Session) -> None:
+    carrot, _ = _ingredient_with_product(
+        session,
+        "carrot",
+        group="vegetable",
+        serving_group="vegetable",
+        serving_size_milli=150_000,
+        price_cents=100,
+    )
+    chicken, _ = _ingredient_with_product(
+        session,
+        "chicken",
+        group="protein",
+        serving_group="protein",
+        serving_size_milli=100_000,
+        price_cents=350,
+        protein_source="chicken",
+    )
+    rice, _ = _ingredient_with_product(
+        session,
+        "rice",
+        group="carb",
+        serving_group="carb",
+        serving_size_milli=60_000,
+        price_cents=130,
+    )
+    _full_meal(
+        session,
+        "main-lunch",
+        ingredients=[(carrot, 300_000), (chicken, 200_000), (rice, 120_000)],
+        meal_types=["lunch"],
+        protein_source="chicken",
+        carbs="rice",
+    )
+    make_dish(
+        session,
+        "side-dinner",
+        meal_types=["dinner"],
+        role="complement",
+        ingredients=[(carrot, 300_000)],
+    )
+    eligibility = evaluate_dishes(session, PreferenceSnapshot())
+
+    with pytest.raises(OptimizerError) as error:
+        optimize_menu(eligibility, _request(people=2, days=1))
+
+    assert error.value.code == "NO_FEASIBLE_MENU"
+    assert error.value.reason == "no_assignment"
+
+
+def test_week_limits_legumes_balances_proteins_and_avoids_same_day(
+    session: Session,
+) -> None:
+    assert OPTIMIZER_VERSION == "2"
+    catalog = build_balanced_catalog(session, days=7)
+    dishes = {dish.id: dish for dish in catalog.dishes}
+
+    result = optimize_menu(
+        catalog.eligibility,
+        _request(
+            people=2,
+            days=7,
+            stage1_seconds=2.0,
+            stage2_seconds=2.0,
+        ),
+    )
+
+    assert result.status in {"optimal", "feasible"}
+    assert result.violations == 0
+    by_day: dict[int, list[str | None]] = {}
+    legumes = 0
+    fish = 0
+    for assignment in result.assignments:
+        dish = dishes[assignment.dish_id]
+        primary = dish.primary_protein or min(dish.protein_sources_json)
+        by_day.setdefault(assignment.day_index, []).append(primary)
+        if primary in {"legume", "legumes"}:
+            legumes += 1
+        if "fish" in (dish.tags_json or []) or "fish" in dish.protein_sources_json:
+            fish += 1
+    assert legumes <= 3
+    assert fish >= 2
+    assert all(len(set(sources)) == len(sources) for sources in by_day.values())

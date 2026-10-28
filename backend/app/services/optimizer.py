@@ -38,7 +38,7 @@ from app.services.pricing import (
     scale_quantity,
 )
 
-OPTIMIZER_VERSION = "1"
+OPTIMIZER_VERSION = "2"
 STAGE1_SECONDS = 3.0
 STAGE2_SECONDS = 3.0
 FALLBACK_SECONDS = 2.0
@@ -55,8 +55,12 @@ _RELAXATION_ORDER: tuple[str, ...] = (
     "red_meat",
     "light_dinners",
     "carb_sources",
+    "legume_dominance",
+    "protein_balance",
+    "same_day_protein",
 )
 _RED_MEAT_SOURCES: frozenset[str] = frozenset({"beef", "pork"})
+_LEGUME_SOURCES: frozenset[str] = frozenset({"legume", "legumes"})
 _DIAGNOSTIC_SECONDS = 0.5
 _MIN_SOLVE_SECONDS = 0.01
 
@@ -175,6 +179,7 @@ class _DishSpec:
     group_rations: Mapping[str, int]
     estimated_cents: int
     protein_sources: frozenset[str]
+    primary_protein: str | None
     carbs: str | None
     has_fish: bool
     has_legumes: bool
@@ -437,6 +442,9 @@ def _prepare_problem(
         if not result.eligible or result.dish.id not in eligible_ids:
             continue
         dish = result.dish
+        # F6: el optimizador solo selecciona platos principales completos.
+        if dish.role != "main":
+            continue
         slots = _dish_slots(dish)
         if not slots:
             continue
@@ -487,6 +495,9 @@ def _prepare_problem(
                 )
 
         protein_sources = frozenset(dish.protein_sources_json or ())
+        primary_protein = dish.primary_protein or (
+            min(protein_sources) if protein_sources else None
+        )
         tags = frozenset(dish.tags_json or ())
         specs.append(
             _DishSpec(
@@ -496,6 +507,7 @@ def _prepare_problem(
                 group_rations=group_rations,
                 estimated_cents=estimated_cents,
                 protein_sources=protein_sources,
+                primary_protein=primary_protein,
                 carbs=dish.carbs,
                 has_fish="fish" in tags or "fish" in protein_sources,
                 has_legumes="legume" in tags or "legumes" in protein_sources,
@@ -768,7 +780,7 @@ def _add_variety_rules(
         _lower_violation(
             model,
             "fish",
-            _ceil_div(request.days, 7),
+            max(1, _ceil_div(request.days * 2, 7)),
             sum(fish_variables),
         )
     )
@@ -844,6 +856,65 @@ def _add_variety_rules(
         )
     )
 
+    primary_sources = sorted(
+        {spec.primary_protein for spec in problem.dishes if spec.primary_protein is not None}
+    )
+    cap = max(2, _ceil_div(total_slots, min(len(primary_sources), 5))) if primary_sources else 0
+    legume_groups: dict[str, list[cp_model.IntVar]] = {}
+    other_groups: dict[str, list[cp_model.IntVar]] = {}
+    for source in primary_sources:
+        variables = [
+            variable
+            for spec in problem.dishes
+            if spec.primary_protein == source
+            for variable in x_by_dish[spec.dish.id]
+        ]
+        if source in _LEGUME_SOURCES:
+            legume_groups[source] = variables
+        else:
+            other_groups[source] = variables
+    violations.append(
+        _group_cap_violation(
+            model,
+            "legume_dominance",
+            cap,
+            legume_groups,
+            total_slots,
+        )
+    )
+    violations.append(
+        _group_cap_violation(
+            model,
+            "protein_balance",
+            cap,
+            other_groups,
+            total_slots,
+        )
+    )
+
+    same_day_terms: list[cp_model.IntVar] = []
+    for day in range(request.days):
+        for source in primary_sources:
+            variables = [
+                variable
+                for spec in problem.dishes
+                if spec.primary_protein == source
+                for variable in (x.get((day, slot, spec.dish.id)) for slot in _SLOTS)
+                if variable is not None
+            ]
+            if len(variables) < 2:
+                continue
+            excess = model.new_int_var(
+                0,
+                1,
+                f"same_day_{day}_{_safe_name(source)}",
+            )
+            model.add(excess >= sum(variables) - 1)
+            same_day_terms.append(excess)
+    same_day = model.new_int_var(0, request.days, "violation_same_day_protein")
+    model.add(same_day == sum(same_day_terms))
+    violations.append(_Violation(code="same_day_protein", variable=same_day))
+
     ordered = {violation.code: violation for violation in violations}
     return tuple(ordered[code] for code in _RELAXATION_ORDER)
 
@@ -868,6 +939,30 @@ def _upper_violation(
 ) -> _Violation:
     variable = model.new_int_var(0, max(0, max_count), f"violation_{code}")
     model.add(variable >= expression - threshold)
+    return _Violation(code=code, variable=variable)
+
+
+def _group_cap_violation(
+    model: cp_model.CpModel,
+    code: str,
+    cap: int,
+    groups: Mapping[str, Sequence[cp_model.IntVar]],
+    max_count: int,
+) -> _Violation:
+    """Suma el exceso de varios grupos de platos sobre un tope blando por fuente."""
+    excess_terms: list[cp_model.IntVar] = []
+    for source, variables in sorted(groups.items()):
+        if not variables:
+            continue
+        excess = model.new_int_var(
+            0,
+            max_count,
+            f"excess_{code}_{_safe_name(source)}",
+        )
+        model.add(excess >= sum(variables) - cap)
+        excess_terms.append(excess)
+    variable = model.new_int_var(0, max_count, f"violation_{code}")
+    model.add(variable == sum(excess_terms))
     return _Violation(code=code, variable=variable)
 
 
@@ -1230,7 +1325,9 @@ def _result_from_solution(
     assignments: list[OptimizationAssignment] = []
     for day, slot, dish_id in selected:
         spec = problem.dishes_by_id[dish_id]
-        protein_source = min(spec.protein_sources) if spec.protein_sources else None
+        protein_source = spec.primary_protein or (
+            min(spec.protein_sources) if spec.protein_sources else None
+        )
         assignments.append(
             OptimizationAssignment(
                 day_index=day,

@@ -5,6 +5,7 @@ import { DomainRequestError, requestJson, type ApiErrorBody } from '@/lib/domain
 export type MenuStatus = 'optimal' | 'feasible' | 'relaxed';
 export type PriceStatus = 'current' | 'stale';
 export type MealSlot = 'lunch' | 'dinner';
+export type MenuCourse = 'main' | 'complement';
 export type ExclusionScope = 'menu' | 'profile';
 export type ExportFormat = 'markdown' | 'csv';
 
@@ -58,6 +59,7 @@ export type MenuEntry = {
   id: number;
   day_index: number;
   slot: MealSlot;
+  course: MenuCourse;
   dish_id: number;
   dish_name: string;
   locked: boolean;
@@ -232,11 +234,30 @@ export function setEntryLocked(
   });
 }
 
-/** Cambia el plato de una entrada por otro plato elegible. */
+/** Cambia el plato de una entrada por otro plato elegible del mismo curso. */
 export function swapEntry(menuId: number, entryId: number, dishId: number): Promise<MenuDetail> {
   return requestJson<MenuDetail>(`/api/menus/${menuId}/entries/${entryId}/swap`, {
     method: 'POST',
     body: JSON.stringify({ dish_id: dishId }),
+  });
+}
+
+/** Añade un acompañamiento al hueco de un plato principal. */
+export function addComplement(
+  menuId: number,
+  mainEntryId: number,
+  dishId: number,
+): Promise<MenuDetail> {
+  return requestJson<MenuDetail>(`/api/menus/${menuId}/entries/${mainEntryId}/complement`, {
+    method: 'POST',
+    body: JSON.stringify({ dish_id: dishId }),
+  });
+}
+
+/** Quita el acompañamiento del hueco de un plato principal. */
+export function removeComplement(menuId: number, mainEntryId: number): Promise<MenuDetail> {
+  return requestJson<MenuDetail>(`/api/menus/${menuId}/entries/${mainEntryId}/complement`, {
+    method: 'DELETE',
   });
 }
 

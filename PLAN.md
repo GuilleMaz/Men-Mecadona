@@ -1,7 +1,7 @@
 # PLAN.md — Cesta
 
-> **Estado:** F3 completada el 2026-10-26. Siguiente fase: F4 (optimizador, menú y lista de la compra).
-> **Última actualización:** 2026-10-26
+> **Estado:** F0-F6 completadas el 2026-10-28. MVP y comidas completas cerrados.
+> **Última actualización:** 2026-10-28
 > **Nombre provisional:** Cesta
 > **Ubicación:** `C:\Users\guill\OneDrive\Escritorio\OpenCode\MERCADONA`
 
@@ -52,6 +52,13 @@ Si ni siquiera el menú más barato cabe, se devuelve un **preview de inviabilid
 - Exportación/impresión de la lista.
 - Funcionamiento local, sin login.
 
+### 2.1.1 F6 — Comidas completas y acompañamientos (implementada)
+
+- Cada comida o cena tiene un **plato principal completo** como plato único obligatorio.
+- Gazpacho, sopas y ensaladas ligeras pueden añadirse como **acompañamiento opcional**; nunca sustituyen al principal.
+- El reparto de proteínas se equilibra con topes blandos por fuente y mínimo de pescado.
+- F6 está implementada desde el 2026-10-28; los menús históricos se interpretan como `course="main"`.
+
 ### 2.2 Fuera de alcance del MVP
 
 - Recetas, pasos, tiempos de cocina o modo chef.
@@ -90,7 +97,7 @@ Si ni siquiera el menú más barato cabe, se devuelve un **preview de inviabilid
 | RF-14 | Se pueden buscar platos y productos. | Should |
 | RF-15 | Se muestra coste por comida, por día y por persona. | Must |
 | RF-16 | La lista de la compra se puede imprimir o exportar. | Should |
-| RF-17 | El menú cumple mínimos diarios de verdura, proteína e hidratos y variedad de fuentes. | Must |
+| RF-17 | El menú cumple mínimos diarios, reparto de fuentes y un plato principal completo por comida/cena; los acompañamientos son opcionales y no sustituyen al principal. | Must |
 | RF-18 | El MVP usa CP 22002 / almacén 4389; el cambio de CP queda para el backlog. | Must |
 | RF-19 | Se muestra el valor total de los productos que sobran. | Should |
 | RF-20 | El sistema valida que todos los platos e ingredientes tienen producto, precio y unidades coherentes. | Must |
@@ -197,7 +204,8 @@ Ficha de un plato, **sin receta**:
 - slug estable, nombre y descripción breve opcional;
 - raciones base;
 - tipos de comida compatibles: `lunch`, `dinner`, `both`;
-- fuentes de proteína;
+- fuentes de proteína y `primary_protein` (la fuente con más raciones);
+- `role` (`main` o `complement`) derivado de la composición;
 - etiquetas: verdura, hidrato, ligero, etc.;
 - composición: ingredientes y cantidades en la unidad base del ingrediente.
 
@@ -208,8 +216,9 @@ La UI muestra el plato y sus productos. **No hay pasos de cocina.**
 - personas, días, presupuesto;
 - CP y almacén;
 - estado;
-- entradas: día, comida/cena, plato, bloqueado;
-- coste de consumo, ticket, despensa y sobras;
+- entradas: día, comida/cena, plato, `course` (`main` o `complement`) y bloqueo;
+- un `main` obligatorio y como máximo un `complement` por día/hueco;
+- coste de consumo, ticket, despensa y sobras, incluyendo acompañamientos;
 - fecha de precios y `sync_run_id`;
 - snapshot de preferencias y despensa usado al generar.
 
@@ -311,6 +320,10 @@ Lista canónica: `gluten`, `crustaceans`, `eggs`, `fish`, `peanuts`, `soybeans`,
 
 ### 6.6 Equilibrio y variedad
 
+> Las reglas de plato completo y reparto de fuentes pertenecen a F6, ya implementada.
+> Los menús históricos anteriores a F6 se interpretan como `course="main"` y no se
+> invalidan.
+
 Mínimos diarios duros, **por persona y día**, calculados desde la composición:
 
 - 1 ración de verdura = 150 g.
@@ -319,22 +332,37 @@ Mínimos diarios duros, **por persona y día**, calculados desde la composición
 
 Cada ingrediente declara `serving_group` (`vegetable`, `protein`, `carb`, `none`) y `serving_size_milli`. La composición del plato calcula las raciones. Los mínimos son 1 ración de verdura, 1 de proteína y 1 de hidrato por persona y día.
 
+#### Comida completa y acompañamientos
+
+- Un plato `main` aporta al menos **0,5 raciones de proteína por persona** y **0,5 raciones entre verdura e hidrato**.
+- Los platos que no cumplen son `complement`. No pueden ser el plato único de una comida o cena.
+- Cada hueco tiene exactamente un `main` y puede tener como máximo un `complement`.
+- El optimizador solo selecciona `main`; los acompañamientos se añaden manualmente con `MenuService` y recalcularán ticket, lista, consumo y sobras.
+- `role` y `primary_protein` se derivan de la composición al cargar el seed. `primary_protein` es la fuente con más raciones de proteína; en empate se usa un orden estable.
+- Los menús históricos se interpretan con `course="main"` y no se invalidan.
+
+#### Variedad y reparto
+
 Variedad, modelada como violaciones minimizadas:
 
 | Regla | Métrica | Umbral | Violación |
 |---|---|---|---|
 | Variedad de proteína | fuentes distintas | `min(3, days)` | `max(0, umbral − distintas)` |
-| Pescado | platos con pescado | `ceil(days / 7)` | `max(0, umbral − platos)` |
-| Legumbres | platos con legumbre | `ceil(days / 7)` | `max(0, umbral − platos)` |
+| Pescado | platos con pescado | `max(1, ceil(days × 2 / 7))` | `max(0, umbral − platos)` |
+| Legumbres | platos principales con legumbre | `ceil(days / 7)` | `max(0, umbral − platos)` |
 | Carne roja | platos con carne roja | `ceil(days × 3 / 7)` | `max(0, platos − umbral)` |
-| Cenas ligeras | cenas `light` | `ceil(days / 2)` | `max(0, umbral − cenas)` |
+| Cenas ligeras | cenas `light` con plato `main` | `ceil(days / 2)` | `max(0, umbral − cenas)` |
 | Variedad de hidratos | fuentes distintas | `min(2, days)` | `max(0, umbral − distintas)` |
+| Tope por fuente principal | platos `main` de la misma `primary_protein` | `max(2, ceil((days × 2) / min(n_sources, 5)))` | exceso: `legume_dominance` si es legumbre; `protein_balance` en el resto |
+| Misma proteína en el día | fuente principal en comida y cena | una fuente distinta por hueco | `same_day_protein` |
 
 Todas las violaciones tienen peso 1. La etapa 1 minimiza la suma de violaciones; la etapa 2 minimiza el ticket con esa suma fijada.
 
 `light` se define por composición: sin carne roja, al menos 1 ración de verdura y como máximo 1 ración de hidrato. No depende de si el plato se fríe, porque no hay pasos de cocina.
 
-`has_vegetables`, `light`, `carbs` y `protein_sources` se derivan de la composición al cargar el seed y se guardan como caché validada. El YAML puede declararlos, pero `validate_seed` debe comprobar que coinciden con la composición.
+`has_vegetables`, `light`, `carbs`, `protein_sources`, `role` y `primary_protein` se derivan de la composición al cargar el seed y se guardan como caché validada. El YAML puede declarar los flags existentes, pero `validate_seed` debe comprobar que coinciden con la composición; `role` y `primary_protein` no se escriben a mano.
+
+Los límites de reparto son **blandos**: si el presupuesto impide cumplirlos, el menú se marca `relaxed` y se explica qué regla se relajó. El plato completo es **duro** y no se relaja.
 
 Para menús de 1-2 días se aplican los mínimos diarios y los umbrales de variedad con `min`/`ceil`; no se relajan los mínimos diarios.
 
@@ -592,13 +620,17 @@ Prefijo `/api`. Errores homogéneos:
 | GET | `/api/menus` | Historial paginado |
 | GET | `/api/menus/{id}` | Menú completo |
 | PATCH | `/api/menus/{id}/entries/{entry_id}` | Bloquea/desbloquea un plato |
-| POST | `/api/menus/{id}/entries/{entry_id}/swap` | Busca alternativa |
+| POST | `/api/menus/{id}/entries/{entry_id}/swap` | Busca alternativa del mismo `course` |
 | POST | `/api/menus/{id}/entries/{entry_id}/exclude` | Excluye plato del menú o del perfil |
+| POST | `/api/menus/{id}/entries/{main_entry_id}/complement` | Añade un acompañamiento a la comida/cena |
+| DELETE | `/api/menus/{id}/entries/{main_entry_id}/complement` | Quita el acompañamiento |
 | POST | `/api/menus/{id}/regenerate` | Regenera respetando bloqueos |
 | POST | `/api/menus/{id}/revalidate` | Recalcula precios, ticket y lista actuales |
 | GET | `/api/menus/{id}/shopping-list` | Lista de la compra |
 | PATCH | `/api/menus/{id}/shopping-list/items/{item_id}` | Marca comprado o «ya lo tengo» |
 | GET | `/api/menus/{id}/export` | Exporta markdown/CSV |
+
+`GET /api/dishes` admite `role=main|complement`; los esquemas de plato exponen `role` y `primary_protein`, y las entradas de menú `course`. Las rutas de acompañamiento están implementadas desde F6.
 
 ### 10.1 Generación
 
@@ -698,9 +730,14 @@ need_i(x) = Σ_{r,d,s} coef[r,i] × x[r,d,s]
 
 ### 11.2 Variables
 
-- `x[r,d,s] ∈ {0,1}`: plato `r` en día `d`, hueco `s`.
+> La selección exclusiva de platos `main` y los topes de reparto son el contrato
+> de F6, implementado desde el 2026-10-28.
+
+- `x[r,d,s] ∈ {0,1}`: plato principal `r` en día `d`, hueco `s`.
 - `q[p] ∈ Z+`: paquetes comprados del producto `p`.
 - `violation[k] ∈ Z+`: incumplimiento de la regla de variedad `k`.
+
+Solo los platos `main` entran en `x[r,d,s]`; los `complement` se añaden después con `MenuService` y no son variables del solver.
 
 `used[p]` y `leftover[p]` no son variables del solver: se calculan después de resolver con el plan canónico de §11.7.
 
@@ -726,10 +763,11 @@ need_i(x) = Σ_{r,d,s} coef[r,i] × x[r,d,s]
 8. `UNIQUE(product_id)` garantiza que un producto no se cuenta en dos ingredientes.
 9. Los platos deben ser compatibles con el hueco (`lunch`/`dinner`/`both`).
 10. Un plato no puede aparecer dos veces en el mismo día.
+11. `x[r,d,s] = 0` si `dishes.role != "main"`.
 
 ### 11.4 Objetivo lexicográfico
 
-Las reglas de variedad se definen en §6.6 con métricas, umbrales y violaciones. Todas las violaciones tienen peso 1.
+Las reglas de variedad se definen en §6.6 con métricas, umbrales y violaciones. Todas las violaciones tienen peso 1. Las reglas nuevas `legume_dominance`, `protein_balance` y `same_day_protein` también son violaciones blandas; el plato completo es una restricción dura.
 
 **Etapa 1:** minimizar la suma de violaciones.
 
@@ -766,6 +804,7 @@ Causas posibles: `budget`, `repeats`, `minimums`, `locks`, `no_assignment`.
 - Etapa 1: 3 s. Etapa 2: 3 s. Fallback de mínimo: 2 s.
 - La generación p95 debe ser < 10 s incluyendo API y serialización.
 - `num_search_workers=1` y semilla fija para tests y reproducibilidad.
+- `OPTIMIZER_VERSION = "2"` al incorporar plato completo y reparto de fuentes; los menús guardados conservan su versión.
 - Si se agota el tiempo:
   - con mejor esfuerzo, se persiste `feasible` con `timed_out=true`;
   - sin mejor esfuerzo, se devuelve `timeout` con `menu_id=null`.
@@ -887,13 +926,14 @@ Datos observados:
 
 Para que 14 días × 2 comidas sean viables:
 
-- ≥ 14 platos compatibles con `lunch`;
-- ≥ 14 platos compatibles con `dinner`;
-- ≥ 28 platos elegibles con exclusiones por defecto;
-- ≥ 3 fuentes de proteína con ≥ 4 platos cada una;
-- ≥ 2 platos de pescado, ≥ 2 de legumbre, ≥ 2 de carne roja;
-- ≥ 4 cenas ligeras;
-- ≥ 1 verdura y ≥ 1 hidrato disponibles cada día.
+- ≥ 14 platos `main` compatibles con `lunch`;
+- ≥ 14 platos `main` compatibles con `dinner`;
+- ≥ 28 platos `main` elegibles con exclusiones por defecto;
+- ≥ 3 fuentes de proteína con ≥ 4 platos `main` cada una;
+- ≥ 2 platos `main` de pescado, ≥ 2 de legumbre y ≥ 2 de carne roja;
+- ≥ 4 cenas `main` ligeras;
+- ≥ 1 verdura y ≥ 1 hidrato disponibles cada día;
+- ≥ 3 platos `complement`, con al menos uno compatible con `lunch` y otro con `dinner`.
 
 `validate_seed` comprueba estos umbrales y la elegibilidad con exclusiones por defecto. El dry-run del optimizador se ejecuta con `scripts/dry_run_menu.py`.
 
@@ -924,6 +964,8 @@ Para que 14 días × 2 comidas sean viables:
       quantity: 15
       unit: ml
 ```
+
+`role` y `primary_protein` no se declaran a mano en el YAML: se derivan de la composición y se validan al cargar el seed.
 
 ### 13.4 Validación
 
@@ -1140,6 +1182,7 @@ El detalle accionable está en `TASKS.md`.
 | F3 | Coste puro y preview | Identidad contable y coste verificables |
 | F4 | Optimizador y menú | Menú `días × 2` bajo presupuesto |
 | F5 | Calidad y entrega | Tests, seguridad, historial, documentación |
+| F6 | Comidas completas y acompañamientos | Principal obligatorio, acompañamientos opcionales y reparto de proteínas |
 
 ---
 
@@ -1195,7 +1238,7 @@ El detalle accionable está en `TASKS.md`.
 | RF-14 | F2 | Búsqueda de platos/productos |
 | RF-15 | F3/F4 | Coste por comida/día/persona |
 | RF-16 | F5 | Exportación, impresión y escape CSV |
-| RF-17 | F4 | Mínimos diarios y variedad en 1/2/7/14 días |
+| RF-17 | F6 | Mínimos diarios, variedad y plato completo en 1/2/7/14 días |
 | RF-18 | F0/F1 | CP 22002 y almacén 4389 |
 | RF-19 | F3 | Valor de sobras |
 | RF-20 | F2 | Validador de seed |

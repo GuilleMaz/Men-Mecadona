@@ -14,6 +14,7 @@ IngredientGroup = Literal[
 ServingGroup = Literal["vegetable", "protein", "carb", "none"]
 BaseUnit = Literal["g", "ml", "unit"]
 MealType = Literal["lunch", "dinner"]
+DishRole = Literal["main", "complement"]
 
 
 class AllergenOut(BaseModel):
@@ -76,6 +77,8 @@ class DishSummary(BaseModel):
     description: str | None
     base_servings: int
     meal_types: list[MealType]
+    role: DishRole
+    primary_protein: str | None
     protein_sources: list[str]
     has_vegetables: bool
     light: bool

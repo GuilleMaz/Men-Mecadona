@@ -33,7 +33,7 @@ class MenuSettings(BaseModel):
     excluded_tags: list[str] = Field(default_factory=list)
     pantry: list[PantrySnapshot] = Field(default_factory=list)
     max_repeats: int = Field(default=1, ge=1, le=14)
-    optimizer_version: str = Field(default="1", min_length=1, max_length=32)
+    optimizer_version: str = Field(default="2", min_length=1, max_length=32)
 
     @field_validator("allergen_codes")
     @classmethod

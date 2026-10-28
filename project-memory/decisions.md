@@ -1,5 +1,145 @@
 # Decisions
 
+## 2026-10-28 — Implementación de comidas completas y acompañamientos (F6)
+
+### Problema
+
+El contrato de F6 estaba documentado pero el código seguía permitiendo que un
+gazpacho, una sopa o una ensalada de pasta ocuparan un hueco como plato único.
+Además, la migración de `menu_entries` necesitaba recrear la tabla en SQLite y
+la base real tiene menús históricos con claves foráneas.
+
+### Decisión
+
+- `Dish.role` y `Dish.primary_protein` se derivan de la composición: `main` exige
+  ≥0,5 raciones de proteína por persona y ≥0,5 entre verdura e hidrato. El seed
+  calcula y persiste ambos; el YAML no los declara a mano.
+- `MenuEntry.course` (`main|complement`) con unicidad
+  `(menu_id, day_index, slot, course)`. Los menús históricos reciben
+  `course='main'` por `server_default` y no se reescriben.
+- El optimizador filtra solo `main`, añade `legume_dominance`,
+  `protein_balance`, `same_day_protein` y el umbral de pescado
+  `max(1, ceil(days × 2 / 7))`; `OPTIMIZER_VERSION` pasa a `2`.
+- `MenuService` añade/quita acompañamientos con recálculo completo y rechazo por
+  presupuesto. `regenerate` prueba cada acompañamiento anterior por separado y
+  descarta solo los que no caben.
+- La conexión de Alembic desactiva `PRAGMA foreign_keys` durante las migraciones
+  con `batch_alter_table`; la app mantiene `foreign_keys=ON` en cada conexión.
+  Sin esto, SQLite rechaza el `DROP TABLE dishes` cuando hay menús guardados.
+- La UI muestra principal y acompañamiento, filtra el catálogo por rol y solo
+  ofrece el curso correcto en los diálogos.
+
+### Justificación
+
+- La regla de plato completo debe ser dura para que un menú nuevo no pueda
+  presentar un acompañamiento como comida.
+- El default `course='main'` conserva la validez y el historial de los menús
+  anteriores sin migración de datos ni cambios de contrato.
+- Descartar acompañamientos uno a uno mantiene los principales y el presupuesto
+  aunque el nuevo menú sea más caro.
+- Desactivar las claves foráneas solo en la conexión de migración evita perder
+  datos y no relaja ninguna garantía en tiempo de ejecución.
+
+### Resultado
+
+- Migración `20261026_0006` aplicada a la base real con 2 menús y 28 entradas
+  históricas; `foreign_key_check` limpio.
+- 110 ingredientes, 212 mapeos y 63 platos: 55 principales y 8 acompañamientos.
+- 365 tests backend y 56 frontend en verde; dry-run 16/16; benchmark 14d/4p p95
+  5,22 s.
+
+### Alternativas
+
+- Recrear `menu_entries` con las claves foráneas activas: descartado; SQLite
+  rechaza el DROP cuando hay filas dependientes.
+- Clasificar `main|complement` a mano en el YAML: descartado; se desincroniza de
+  la composición y el contrato exige derivarlo.
+- Añadir todos los acompañamientos de golpe en `regenerate`: descartado; un solo
+  acompañamiento caro impediría conservar los demás.
+- Un tope duro de proteínas: descartado; el presupuesto ajustado quedaría
+  inviable. Se usa violación blanda y estado `relaxed`.
+
+### Limitaciones conocidas
+
+- La clasificación es una heurística por raciones, no una medida de saciedad.
+- Los menús históricos pueden seguir mostrando un complemento como plato único
+  hasta que se regeneren.
+- `regenerate` informa de los acompañamientos descartados en la UI comparando el
+  número anterior y el posterior; no se persiste un motivo por acompañamiento.
+
+---
+
+## 2026-10-26 — Plan de comidas completas y acompañamientos (F6)
+
+### Problema
+
+El MVP puede generar una cena de gazpacho o ensalada de pasta como plato único.
+Los mínimos son diarios, no por comida, y las legumbres solo tienen un mínimo
+semanal: al ser baratas, el solver abusa de ellas. El resultado es un menú que
+puede cumplir el presupuesto y los mínimos, pero no resulta saciante ni está
+bien repartido.
+
+### Decisión
+
+- Añadir `dishes.role` (`main|complement`) y `dishes.primary_protein`, derivados
+  de la composición. Un `main` exige ≥0,5 raciones de proteína por persona y
+  ≥0,5 raciones entre verdura e hidrato; los demás son `complement`.
+- Cada comida/cena tendrá exactamente un `main`; podrá tener como máximo un
+  `complement`. El optimizador solo selecciona principales.
+- Los acompañamientos serán **opcionales y manuales**: el usuario los añade,
+  cambia o quita desde el menú. No se añaden automáticamente para no encarecer
+  todos los menús ni necesitar repetir acompañamientos en 14 días.
+- Reparto blando: tope por fuente principal
+  `max(2, ceil((days × 2) / min(n_sources, 5)))`, sin repetir la misma proteína
+  en comida y cena del mismo día, y pescado `max(1, ceil(days × 2 / 7))`.
+- Códigos de relajación nuevos: `legume_dominance`, `protein_balance` y
+  `same_day_protein`. El plato completo es duro; los topes son blandos.
+- Los menús históricos no se reescriben: se interpretan con `course="main"` y
+  solo las nuevas generaciones aplican F6.
+
+### Justificación
+
+- Un plato principal completo evita que una cena ligera sin proteína pase como
+  comida por el hecho de que la comida del día cubra los mínimos.
+- El umbral 0,5 conserva platos culturalmente razonables (tortilla, bocadillo,
+  ensalada con atún) y excluye los que no tienen proteína o son claramente un
+  acompañamiento (gazpacho, sopas de verdura, ensalada de pasta).
+- Los topes blandos mantienen la promesa de presupuesto y permiten generar un
+  menú `relaxed` cuando el catálogo o el presupuesto no dan más variedad.
+- Los acompañamientos manuales preservan el control del usuario y evitan que
+  todos los menús suban de precio.
+
+### Resultado
+
+- Plan documentado en `PLAN.md`, `TASKS.md`, `AGENTS.md`, `README.md` y
+  `project-memory/` el 2026-10-26.
+- Implementado el 2026-10-28 (ver entrada superior de implementación de F6).
+
+### Alternativas
+
+- Excluir gazpacho/sopas/ensaladas del catálogo: descartado; el usuario quiere
+  poder añadirlos como acompañamiento.
+- Acompañamientos automáticos en todas las comidas: descartado; sube el coste y
+  no hay suficientes acompañamientos distintos para 14 días.
+- Tope duro de legumbres: descartado; un presupuesto ajustado quedaría inviable
+  aunque el menú pudiera ser aceptable. Se usa tope blando con aviso.
+- Umbral 0,75 de proteína: descartado para F6; convertiría en acompañamientos
+  platos como el bocadillo de pavo o la tortilla de patata. Se puede revisar en
+  una iteración.
+
+### Limitaciones conocidas
+
+- La clasificación `main|complement` es una heurística por raciones, no una
+  medida de calorías ni de saciedad real.
+- Los topes de reparto se relajan bajo presupuesto y el menú se muestra como
+  `relaxed`; no se garantiza una variedad perfecta en todos los casos.
+- Los menús antiguos pueden seguir mostrando gazpacho como plato único hasta que
+  se regeneren.
+- La migración de `menu_entries` requiere recrear la tabla en SQLite por el
+  cambio de restricción única.
+
+---
+
 ## 2026-10-26 — Resiliencia de precios, entrega y producción local (F5)
 
 ### Problema

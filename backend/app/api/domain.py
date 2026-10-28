@@ -22,6 +22,7 @@ from app.schemas.domain import (
     DishDetail,
     DishIngredientOut,
     DishPage,
+    DishRole,
     DishSummary,
     ExclusionCreate,
     ExclusionOut,
@@ -83,6 +84,8 @@ def _dish_summary(result: DishEligibility) -> DishSummary:
         description=dish.description,
         base_servings=dish.base_servings,
         meal_types=list(dish.meal_types_json or []),  # type: ignore[arg-type]
+        role=dish.role,  # type: ignore[arg-type]
+        primary_protein=dish.primary_protein,
         protein_sources=list(dish.protein_sources_json or []),
         has_vegetables=dish.has_vegetables,
         light=dish.light,
@@ -181,6 +184,7 @@ def list_dishes(
     session: SessionDep,
     q: Annotated[str | None, Query(max_length=100)] = None,
     meal_type: Annotated[Literal["lunch", "dinner"] | None, Query()] = None,
+    role: Annotated[DishRole | None, Query()] = None,
     tag: Annotated[str | None, Query(max_length=64)] = None,
     light: Annotated[bool | None, Query()] = None,
     only_eligible: bool = False,
@@ -203,6 +207,8 @@ def list_dishes(
         ):
             continue
         if meal_type is not None and meal_type not in (dish.meal_types_json or []):
+            continue
+        if role is not None and dish.role != role:
             continue
         if tag_filter is not None and tag_filter not in (dish.tags_json or []):
             continue

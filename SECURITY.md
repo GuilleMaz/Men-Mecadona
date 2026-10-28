@@ -1,7 +1,7 @@
 # Seguridad local de Cesta
 
 Cesta es una aplicaciÃ³n local de un solo usuario. No hay login ni exposiciÃ³n a la
-LAN en el MVP. Esta checklist cubre F0-F5.
+LAN en el MVP. Esta checklist cubre F0-F6.
 
 ## Checklist
 

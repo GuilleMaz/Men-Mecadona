@@ -1,7 +1,7 @@
 ﻿# TASKS.md — Cesta
 
-> **Estado global:** F0-F5 completadas el 2026-10-26. MVP cerrado.
-> **Última actualización:** 2026-10-26
+> **Estado global:** F0-F6 completadas el 2026-10-28. MVP y comidas completas cerrados.
+> **Última actualización:** 2026-10-28
 > **Plan de referencia:** `PLAN.md`
 
 ## Convenciones
@@ -526,6 +526,60 @@
 **DoD de F5:** MVP instalable, documentado, seguro y probado.
 
 **Estado F5:** cumplido el 2026-10-26. `check.ps1` en verde con 354 tests backend, 54 frontend y build; auditoría sin hallazgos; benchmark 14d/4p p95 3,73 s; sync 7,72 s; producción local verificada con `run.ps1 -Prod`. Commit `32b32ac` publicado en `origin/main`.
+
+---
+
+## F6 — Comidas completas y acompañamientos
+
+**Objetivo:** garantizar que cada comida/cena sea saciante y equilibrar las fuentes de proteína, permitiendo acompañamientos opcionales.
+
+**Depende de:** F4 y F5.
+
+**Estado:** completada el 2026-10-28.
+
+- [x] **F6.1 — Rol del plato y proteína principal**
+  - Añadir `dishes.role` (`main|complement`) y `dishes.primary_protein`.
+  - Derivar ambos de la composición; `main` exige ≥0,5 raciones de proteína y ≥0,5 de verdura/hidrato por persona.
+  - Migración Alembic y actualización del seed.
+  - **DoD:** gazpacho, ensalada de pasta y sopas sin proteína quedan como `complement`; el catálogo expone `role` y `primary_protein`.
+  - **Resultado:** migración `20261026_0006`; `derive_dish` calcula rol y proteína principal; 55 principales y 8 acompañamientos (5 existentes + 3 nuevos). `/api/dishes` acepta `role` y expone ambos campos.
+
+- [x] **F6.2 — Menú con acompañamientos**
+  - Añadir `menu_entries.course` (`main|complement`) y la unicidad `(menu_id, day_index, slot, course)`.
+  - Endpoints para añadir y quitar acompañamientos.
+  - `swap` y `exclude` respetan el rol; `regenerate` conserva acompañamientos válidos si caben.
+  - **DoD:** se puede añadir/quitar un acompañamiento; ticket, lista, consumo, sobras e identidades contables lo incluyen; un acompañamiento caro devuelve `BUDGET_EXCEEDED`.
+  - **Resultado:** `course` con CHECK y unicidad por curso; `POST|DELETE /api/menus/{id}/entries/{main_entry_id}/complement`; `regenerate` reintenta cada acompañamiento y descarta los que no caben. Tests de alta, baja, presupuesto, swap por curso y regeneración.
+
+- [x] **F6.3 — Optimizador de principales y reparto**
+  - Filtrar solo platos `main`.
+  - Añadir topes blandos por fuente, misma proteína por día y pescado 2/semana.
+  - Nuevos códigos `legume_dominance`, `protein_balance`, `same_day_protein`; subir `optimizer_version` a `2`.
+  - **DoD:** ningún menú nuevo usa un plato incompleto; 7 días/2 personas no supera 3 legumbres principales; 14 días/4 personas no supera 6; se cumple el pescado si hay productos elegibles.
+  - **Resultado:** el optimizador ignora `complement`; tope `max(2, ceil(días×2/min(fuentes,5)))` desdoblado en `legume_dominance` y `protein_balance`; `same_day_protein` por día; pescado `max(1, ceil(días×2/7))`; versión `2`. Tests de rol y topes.
+
+- [x] **F6.4 — UI de principal + acompañamiento**
+  - Rejilla con principal y acompañamiento; botón «Añadir acompañamiento», cambiar y quitar.
+  - Catálogo con etiqueta `Principal`/`Acompañamiento` y filtro por rol.
+  - Etiquetas de relajación nuevas y exportación/impresión con ambos cursos.
+  - **DoD:** flujo usable y accesible en escritorio y móvil; los diálogos solo ofrecen el rol correcto.
+  - **Resultado:** `MenuGrid` renderiza principal y acompañamiento; `ComplementDishDialog`; catálogo con filtro y etiqueta de curso; export markdown con ambos cursos; MSW y tests de UI actualizados.
+
+- [x] **F6.5 — Seed y cobertura**
+  - Añadir 2-3 acompañamientos ligeros (por ejemplo, ensalada mixta) y asegurar compatibilidad con comida y cena.
+  - Validar cobertura de principales y acompañamientos.
+  - **DoD:** `validate_seed.py` en verde; hay al menos un acompañamiento para comida y otro para cena.
+  - **Resultado:** añadidos `mixed-salad`, `tomato-onion-salad` y `grilled-vegetables`, compatibles con comida y cena; `validate_seed.py` en verde con 0 avisos y cobertura de principales/acompañamientos.
+
+- [x] **F6.6 — Tests, benchmark, documentación y cierre**
+  - Tests backend/frontend, dry-run y benchmark 14 días/4 personas.
+  - Actualizar README, PLAN, AGENTS y project-memory.
+  - **DoD:** `check.ps1` en verde; benchmark p95 < 10 s; `finish-phase.ps1 -Phase F6 -Summary "comidas completas y acompañamientos"` publicado.
+  - **Resultado:** 365 tests backend y 56 frontend; dry-run 16/16; benchmark 14d/4p p95 5,22 s; documentación y memoria actualizadas; cierre con `finish-phase.ps1`.
+
+**DoD de F6:** ningún menú nuevo presenta un plato incompleto como comida o cena; los acompañamientos son opcionales y no sustituyen al principal; el reparto de proteínas es razonable o se informa de la relajación; coste, lista e identidades contables incluyen los acompañamientos.
+
+**Estado F6:** completada el 2026-10-28. 55 principales y 8 acompañamientos; migración `20261026_0006`; 365 tests backend y 56 frontend; dry-run 16/16; benchmark p95 5,22 s.
 
 ---
 

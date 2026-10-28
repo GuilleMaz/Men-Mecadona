@@ -1,5 +1,106 @@
 # Changelog
 
+## 2026-10-28 — F6: comidas completas y acompañamientos
+
+### Cambios
+
+- Backend: `dishes.role` (`main|complement`) y `dishes.primary_protein` derivados
+  de la composición; `menu_entries.course` con CHECK y unicidad
+  `(menu_id, day_index, slot, course)`. Migración `20261026_0006`.
+- Seed: 3 acompañamientos nuevos (`mixed-salad`, `tomato-onion-salad`,
+  `grilled-vegetables`); 63 platos en total, 55 principales y 8 acompañamientos.
+  `validate_seed` comprueba principales, acompañamientos y cobertura por hueco.
+- Optimizador: solo platos `main`; topes blandos `legume_dominance`,
+  `protein_balance`, `same_day_protein`; pescado `max(1, ceil(days × 2 / 7))`;
+  `OPTIMIZER_VERSION = "2"`.
+- `MenuService`: añadir/quitar acompañamientos, recálculo de ticket, lista,
+  consumo, sobras e identidades; `swap`/`exclude` respetan el curso; `regenerate`
+  conserva los acompañamientos que caben y descarta los que no.
+- API: `POST|DELETE /api/menus/{id}/entries/{main_entry_id}/complement`;
+  `GET /api/dishes?role=main|complement`; `role`/`primary_protein` en platos y
+  `course` en entradas.
+- Frontend: rejilla principal + acompañamiento, diálogo de añadir/quitar,
+  etiqueta y filtro de curso en Platos, nuevas etiquetas de relajación y export
+  markdown con ambos cursos.
+- Migraciones: la conexión de Alembic desactiva `foreign_keys` durante
+  `batch_alter_table` para poder recrear tablas con menús históricos.
+- Documentación: README raíz/backend/frontend, `PLAN.md`, `TASKS.md`,
+  `AGENTS.md` y `project-memory/`.
+
+### Verificación
+
+- `uv run pytest`: **365 tests backend** en verde, sin red.
+- `npm run lint`, `format:check`, `typecheck`, `test` (**56 tests**) y build en
+  verde.
+- `scripts/validate_seed.py`: OK (0 avisos).
+- `scripts/dry_run_menu.py`: **16/16** escenarios válidos.
+- `scripts/benchmark_menu.py --runs 20 --days 14 --people 4`: p50 4,20 s,
+  **p95 5,22 s**, máximo 5,31 s (< 10 s).
+- Migración `20261026_0006` aplicada a la base real: 2 menús y 28 entradas
+  históricas conservados, `foreign_key_check` limpio.
+
+### Archivos
+
+- `backend/app/models/dishes.py`, `backend/app/models/menu.py`,
+  `backend/app/schemas/domain.py`, `backend/app/schemas/menu.py`,
+  `backend/app/schemas/menu_api.py`
+- `backend/app/services/seed.py`, `optimizer.py`, `menu_service.py`,
+  `backend/app/api/domain.py`, `backend/app/api/menus.py`
+- `backend/app/db.py`, `backend/alembic/env.py`,
+  `backend/alembic/versions/20261026_0006_dish_courses.py`
+- `backend/app/data/dishes.yaml`
+- `backend/tests/test_seed.py`, `test_optimizer.py`, `test_menu_service.py`,
+  `test_menus_api.py`, `test_menu_migrations.py`, `domain_fixtures.py`,
+  `optimizer_fixtures.py`
+- `frontend/src/lib/domain.ts`, `lib/menu.ts`, `lib/labels.ts`,
+  `components/menu/MenuEntryCard.tsx`, `MenuGrid.tsx`,
+  `ComplementDishDialog.tsx`, `SwapDishDialog.tsx`, `pages/MenuDetailPage.tsx`,
+  `pages/DishesPage.tsx`, `test/server.ts`, tests de UI
+- `README.md`, `backend/README.md`, `frontend/README.md`, `PLAN.md`,
+  `TASKS.md`, `AGENTS.md`, `project-memory/**`
+
+### Motivo
+
+- Cerrar la regla de plato principal completo y acompañamientos opcionales sin
+  relajar presupuesto, alérgenos ni exclusiones, manteniendo válidos los menús
+  históricos.
+
+## 2026-10-26 — F6 planificada: comidas completas y acompañamientos (solo documentación)
+
+### Cambios
+
+- `PLAN.md`: nueva regla de plato principal (`main`) y acompañamiento opcional
+  (`complement`), umbral de 0,5 raciones de proteína y 0,5 de verdura/hidrato,
+  reparto blando por fuente, pescado 2/semana, endpoints de acompañamiento,
+  restricciones del optimizador y cobertura mínima.
+- `TASKS.md`: fase F6 planificada con F6.1-F6.6 y DoD; ninguna tarea marcada como
+  hecha.
+- `AGENTS.md`: invariantes 14 y 15, contrato de comida completa/acompañamientos,
+  tests y prohibiciones nuevas.
+- `README.md`, `backend/README.md` y `frontend/README.md`: explicación de F6
+  marcada explícitamente como **planificada, no implementada**.
+- `project-memory/`: estado, arquitectura prevista, decisión F6, próximos pasos,
+  riesgos y esta entrada de changelog.
+
+### Verificación
+
+- Revisión documental: no se ha ejecutado `check.ps1` porque no hay cambios de
+  código, migraciones, seed ni tests.
+- `git diff --check`: sin errores de espacios ni finales de línea.
+- No se ha modificado código de `backend/app/`, `frontend/src/` ni `scripts/`; solo documentación.
+
+### Archivos
+
+- `PLAN.md`, `TASKS.md`, `AGENTS.md`, `README.md`
+- `backend/README.md`, `frontend/README.md`
+- `project-memory/project-overview.md`, `architecture.md`, `decisions.md`,
+  `next-steps.md`, `changelog.md`
+
+### Motivo
+
+- Dejar el alcance y las decisiones de F6 documentados antes de implementar, sin
+  mezclar documentación con código y sin afirmar que la fase está cerrada.
+
 ## 2026-10-26 — F5: calidad, resiliencia de precios y entrega
 
 ### Cambios

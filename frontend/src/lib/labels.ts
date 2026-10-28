@@ -22,6 +22,16 @@ export const MEAL_LABELS: Record<string, string> = {
   dinner: 'Cena',
 };
 
+export const COURSE_LABELS: Record<string, string> = {
+  main: 'Principal',
+  complement: 'Acompañamiento',
+};
+
+export const ROLE_LABELS: Record<string, string> = {
+  main: 'Principal',
+  complement: 'Acompañamiento',
+};
+
 export const MENU_STATUS_LABELS: Record<string, string> = {
   optimal: 'Óptimo',
   feasible: 'Factible',
@@ -59,6 +69,9 @@ export const RELAXATION_LABELS: Record<string, string> = {
   red_meat: 'Más carne roja de la recomendada',
   light_dinners: 'Cenas menos ligeras de lo recomendado',
   carb_sources: 'Falta variedad de hidratos',
+  legume_dominance: 'Demasiados platos principales de legumbre',
+  protein_balance: 'Reparto de proteínas poco equilibrado',
+  same_day_protein: 'Misma proteína en comida y cena',
 };
 
 export const EXCLUSION_REASON_LABELS: Record<string, string> = {

@@ -1,27 +1,40 @@
-import { Lock, LockOpen, RefreshCw, Shuffle, ThumbsDown } from 'lucide-react';
+import { Lock, LockOpen, Plus, RefreshCw, Shuffle, ThumbsDown, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatEuro, formatQuantity, mealLabel, proteinLabel, tagLabel } from '@/lib/labels';
+import {
+  COURSE_LABELS,
+  formatEuro,
+  formatQuantity,
+  mealLabel,
+  proteinLabel,
+  tagLabel,
+} from '@/lib/labels';
 import type { MenuEntry } from '@/lib/menu';
 
 type MenuEntryCardProps = {
   entry: MenuEntry;
   isBusy: boolean;
+  hasComplement?: boolean;
   onToggleLock: () => void;
   onSwap: () => void;
   onExclude: () => void;
   onRegenerate: () => void;
+  onAddComplement?: () => void;
+  onRemoveComplement?: () => void;
 };
 
 /** Tarjeta de una comida o cena del menú con sus acciones. */
 export function MenuEntryCard({
   entry,
   isBusy,
+  hasComplement = false,
   onToggleLock,
   onSwap,
   onExclude,
   onRegenerate,
+  onAddComplement,
+  onRemoveComplement,
 }: MenuEntryCardProps) {
   return (
     <Card className="h-full gap-3 py-4" aria-busy={isBusy}>
@@ -29,7 +42,9 @@ export function MenuEntryCard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {mealLabel(entry.slot)}
+              <span>{mealLabel(entry.slot)}</span>
+              <span aria-hidden="true"> · </span>
+              <span>{COURSE_LABELS[entry.course] ?? entry.course}</span>
             </p>
             <CardTitle>
               <h4 className="text-base font-semibold">{entry.dish_name}</h4>
@@ -123,6 +138,32 @@ export function MenuEntryCard({
             <ThumbsDown aria-hidden="true" className="size-4" />
             No me gusta
           </Button>
+          {entry.course === 'main' && !hasComplement && onAddComplement ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isBusy}
+              aria-label={`Añadir acompañamiento a ${entry.dish_name}`}
+              onClick={onAddComplement}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Añadir acompañamiento
+            </Button>
+          ) : null}
+          {entry.course === 'complement' && onRemoveComplement ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isBusy}
+              aria-label={`Quitar acompañamiento ${entry.dish_name}`}
+              onClick={onRemoveComplement}
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+              Quitar
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"

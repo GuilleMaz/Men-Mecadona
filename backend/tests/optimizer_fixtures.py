@@ -29,6 +29,7 @@ _PROTEINS: tuple[tuple[str, str, int, int], ...] = (
     ("fish", "fish", 100_000, 500),
     ("legumes", "legumes", 80_000, 120),
     ("beef", "beef", 100_000, 600),
+    ("eggs", "eggs", 100_000, 200),
 )
 
 _CARBS: tuple[tuple[str, str, int], ...] = (
@@ -43,17 +44,17 @@ _LUNCH_SOURCES: tuple[str, ...] = (
     "beef",
     "fish",
     "legumes",
+    "eggs",
     "chicken",
     "fish",
     "legumes",
     "beef",
+    "eggs",
     "chicken",
     "fish",
     "legumes",
-    "chicken",
     "beef",
-    "fish",
-    "legumes",
+    "eggs",
     "chicken",
 )
 
@@ -62,18 +63,18 @@ _DINNER_SOURCES: tuple[str, ...] = (
     "legumes",
     "chicken",
     "beef",
-    "fish",
-    "legumes",
-    "chicken",
+    "eggs",
     "fish",
     "legumes",
     "chicken",
     "beef",
+    "eggs",
     "fish",
     "legumes",
     "chicken",
+    "eggs",
     "fish",
-    "legumes",
+    "beef",
 )
 
 

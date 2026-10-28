@@ -116,6 +116,25 @@ describe('DishesPage', () => {
     });
   });
 
+  it('envía el filtro de curso a la API', async () => {
+    const user = userEvent.setup();
+    const urls: string[] = [];
+    server.use(
+      http.get('/api/dishes', ({ request }) => {
+        urls.push(request.url);
+        return HttpResponse.json({ items: [], total: 0, limit: 100, offset: 0 });
+      }),
+    );
+    renderApp(['/dishes']);
+
+    await screen.findByText('No hay platos que coincidan con los filtros.');
+    await user.selectOptions(screen.getByLabelText('Curso'), 'complement');
+
+    await waitFor(() => {
+      expect(urls.some((url) => url.includes('role=complement'))).toBe(true);
+    });
+  });
+
   it('muestra el estado vacío si no hay platos elegibles', async () => {
     server.use(
       http.get('/api/dishes', () =>

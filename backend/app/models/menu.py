@@ -44,10 +44,13 @@ MENU_STATUSES: tuple[str, ...] = ("optimal", "feasible", "relaxed")
 MENU_PRICE_STATUSES: tuple[str, ...] = ("current", "stale")
 #: Huecos del menú.
 MENU_SLOTS: tuple[str, ...] = ("lunch", "dinner")
+#: Curso de una entrada: plato principal obligatorio o acompañamiento opcional.
+MENU_COURSES: tuple[str, ...] = ("main", "complement")
 
 _MENU_STATUS_SQL = ", ".join(f"'{status}'" for status in MENU_STATUSES)
 _MENU_PRICE_STATUS_SQL = ", ".join(f"'{status}'" for status in MENU_PRICE_STATUSES)
 _MENU_SLOT_SQL = ", ".join(f"'{slot}'" for slot in MENU_SLOTS)
+_MENU_COURSE_SQL = ", ".join(f"'{course}'" for course in MENU_COURSES)
 
 
 class Menu(Base):
@@ -163,6 +166,7 @@ class Menu(Base):
         order_by=lambda: (
             MenuEntry.day_index,
             case((MenuEntry.slot == "lunch", 0), else_=1),
+            case((MenuEntry.course == "main", 0), else_=1),
             MenuEntry.id,
         ),
     )
@@ -178,19 +182,31 @@ class MenuEntry(Base):
 
     __tablename__ = "menu_entries"
     __table_args__ = (
-        UniqueConstraint("menu_id", "day_index", "slot", name="uq_menu_entries_menu_slot"),
+        UniqueConstraint(
+            "menu_id",
+            "day_index",
+            "slot",
+            "course",
+            name="uq_menu_entries_menu_slot_course",
+        ),
         CheckConstraint("day_index >= 0", name="ck_menu_entries_day_index"),
         CheckConstraint(f"slot IN ({_MENU_SLOT_SQL})", name="ck_menu_entries_slot"),
+        CheckConstraint(f"course IN ({_MENU_COURSE_SQL})", name="ck_menu_entries_course"),
         CheckConstraint("entry_consumption_cents >= 0", name="ck_menu_entries_consumption"),
         CheckConstraint("locked IN (0, 1)", name="ck_menu_entries_locked"),
         Index("ix_menu_entries_menu_id", "menu_id"),
         Index("ix_menu_entries_dish_id", "dish_id"),
+        Index("ix_menu_entries_course", "course"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     menu_id: Mapped[int] = mapped_column(ForeignKey("menus.id", ondelete="CASCADE"), nullable=False)
     day_index: Mapped[int] = mapped_column(Integer, nullable=False)
     slot: Mapped[str] = mapped_column(String(8), nullable=False)
+    #: `main` obligatorio por hueco; como máximo un `complement`.
+    course: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="main", server_default="main"
+    )
     dish_id: Mapped[int] = mapped_column(
         ForeignKey("dishes.id", ondelete="RESTRICT"), nullable=False
     )
